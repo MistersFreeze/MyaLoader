@@ -5,6 +5,14 @@
 ]]
 
 local BASE_URL = "https://raw.githubusercontent.com/MistersFreeze/MyaLoader/main/"
+-- Optional override (e.g. set by loader_jnkie.lua before loading this file).
+if typeof(getgenv) == "function" and typeof(getgenv().MYA_BASE_URL) == "string" and #getgenv().MYA_BASE_URL > 0 then
+	local u = getgenv().MYA_BASE_URL
+	if string.sub(u, -1) ~= "/" then
+		u = u .. "/"
+	end
+	BASE_URL = u
+end
 
 local Players = game:GetService("Players")
 local localPlayer = Players.LocalPlayer or Players.PlayerAdded:Wait()

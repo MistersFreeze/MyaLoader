@@ -12,13 +12,29 @@ Executor-oriented Roblox script base: a small **loader**, a **hub** GUI, and **p
 | `lib/util.lua` | `HttpGet`, safe `loadstring`, `loadModuleFromUrl`. |
 | `lib/ui.lua` | Themed frames, buttons, scroll areas. |
 | `games/*.lua` | One module per experience; exports `mount` / `unmount`. |
+| `loader_jnkie.lua` | Optional entry for [Junkie / jnkie.com](https://jnkie.com/) (see below). |
 
 ## Hosting
+
+### GitHub raw (or any static URL tree)
+
 
 1. Push this folder to a GitHub repository (or any host that serves raw `.lua` text).
 2. Copy the **raw** base URL for the branch root, e.g. `https://raw.githubusercontent.com/MistersFreeze/MyaLoader/main/`.
 3. Edit `loader.lua` and set `BASE_URL` to that URL (trailing slash required).
 4. In your executor, run the full `loader.lua` script (paste or `loadstring(game:HttpGet(YOUR_LOADER_RAW_URL))()`).
+
+### Junkie (jnkie.com)
+
+Junkie’s dashboard gives **one download URL per Lua script**, not a whole folder like `raw.githubusercontent.com/.../main/`. Mya is split across many files (`config.lua`, `hub.lua`, `lib/*`, …), so you typically:
+
+1. **Keep hosting those files** on a host with stable paths (public GitHub raw, VPS, etc.) and set `MYA_BASE_URL` inside [`loader_jnkie.lua`](loader_jnkie.lua) to that root (same idea as `BASE_URL` in `loader.lua`).
+2. **Upload** the contents of `loader_jnkie.lua` to Junkie (Lua Scripts → Original Code). Users run the **Junkie CDN URL** Junkie gives you; that script sets `getgenv().MYA_BASE_URL`, then `HttpGet`s `loader.lua` from your static host and runs it.
+
+- Set `USE_JUNKIE_KEYS = false` if you only want Junkie as the entry host and **no** key gate.
+- Set `USE_JUNKIE_KEYS = true` and fill `JUNKIE_SERVICE` / `JUNKIE_IDENTIFIER` to use the [Junkie SDK](https://jnkie.com/sdk/library.lua) (`loader_jnkie.lua` includes a minimal stub — replace the key loop with your own UI per [their docs](https://docs.jnkie.com/roblox-sdk/external-loader)).
+
+To put **everything** in a single Junkie upload with **no** extra `HttpGet` chain, you would need one bundled `.lua` build (not generated in this repo).
 
 ## Add a supported game
 
