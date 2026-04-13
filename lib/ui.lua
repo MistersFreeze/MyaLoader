@@ -61,6 +61,7 @@ return function(theme: { [string]: any })
 	function UI.button(parent: Instance, text: string, callback: () -> ())
 		local b = Instance.new("TextButton")
 		b.AutoButtonColor = false
+		b.BorderSizePixel = 0
 		b.Size = UDim2.new(1, 0, 0, 36)
 		b.BackgroundColor3 = theme.surface
 		b.Text = text
@@ -69,7 +70,6 @@ return function(theme: { [string]: any })
 		b.TextColor3 = theme.text
 		b.Parent = parent
 		UI.corner(b)
-		UI.stroke(b)
 
 		b.MouseEnter:Connect(function()
 			TweenService:Create(b, TweenInfo.new(0.12), { BackgroundColor3 = theme.bgElevated }):Play()
@@ -84,6 +84,7 @@ return function(theme: { [string]: any })
 	function UI.primaryButton(parent: Instance, text: string, callback: () -> ())
 		local b = Instance.new("TextButton")
 		b.AutoButtonColor = false
+		b.BorderSizePixel = 0
 		b.Size = UDim2.new(1, 0, 0, 36)
 		b.BackgroundColor3 = theme.accent
 		b.Text = text
@@ -113,6 +114,22 @@ return function(theme: { [string]: any })
 		f.Parent = parent
 		UI.corner(f)
 		UI.stroke(f)
+		UI.padding(f, theme.padding)
+		local layout = Instance.new("UIListLayout")
+		layout.SortOrder = Enum.SortOrder.LayoutOrder
+		layout.Padding = UDim.new(0, 8)
+		layout.Parent = f
+		return f
+	end
+
+	-- Same as card but no border stroke (hub / flat panels).
+	function UI.panel(parent: Instance)
+		local f = Instance.new("Frame")
+		f.BackgroundColor3 = theme.bgElevated
+		f.Size = UDim2.new(1, 0, 0, 0)
+		f.AutomaticSize = Enum.AutomaticSize.Y
+		f.Parent = parent
+		UI.corner(f)
 		UI.padding(f, theme.padding)
 		local layout = Instance.new("UIListLayout")
 		layout.SortOrder = Enum.SortOrder.LayoutOrder

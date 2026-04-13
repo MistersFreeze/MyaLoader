@@ -68,7 +68,6 @@ return function(BASE_URL: string, config: { [string]: any })
 	root.Selectable = true
 	root.Parent = gui
 	UI.corner(root)
-	UI.stroke(root)
 
 	local titleBar = Instance.new("Frame")
 	titleBar.Name = "TitleBar"
@@ -100,6 +99,7 @@ return function(BASE_URL: string, config: { [string]: any })
 	btnRow.Parent = titleBar
 
 	local minBtn = Instance.new("TextButton")
+	minBtn.BorderSizePixel = 0
 	minBtn.Size = UDim2.new(0, 32, 1, 0)
 	minBtn.Position = UDim2.new(0, 0, 0, 0)
 	minBtn.BackgroundColor3 = theme.surface
@@ -112,6 +112,7 @@ return function(BASE_URL: string, config: { [string]: any })
 	UI.corner(minBtn)
 
 	local closeBtn = Instance.new("TextButton")
+	closeBtn.BorderSizePixel = 0
 	closeBtn.Size = UDim2.new(0, 32, 1, 0)
 	closeBtn.Position = UDim2.new(1, 0, 0, 0)
 	closeBtn.AnchorPoint = Vector2.new(1, 0)
@@ -184,6 +185,7 @@ return function(BASE_URL: string, config: { [string]: any })
 	local function makeTab(id: string, label: string)
 		local b = Instance.new("TextButton")
 		b.Name = id
+		b.BorderSizePixel = 0
 		b.Size = UDim2.new(1, -8, 0, 34)
 		b.BackgroundColor3 = theme.bgElevated
 		b.Text = label
@@ -208,14 +210,30 @@ return function(BASE_URL: string, config: { [string]: any })
 		return page
 	end
 
+	local function makeCategoryLabel(text: string)
+		local lbl = Instance.new("TextLabel")
+		lbl.BackgroundTransparency = 1
+		lbl.Size = UDim2.new(1, -8, 0, 22)
+		lbl.Font = Enum.Font.GothamBold
+		lbl.TextSize = 11
+		lbl.TextXAlignment = Enum.TextXAlignment.Left
+		lbl.TextColor3 = theme.textMuted
+		lbl.Text = text
+		lbl.Parent = sidebar
+		local pad = Instance.new("UIPadding", lbl)
+		pad.PaddingLeft = UDim.new(0, 4)
+		pad.PaddingTop = UDim.new(0, 6)
+	end
+
 	local homePage = makeTab("home", "Home")
 	local gamesPage = makeTab("games", "Games")
-	local settingsPage = makeTab("settings", "Settings")
+	makeCategoryLabel("UNIVERSAL")
+	local dumperPage = makeTab("dumper", "Dumper")
 
 	local homeScroll = UI.scroll(homePage)
 	homeScroll.Size = UDim2.new(1, 0, 1, 0)
 
-	local homeCard = UI.card(homeScroll)
+	local homeCard = UI.panel(homeScroll)
 	homeCard.Size = UDim2.new(1, -4, 0, 0)
 	UI.label(homeCard, "Welcome to " .. config.BRAND, 18, false)
 	UI.label(
@@ -230,7 +248,7 @@ return function(BASE_URL: string, config: { [string]: any })
 	local gamesScroll = UI.scroll(gamesPage)
 	gamesScroll.Size = UDim2.new(1, 0, 1, 0)
 
-	local gamesCard = UI.card(gamesScroll)
+	local gamesCard = UI.panel(gamesScroll)
 	gamesCard.Size = UDim2.new(1, -4, 0, 0)
 
 	local gamePanel = Instance.new("Frame")
@@ -246,13 +264,39 @@ return function(BASE_URL: string, config: { [string]: any })
 	gameLayout.Padding = UDim.new(0, 8)
 	gameLayout.Parent = gamePanel
 
-	local settingsScroll = UI.scroll(settingsPage)
-	settingsScroll.Size = UDim2.new(1, 0, 1, 0)
-	local settingsCard = UI.card(settingsScroll)
-	settingsCard.Size = UDim2.new(1, -4, 0, 0)
-	UI.label(settingsCard, "Loader base URL (set in loader.lua on your client):", 14, true)
-	local urlHint = UI.label(settingsCard, BASE_URL, 13, false)
-	urlHint.TextWrapped = true
+	local dumperScroll = UI.scroll(dumperPage)
+	dumperScroll.Size = UDim2.new(1, 0, 1, 0)
+	local dumperCard = UI.panel(dumperScroll)
+	dumperCard.Size = UDim2.new(1, -4, 0, 0)
+	UI.label(dumperCard, "Pro Script Dumper", 18, false)
+	UI.label(
+		dumperCard,
+		"Decompiles LocalScripts and ModuleScripts to files under workspace/Pro Script Dumper. Requires executor APIs (decompile, writefile, …). Uses an external Material UI library when launched.",
+		14,
+		true
+	)
+	UI.primaryButton(dumperCard, "Launch Dumper", function()
+		notify("Downloading Dumper…")
+		local url = BASE_URL .. "universal/dumper.lua"
+		local src, herr = Util.httpGet(url)
+		if not src then
+			notify("Dumper download failed: " .. tostring(herr))
+			return
+		end
+		local fn, cerr = Util.loadstringCompile(src, "universal/dumper.lua")
+		if not fn then
+			notify("Dumper compile failed: " .. tostring(cerr))
+			return
+		end
+		task.spawn(function()
+			local ok, err = pcall(fn)
+			if not ok then
+				notify("Dumper error: " .. tostring(err))
+			else
+				notify("Dumper started")
+			end
+		end)
+	end)
 
 	local mountedModule: any = nil
 	local placeId = game.PlaceId
@@ -301,7 +345,6 @@ return function(BASE_URL: string, config: { [string]: any })
 		if not gamePath then
 			supportTitle.Text = "Unsupported experience"
 			UI.label(gamePanel, "No module is registered for PlaceId " .. tostring(placeId) .. ".", 14, true)
-			UI.label(gamePanel, "Add an entry to SUPPORTED_GAMES in config.lua and host the matching file under games/.", 14, true)
 			notify("Unsupported PlaceId")
 			return
 		end
