@@ -349,7 +349,7 @@ return function(BASE_URL: string, config: { [string]: any })
 
 		mountedModule = mod
 		notify("Game module active")
-		task.defer(closeHubAfterGameLoad)
+		closeHubAfterGameLoad()
 	end
 
 	placeIdConn = game:GetPropertyChangedSignal("PlaceId"):Connect(function()
@@ -359,8 +359,6 @@ return function(BASE_URL: string, config: { [string]: any })
 		gamePath = supported[placeId]
 		tryMountGame()
 	end)
-
-	tryMountGame()
 
 	setTab("home")
 	root.BackgroundTransparency = 1
@@ -410,4 +408,7 @@ return function(BASE_URL: string, config: { [string]: any })
 		body.Visible = not minimized
 		root.Size = if minimized then UDim2.fromOffset(540, 44) else UDim2.fromOffset(540, 400)
 	end)
+
+	-- After all connections exist (so closeHub can disconnect drag), load game and auto-close hub.
+	tryMountGame()
 end

@@ -33,27 +33,27 @@ local function rand_str(len)
     return table.concat(r)
 end
 
--- -------------------- Colour palette (tactical / amber) --------------------
+-- -------------------- Colour palette (pink accent) --------------------
 local C = {
 	bg = Color3.fromRGB(14, 16, 20),
 	panel = Color3.fromRGB(22, 24, 30),
 	header = Color3.fromRGB(18, 20, 26),
 	tab_off = Color3.fromRGB(26, 28, 34),
-	tab_on = Color3.fromRGB(232, 165, 75),
-	accent = Color3.fromRGB(232, 165, 75),
+	tab_on = Color3.fromRGB(230, 120, 175),
+	accent = Color3.fromRGB(230, 120, 175),
 	row_hover = Color3.fromRGB(32, 34, 42),
 	tog_off = Color3.fromRGB(48, 50, 58),
-	tog_on = Color3.fromRGB(232, 165, 75),
+	tog_on = Color3.fromRGB(230, 120, 175),
 	text = Color3.fromRGB(236, 238, 244),
 	dim = Color3.fromRGB(120, 124, 138),
 	red = Color3.fromRGB(220, 80, 80),
 	green = Color3.fromRGB(90, 200, 130),
 	slid_bg = Color3.fromRGB(38, 40, 48),
-	slid_fg = Color3.fromRGB(232, 165, 75),
+	slid_fg = Color3.fromRGB(230, 120, 175),
 	input_bg = Color3.fromRGB(28, 30, 38),
 	picker_bg = Color3.fromRGB(16, 18, 22),
 	sub_off = Color3.fromRGB(30, 32, 40),
-	sub_on = Color3.fromRGB(232, 165, 75),
+	sub_on = Color3.fromRGB(230, 120, 175),
 }
 
 -- -------------------- Root GUI --------------------
@@ -212,7 +212,7 @@ Instance.new("UICorner", accentBar).CornerRadius = UDim.new(0, 8)
 local header = Instance.new("Frame")
 header.BackgroundColor3 = C.header
 header.BorderSizePixel = 0
-header.Size = UDim2.new(1, -4, 0, 48)
+header.Size = UDim2.new(1, -4, 0, 40)
 header.Position = UDim2.new(0, 4, 0, 0)
 header.ZIndex = 10
 header.Parent = main
@@ -220,8 +220,8 @@ Instance.new("UICorner", header).CornerRadius = UDim.new(0, 8)
 local hdr_sq = Instance.new("Frame")
 hdr_sq.BackgroundColor3 = C.header
 hdr_sq.BorderSizePixel = 0
-hdr_sq.Position = UDim2.fromOffset(0, 32)
-hdr_sq.Size = UDim2.new(1, 0, 0, 20)
+hdr_sq.Position = UDim2.fromOffset(0, 28)
+hdr_sq.Size = UDim2.new(1, 0, 0, 14)
 hdr_sq.Parent = header
 
 local title_lbl = Instance.new("TextLabel")
@@ -231,28 +231,18 @@ title_lbl.TextColor3 = C.text
 title_lbl.TextSize = 15
 title_lbl.BackgroundTransparency = 1
 title_lbl.BorderSizePixel = 0
-title_lbl.Position = UDim2.fromOffset(14, 6)
-title_lbl.Size = UDim2.new(1, -24, 0, 20)
+title_lbl.Position = UDim2.fromOffset(14, 0)
+title_lbl.Size = UDim2.new(1, -24, 1, 0)
 title_lbl.TextXAlignment = Enum.TextXAlignment.Left
+title_lbl.TextYAlignment = Enum.TextYAlignment.Center
 title_lbl.Parent = header
-
-local sub_lbl = Instance.new("TextLabel")
-sub_lbl.Font = Enum.Font.GothamMedium
-sub_lbl.Text = "Mya  ·  PlaceId 72920620366355"
-sub_lbl.TextColor3 = C.dim
-sub_lbl.TextSize = 11
-sub_lbl.BackgroundTransparency = 1
-sub_lbl.Position = UDim2.fromOffset(14, 26)
-sub_lbl.Size = UDim2.new(1, -24, 0, 16)
-sub_lbl.TextXAlignment = Enum.TextXAlignment.Left
-sub_lbl.Parent = header
 
 -- -------------------- Tab bar --------------------
 local TAB_NAMES = { "Combat", "Movement", "Visuals", "Misc", "Configs" }
 
 local tab_bar = Instance.new("Frame")
 tab_bar.BackgroundColor3=C.header; tab_bar.BorderSizePixel=0
-tab_bar.Position=UDim2.fromOffset(4,48); tab_bar.Size=UDim2.new(1,-4,0,30)
+tab_bar.Position=UDim2.fromOffset(4,40); tab_bar.Size=UDim2.new(1,-4,0,30)
 tab_bar.ZIndex=10; tab_bar.Parent=main
 Instance.new("UIListLayout",tab_bar).FillDirection=Enum.FillDirection.Horizontal
 
@@ -261,7 +251,7 @@ local tab_buttons = {}; local tab_containers = {}; local active_tab = nil
 -- Sub-nav bar (hidden for tabs without sub-pages)
 local sub_bar = Instance.new("Frame")
 sub_bar.BackgroundColor3 = C.bg; sub_bar.BorderSizePixel = 0
-sub_bar.Position = UDim2.fromOffset(4, 78); sub_bar.Size = UDim2.new(1, -4, 0, 26)
+sub_bar.Position = UDim2.fromOffset(4, 70); sub_bar.Size = UDim2.new(1, -4, 0, 26)
 sub_bar.ZIndex = 10; sub_bar.Visible = false; sub_bar.Parent = main
 local sub_bar_layout = Instance.new("UIListLayout", sub_bar)
 sub_bar_layout.FillDirection = Enum.FillDirection.Horizontal
@@ -271,7 +261,7 @@ sub_bar_layout.VerticalAlignment = Enum.VerticalAlignment.Center
 
 local content = Instance.new("Frame")
 content.BackgroundTransparency=1; content.BorderSizePixel=0
-content.Position=UDim2.fromOffset(4,78); content.Size=UDim2.new(1,-4,1,-78)
+content.Position=UDim2.fromOffset(4,70); content.Size=UDim2.new(1,-4,1,-70)
 content.ClipsDescendants=true; content.Parent=main
 
 -- -------------------- Sub-page infrastructure --------------------
@@ -302,7 +292,7 @@ local function switch_sub(tab_name, sub_name)
     for n, pg in pairs(subs) do pg.Visible = (n == sub_name) end
     for n, b  in pairs(btns) do
         b.BackgroundColor3 = (n == sub_name) and C.sub_on or C.sub_off
-        b.TextColor3       = (n == sub_name) and Color3.fromRGB(28, 24, 18) or C.dim
+        b.TextColor3       = (n == sub_name) and Color3.fromRGB(45, 18, 32) or C.dim
     end
 end
 
@@ -313,17 +303,17 @@ local function switch_tab(name)
     for n, cont in pairs(tab_containers) do cont.Visible = (n == name) end
     for n, b in pairs(tab_buttons) do
         b.BackgroundColor3 = (n == name) and C.tab_on or C.tab_off
-        b.TextColor3       = (n == name) and Color3.fromRGB(28, 24, 18) or C.dim
+        b.TextColor3       = (n == name) and Color3.fromRGB(45, 18, 32) or C.dim
     end
 
     -- Show/hide sub-nav bar and adjust content position
     sub_bar.Visible = has_subs
     if has_subs then
-        content.Position = UDim2.fromOffset(4, 104)
-        content.Size     = UDim2.new(1, -4, 1, -104)
+        content.Position = UDim2.fromOffset(4, 96)
+        content.Size     = UDim2.new(1, -4, 1, -96)
     else
-        content.Position = UDim2.fromOffset(4, 78)
-        content.Size     = UDim2.new(1, -4, 1, -78)
+        content.Position = UDim2.fromOffset(4, 70)
+        content.Size     = UDim2.new(1, -4, 1, -70)
     end
 
     -- Rebuild sub-bar buttons
@@ -817,7 +807,7 @@ local aim_key_btn, aim_key_update = make_keybind(pg, "Aim Key", 7, Enum.UserInpu
 pg = all_sub_pages["Combat"]["Silent Aim"]
 section_label(pg, "Silent Aim", 1)
 make_toggle(pg, "Silent Aim",       2,  "toggle_silent_aim")
-local upd_col_sfov = make_toggle_with_color(pg, "Show Silent FOV", 3, "toggle_show_silent_fov", Color3.fromRGB(255, 140, 0),
+local upd_col_sfov = make_toggle_with_color(pg, "Show Silent FOV", 3, "toggle_show_silent_fov", Color3.fromRGB(230, 120, 175),
     function(c) if _G.set_color_silent_fov then _G.set_color_silent_fov(c) end end)
 
 local silent_fov_set = make_slider(pg, "Silent FOV Radius", 4, 10, 300, 80, "%d px",
