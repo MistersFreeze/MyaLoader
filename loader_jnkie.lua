@@ -1,35 +1,75 @@
 --[[
   JUNKIE (jnkie.com) entry — paste into Dashboard → Lua Scripts → Original Code.
 
-  Junkie CDN expects getgenv().SCRIPT_KEY early. With a KEYLESS dashboard script, use KEYLESS below.
-  SHOW_KEY_UI then lets the user type a key before Mya loads (no Kick — errors stay on the UI).
+  IMPORTANT — Junkie runs BEFORE this file’s body:
+  - If your script is KEYED, set JUNKIE_LICENSE_KEY below to your UUID. Junkie checks SCRIPT_KEY
+    (and often HWID) immediately — do NOT rely on the in-game key box for Junkie’s own check.
+  - Error "Invalid key … reset HWID" → key is wrong/expired, or HWID mismatch. In Junkie dashboard:
+    open the key → Reset HWID / generate a new key for this PC.
+  - JUNKIE_SERVICE / JUNKIE_IDENTIFIER must match your Lua Script on Junkie exactly (not "Mya"/"12345"
+    unless that is what your dashboard shows).
+
+  Running ONLY the raw CDN URL (no this file): execute TWO lines in order in your executor:
+    getgenv().SCRIPT_KEY = "your-uuid-here"
+    loadstring(game:HttpGet("https://api.jnkie.com/.../download", true))()
+
+  Dev key without committing it to Git: set TRY_LOAD_KEY_FROM_FILE = true and put your UUID alone
+  in mya_junkie_key.txt next to this script (executor readfile). That file is gitignored.
 
   Docs: https://docs.jnkie.com/roblox-sdk/external-loader
 ]]
 
--- Satisfies Junkie's wrapper when your dashboard script is KEYLESS ("No script key provided").
-local JUNKIE_PLACEHOLDER_KEY = "KEYLESS"
-if typeof(getgenv) == "function" then
-	getgenv().SCRIPT_KEY = JUNKIE_PLACEHOLDER_KEY
+--------------------------------------------------------------------------------
+-- Option A: paste key here (leave "" when pushing to a public repo).
+-- Option B: TRY_LOAD_KEY_FROM_FILE + mya_junkie_key.txt (one line, your UUID only).
+--------------------------------------------------------------------------------
+local JUNKIE_LICENSE_KEY = ""
+
+-- If true and JUNKIE_LICENSE_KEY is empty, tries readfile("mya_junkie_key.txt") (Synapse etc.).
+local TRY_LOAD_KEY_FROM_FILE = true
+local JUNKIE_KEY_FILE = "mya_junkie_key.txt"
+
+if TRY_LOAD_KEY_FROM_FILE and JUNKIE_LICENSE_KEY == "" and typeof(readfile) == "function" then
+	local ok, contents = pcall(function()
+		return readfile(JUNKIE_KEY_FILE)
+	end)
+	if ok and typeof(contents) == "string" and #contents > 0 then
+		local trimmed = contents:gsub("^%s+", ""):gsub("%s+$", "")
+		if #trimmed >= 8 then
+			JUNKIE_LICENSE_KEY = trimmed
+		end
+	end
 end
 
+--------------------------------------------------------------------------------
 local MYA_BASE_URL = "https://raw.githubusercontent.com/MistersFreeze/MyaLoader/main/"
 
 --------------------------------------------------------------------------------
--- Key gate (in-game TextBox — does not kick you)
+-- Must match your Junkie dashboard → Lua Script → service / identifier (copy from there).
 --------------------------------------------------------------------------------
-
-local SHOW_KEY_UI = true
-
--- true = validate with Junkie.check_key (fill service fields from your Junkie dashboard).
 local USE_JUNKIE_VALIDATION = true
 local JUNKIE_SERVICE = "Mya"
-local JUNKIE_IDENTIFIER = "12345"
+local JUNKIE_IDENTIFIER = "22735"
 local JUNKIE_PROVIDER = "Mixed"
 
--- If USE_JUNKIE_VALIDATION is false: set a non-empty string to require an exact match (simple shared password).
--- Leave "" to only require non-empty input.
+--------------------------------------------------------------------------------
+-- Key gate: only used when JUNKIE_LICENSE_KEY is empty and you want users to type a key.
+-- For Junkie’s own validation, prefer JUNKIE_LICENSE_KEY above (in-game UI runs too late for Junkie CDN).
+--------------------------------------------------------------------------------
+
+local SHOW_KEY_UI = false
+
+-- If USE_JUNKIE_VALIDATION is false: set a non-empty string for a simple shared password.
 local CUSTOM_SECRET = ""
+
+-- First line Junkie sees: real key, KEYLESS for keyless products, or nothing.
+if typeof(getgenv) == "function" then
+	if JUNKIE_LICENSE_KEY ~= "" then
+		getgenv().SCRIPT_KEY = JUNKIE_LICENSE_KEY
+	else
+		getgenv().SCRIPT_KEY = "KEYLESS"
+	end
+end
 
 --------------------------------------------------------------------------------
 

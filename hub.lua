@@ -279,6 +279,23 @@ return function(BASE_URL: string, config: { [string]: any })
 		end
 	end
 
+	local placeIdConn: RBXScriptConnection? = nil
+	local uisDragConn: RBXScriptConnection? = nil
+
+	local function closeHubAfterGameLoad()
+		if placeIdConn then
+			placeIdConn:Disconnect()
+			placeIdConn = nil
+		end
+		if uisDragConn then
+			uisDragConn:Disconnect()
+			uisDragConn = nil
+		end
+		if gui and gui.Parent then
+			gui:Destroy()
+		end
+	end
+
 	local function tryMountGame()
 		clearGameMount()
 		if not gamePath then
@@ -332,17 +349,18 @@ return function(BASE_URL: string, config: { [string]: any })
 
 		mountedModule = mod
 		notify("Game module active")
+		task.defer(closeHubAfterGameLoad)
 	end
 
-	tryMountGame()
-
-	game:GetPropertyChangedSignal("PlaceId"):Connect(function()
+	placeIdConn = game:GetPropertyChangedSignal("PlaceId"):Connect(function()
 		placeId = game.PlaceId
 		placeLabel.Text = "PlaceId: " .. tostring(placeId)
 		supported = config.SUPPORTED_GAMES or {}
 		gamePath = supported[placeId]
 		tryMountGame()
 	end)
+
+	tryMountGame()
 
 	setTab("home")
 	root.BackgroundTransparency = 1
@@ -366,7 +384,7 @@ return function(BASE_URL: string, config: { [string]: any })
 		end
 	end)
 
-	UserInputService.InputChanged:Connect(function(input)
+	uisDragConn = UserInputService.InputChanged:Connect(function(input)
 		if
 			dragging
 			and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch)
