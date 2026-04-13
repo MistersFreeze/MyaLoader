@@ -317,6 +317,8 @@ return function(BASE_URL: string, config: { [string]: any })
 			end,
 			theme = theme,
 			uiFactory = makeUi,
+			baseUrl = BASE_URL,
+			gameScriptPath = gamePath,
 		}
 
 		local ok, errMount = pcall(function()

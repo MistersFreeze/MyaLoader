@@ -1,6 +1,9 @@
 --[[
-  Copy this file to games/<yourgame>.lua and register PlaceId in config.lua:
-    SUPPORTED_GAMES = { [YOUR_PLACE_ID] = "games/<yourgame>.lua" }
+  Single-file game: copy to games/MyGame_1234567890123.lua (name + PlaceId) or use a folder:
+    games/MyGame_1234567890123/init.lua
+  Register in config.lua:
+    SUPPORTED_GAMES = { [PLACE_ID] = "games/MyGame_1234567890123/init.lua" }
+  Hub passes ctx.baseUrl and ctx.gameScriptPath for multi-file HttpGet loads.
 ]]
 
 local M = {}

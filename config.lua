@@ -11,7 +11,7 @@ return {
 	-- Replace keys with real PlaceIds from the experience you support.
 	-- Example: [game.PlaceId while testing] = "games/example.lua"
 	SUPPORTED_GAMES = {
-		-- [1234567890123] = "games/example.lua",
+		[72920620366355] = "games/Operation-One_72920620366355/init.lua",
 	},
 
 	THEME = {

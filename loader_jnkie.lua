@@ -1,23 +1,39 @@
 --[[
-  JUNKIE (jnkie.com) entry script — paste into Dashboard → Lua Scripts → Original Code,
-  or keep this file in your repo and copy the contents when publishing.
+  JUNKIE (jnkie.com) entry — paste into Dashboard → Lua Scripts → Original Code.
 
-  How Junkie differs from GitHub raw:
-  - Junkie gives ONE CDN URL per script (not a folder). This file is that script.
-  - Mya still needs config.lua, hub.lua, lib/*, games/* from a base URL with stable paths.
-    Put MYA_BASE_URL below to any public static host (e.g. raw GitHub, your VPS).
+  Junkie CDN expects getgenv().SCRIPT_KEY early. With a KEYLESS dashboard script, use KEYLESS below.
+  SHOW_KEY_UI then lets the user type a key before Mya loads (no Kick — errors stay on the UI).
 
   Docs: https://docs.jnkie.com/roblox-sdk/external-loader
 ]]
 
--- Where the rest of Mya lives (must end with / in practice; loader normalizes).
+-- Satisfies Junkie's wrapper when your dashboard script is KEYLESS ("No script key provided").
+local JUNKIE_PLACEHOLDER_KEY = "KEYLESS"
+if typeof(getgenv) == "function" then
+	getgenv().SCRIPT_KEY = JUNKIE_PLACEHOLDER_KEY
+end
+
 local MYA_BASE_URL = "https://raw.githubusercontent.com/MistersFreeze/MyaLoader/main/"
 
--- Junkie key system (set from your Junkie dashboard).
-local USE_JUNKIE_KEYS = false
-local JUNKIE_SERVICE = "YOUR_SERVICE_NAME"
+--------------------------------------------------------------------------------
+-- Key gate (in-game TextBox — does not kick you)
+--------------------------------------------------------------------------------
+
+local SHOW_KEY_UI = true
+
+-- true = validate with Junkie.check_key (fill service fields from your Junkie dashboard).
+local USE_JUNKIE_VALIDATION = true
+local JUNKIE_SERVICE = "Mya"
 local JUNKIE_IDENTIFIER = "12345"
 local JUNKIE_PROVIDER = "Mixed"
+
+-- If USE_JUNKIE_VALIDATION is false: set a non-empty string to require an exact match (simple shared password).
+-- Leave "" to only require non-empty input.
+local CUSTOM_SECRET = ""
+
+--------------------------------------------------------------------------------
+
+local Players = game:GetService("Players")
 
 local function get(url: string)
 	return game:HttpGet(url, true)
@@ -41,53 +57,231 @@ local function runMyaLoader()
 	chunk()
 end
 
-local function runWithJunkieKeys()
-	local Junkie = loadstring(get("https://jnkie.com/sdk/library.lua"), "@junkie_sdk")()
-	Junkie.service = JUNKIE_SERVICE
-	Junkie.identifier = JUNKIE_IDENTIFIER
-	Junkie.provider = JUNKIE_PROVIDER
+local function tryValidateKey(key: string): (boolean, string)
+	local trimmed = key:gsub("^%s+", ""):gsub("%s+$", "")
+	if #trimmed == 0 then
+		return false, "Enter your key."
+	end
 
-	-- If you already set a key (e.g. from your own UI), validate it once.
-	local key = getgenv().SCRIPT_KEY
-	if typeof(key) == "string" and #key > 0 then
-		local v = Junkie.check_key(key)
+	if USE_JUNKIE_VALIDATION then
+		local ok, JunkieOrErr = pcall(function()
+			return loadstring(get("https://jnkie.com/sdk/library.lua"), "@junkie_sdk")()
+		end)
+		if not ok then
+			return false, "Could not load Junkie SDK: " .. tostring(JunkieOrErr)
+		end
+		local Junkie = JunkieOrErr
+		Junkie.service = JUNKIE_SERVICE
+		Junkie.identifier = JUNKIE_IDENTIFIER
+		Junkie.provider = JUNKIE_PROVIDER
+
+		local v = Junkie.check_key(trimmed)
 		if v and v.valid then
-			runMyaLoader()
-			return
+			return true, trimmed
 		end
+		local err = (v and (v.message or v.error)) or "Invalid key"
+		return false, tostring(err)
 	end
 
-	-- Minimal loop: replace with your own UI / prompt. See Junkie docs.
-	local attempts = 0
-	while attempts < 10 do
-		attempts = attempts + 1
-		local link = Junkie.get_key_link()
-		if link and setclipboard then
-			setclipboard(link)
-		end
-		-- User must set getgenv().SCRIPT_KEY in your UI, then re-run or call check_key:
-		key = getgenv().SCRIPT_KEY
-		if typeof(key) == "string" and #key > 0 then
-			local v = Junkie.check_key(key)
-			if v and v.valid then
-				runMyaLoader()
-				return
-			end
-			warn("[Mya/Junkie] " .. tostring(v and v.message or "invalid key"))
-		end
-		task.wait(1)
+	if CUSTOM_SECRET ~= "" and trimmed ~= CUSTOM_SECRET then
+		return false, "Wrong key."
 	end
-	error("Junkie key validation did not complete. Set USE_JUNKIE_KEYS = false to skip, or wire your own UI.")
+
+	return true, trimmed
 end
 
-local ok, err = pcall(function()
-	if USE_JUNKIE_KEYS then
-		runWithJunkieKeys()
-	else
-		runMyaLoader()
-	end
-end)
+local function showKeyGate()
+	local lp = Players.LocalPlayer or Players.PlayerAdded:Wait()
+	local pg = lp:WaitForChild("PlayerGui")
 
-if not ok then
-	warn("[Mya] " .. tostring(err))
+	local existing = pg:FindFirstChild("MyaKeyGate")
+	if existing then
+		existing:Destroy()
+	end
+
+	local gui = Instance.new("ScreenGui")
+	gui.Name = "MyaKeyGate"
+	gui.ResetOnSpawn = false
+	gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+	gui.DisplayOrder = 1000
+	gui.Parent = pg
+
+	local root = Instance.new("Frame")
+	root.Name = "Panel"
+	root.AnchorPoint = Vector2.new(0.5, 0.5)
+	root.Position = UDim2.fromScale(0.5, 0.5)
+	root.Size = UDim2.fromOffset(400, 220)
+	root.BackgroundColor3 = Color3.fromRGB(26, 27, 38)
+	root.Parent = gui
+
+	local c = Instance.new("UICorner")
+	c.CornerRadius = UDim.new(0, 12)
+	c.Parent = root
+
+	local stroke = Instance.new("UIStroke")
+	stroke.Color = Color3.fromRGB(58, 62, 78)
+	stroke.Parent = root
+
+	local pad = Instance.new("UIPadding")
+	pad.PaddingLeft = UDim.new(0, 18)
+	pad.PaddingRight = UDim.new(0, 18)
+	pad.PaddingTop = UDim.new(0, 16)
+	pad.PaddingBottom = UDim.new(0, 16)
+	pad.Parent = root
+
+	local title = Instance.new("TextLabel")
+	title.BackgroundTransparency = 1
+	title.Size = UDim2.new(1, 0, 0, 28)
+	title.Font = Enum.Font.GothamBold
+	title.TextSize = 18
+	title.TextColor3 = Color3.fromRGB(230, 232, 242)
+	title.TextXAlignment = Enum.TextXAlignment.Left
+	title.Text = "Mya · Enter key"
+	title.Parent = root
+
+	local hint = Instance.new("TextLabel")
+	hint.BackgroundTransparency = 1
+	hint.Position = UDim2.new(0, 0, 0, 32)
+	hint.Size = UDim2.new(1, 0, 0, 36)
+	hint.Font = Enum.Font.GothamMedium
+	hint.TextSize = 13
+	hint.TextColor3 = Color3.fromRGB(150, 156, 178)
+	hint.TextWrapped = true
+	hint.TextXAlignment = Enum.TextXAlignment.Left
+	hint.TextYAlignment = Enum.TextYAlignment.Top
+	hint.Text = "Paste your key below. Wrong keys show here — you are not kicked."
+	hint.Parent = root
+
+	local box = Instance.new("TextBox")
+	box.Name = "KeyBox"
+	box.Position = UDim2.new(0, 0, 0, 78)
+	box.Size = UDim2.new(1, 0, 0, 40)
+	box.BackgroundColor3 = Color3.fromRGB(34, 36, 48)
+	box.ClearTextOnFocus = false
+	box.Font = Enum.Font.GothamMedium
+	box.TextSize = 14
+	box.TextColor3 = Color3.fromRGB(230, 232, 242)
+	box.Text = ""
+	box.PlaceholderText = "Your access key"
+	box.PlaceholderColor3 = Color3.fromRGB(100, 104, 120)
+	box.Parent = root
+
+	local boxCorner = Instance.new("UICorner")
+	boxCorner.CornerRadius = UDim.new(0, 8)
+	boxCorner.Parent = box
+
+	local errLabel = Instance.new("TextLabel")
+	errLabel.Name = "Error"
+	errLabel.BackgroundTransparency = 1
+	errLabel.Position = UDim2.new(0, 0, 0, 124)
+	errLabel.Size = UDim2.new(1, 0, 0, 32)
+	errLabel.Font = Enum.Font.GothamMedium
+	errLabel.TextSize = 12
+	errLabel.TextColor3 = Color3.fromRGB(242, 110, 110)
+	errLabel.TextWrapped = true
+	errLabel.TextXAlignment = Enum.TextXAlignment.Left
+	errLabel.TextYAlignment = Enum.TextYAlignment.Top
+	errLabel.Text = ""
+	errLabel.Parent = root
+
+	local row = Instance.new("Frame")
+	row.BackgroundTransparency = 1
+	row.Position = UDim2.new(0, 0, 1, -40)
+	row.Size = UDim2.new(1, 0, 0, 36)
+	row.AnchorPoint = Vector2.new(0, 1)
+	row.Parent = root
+
+	local loadBtn = Instance.new("TextButton")
+	loadBtn.Name = "Load"
+	loadBtn.Size = UDim2.new(0.48, -6, 1, 0)
+	loadBtn.BackgroundColor3 = Color3.fromRGB(122, 162, 247)
+	loadBtn.Text = "Load Mya"
+	loadBtn.Font = Enum.Font.GothamBold
+	loadBtn.TextSize = 14
+	loadBtn.TextColor3 = Color3.fromRGB(20, 22, 30)
+	loadBtn.AutoButtonColor = true
+	loadBtn.Parent = row
+
+	local lb = Instance.new("UICorner")
+	lb.CornerRadius = UDim.new(0, 8)
+	lb.Parent = loadBtn
+
+	local closeBtn = Instance.new("TextButton")
+	closeBtn.Name = "Close"
+	closeBtn.Position = UDim2.new(1, 0, 0, 0)
+	closeBtn.AnchorPoint = Vector2.new(1, 0)
+	closeBtn.Size = UDim2.new(0.48, -6, 1, 0)
+	closeBtn.BackgroundColor3 = Color3.fromRGB(42, 44, 58)
+	closeBtn.Text = "Close"
+	closeBtn.Font = Enum.Font.GothamMedium
+	closeBtn.TextSize = 14
+	closeBtn.TextColor3 = Color3.fromRGB(200, 204, 220)
+	closeBtn.AutoButtonColor = true
+	closeBtn.Parent = row
+
+	local cb = Instance.new("UICorner")
+	cb.CornerRadius = UDim.new(0, 8)
+	cb.Parent = closeBtn
+
+	local function onSubmit()
+		errLabel.Text = ""
+		local ok, resOrKey = tryValidateKey(box.Text)
+		if not ok then
+			errLabel.Text = resOrKey
+			return
+		end
+
+		if typeof(getgenv) == "function" then
+			getgenv().SCRIPT_KEY = resOrKey
+		end
+
+		gui:Destroy()
+
+		local runOk, runErr = pcall(runMyaLoader)
+		if not runOk then
+			warn("[Mya] " .. tostring(runErr))
+			local errGui = Instance.new("ScreenGui")
+			errGui.Name = "MyaLoadError"
+			errGui.ResetOnSpawn = false
+			errGui.Parent = pg
+			local f = Instance.new("Frame")
+			f.Size = UDim2.fromOffset(380, 100)
+			f.Position = UDim2.fromScale(0.5, 0.5)
+			f.AnchorPoint = Vector2.new(0.5, 0.5)
+			f.BackgroundColor3 = Color3.fromRGB(26, 27, 38)
+			f.Parent = errGui
+			Instance.new("UICorner", f).CornerRadius = UDim.new(0, 10)
+			local t = Instance.new("TextLabel")
+			t.Size = UDim2.new(1, -20, 1, -20)
+			t.Position = UDim2.new(0, 10, 0, 10)
+			t.BackgroundTransparency = 1
+			t.TextWrapped = true
+			t.Font = Enum.Font.GothamMedium
+			t.TextSize = 13
+			t.TextColor3 = Color3.fromRGB(242, 110, 110)
+			t.Text = tostring(runErr)
+			t.Parent = f
+		end
+	end
+
+	loadBtn.MouseButton1Click:Connect(onSubmit)
+
+	box.FocusLost:Connect(function(enter: boolean)
+		if enter then
+			onSubmit()
+		end
+	end)
+
+	closeBtn.MouseButton1Click:Connect(function()
+		gui:Destroy()
+	end)
+end
+
+if SHOW_KEY_UI then
+	showKeyGate()
+else
+	local ok, err = pcall(runMyaLoader)
+	if not ok then
+		warn("[Mya] " .. tostring(err))
+	end
 end

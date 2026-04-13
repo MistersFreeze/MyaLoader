@@ -11,7 +11,8 @@ Executor-oriented Roblox script base: a small **loader**, a **hub** GUI, and **p
 | `hub.lua` | Builds the window, loads `lib/*`, mounts the game module for the current place. |
 | `lib/util.lua` | `HttpGet`, safe `loadstring`, `loadModuleFromUrl`. |
 | `lib/ui.lua` | Themed frames, buttons, scroll areas. |
-| `games/*.lua` | One module per experience; exports `mount` / `unmount`. |
+| `games/<GameName>_<PlaceId>/` | Per-game folder: at minimum `init.lua` (`mount` / `unmount`). Multi-file games add `runtime.lua`, `gui.lua`, etc. and load them via `ctx.baseUrl` (see Operation One). |
+| `games/example.lua` | Tiny sample module (single file). |
 | `loader_jnkie.lua` | Optional entry for [Junkie / jnkie.com](https://jnkie.com/) (see below). |
 
 ## Hosting
@@ -31,7 +32,9 @@ Junkie’s dashboard gives **one download URL per Lua script**, not a whole fold
 1. **Keep hosting those files** on a host with stable paths (public GitHub raw, VPS, etc.) and set `MYA_BASE_URL` inside [`loader_jnkie.lua`](loader_jnkie.lua) to that root (same idea as `BASE_URL` in `loader.lua`).
 2. **Upload** the contents of `loader_jnkie.lua` to Junkie (Lua Scripts → Original Code). Users run the **Junkie CDN URL** Junkie gives you; that script sets `getgenv().MYA_BASE_URL`, then `HttpGet`s `loader.lua` from your static host and runs it.
 
-- Set `USE_JUNKIE_KEYS = false` if you only want Junkie as the entry host and **no** key gate.
+- Junkie expects `getgenv().SCRIPT_KEY` early; `loader_jnkie.lua` sets `JUNKIE_PLACEHOLDER_KEY = "KEYLESS"` for keyless dashboard scripts.
+- **`SHOW_KEY_UI`** (default on) shows an in-game **TextBox**; keys are checked with **`USE_JUNKIE_VALIDATION`** + Junkie `check_key`, or with **`CUSTOM_SECRET`** if you turn Junkie validation off. Invalid keys show text on the panel — **no kick**.
+- Set **`SHOW_KEY_UI = false`** to load Mya immediately (no prompt).
 - Set `USE_JUNKIE_KEYS = true` and fill `JUNKIE_SERVICE` / `JUNKIE_IDENTIFIER` to use the [Junkie SDK](https://jnkie.com/sdk/library.lua) (`loader_jnkie.lua` includes a minimal stub — replace the key loop with your own UI per [their docs](https://docs.jnkie.com/roblox-sdk/external-loader)).
 
 To put **everything** in a single Junkie upload with **no** extra `HttpGet` chain, you would need one bundled `.lua` build (not generated in this repo).
