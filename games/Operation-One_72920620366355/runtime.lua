@@ -10,12 +10,8 @@ local healthbars      = false
 local names           = false
 local team_check      = true
 local gadgets         = false
-local no_recoil       = false
-local no_spread       = false
 local fullbright      = false
 local aim_assist      = false
-local silent_aim      = false
-local run_and_shoot   = false
 local chams           = false
 local fly_enabled     = false
 local jump_boost      = false
@@ -29,28 +25,12 @@ local aim_key         = Enum.UserInputType.MouseButton2
 local show_fov_circle = false
 local vis_check       = false      -- false = track through walls, true = visible only
 
-local silent_aim_fov  = 1200
-local silent_aim_key  = Enum.UserInputType.MouseButton2
-local show_silent_fov = false
-
--- Astro-style: "esp" = bone/ESP (screen center FOV), "viewmodels" = Operation One viewmodels + mouse FOV, "hybrid" = ESP then viewmodels
-local silent_target_mode = "esp"
--- Recoil multipliers when no_recoil is on (0 = remove fully, 1 = keep full game recoil); matches gun_modification.lua stack scaling
-local recoil_vertical   = 0
-local recoil_horizontal = 0
-
-local ASTRO_SILENT_PARTS = {
-    "head", "torso", "shoulder1", "shoulder2",
-    "arm1", "arm2", "hip1", "hip2", "leg1", "leg2",
-}
-
 -- Customisable colors (overridable from UI/config)
 local color_tracer     = Color3.new(1, 1, 1)
 local color_box        = Color3.new(1, 1, 1)
 local color_skel_vis   = Color3.fromRGB(0, 255, 0)
 local color_skel_hid   = Color3.new(1, 1, 1)
 local color_fov_circle = Color3.new(1, 1, 1)
-local color_silent_fov = Color3.fromRGB(255, 140, 0)
 local color_chams      = Color3.fromRGB(255, 50, 50)
 local color_throwable  = Color3.fromRGB(255, 60, 60)
 local color_placeable  = Color3.fromRGB(255, 170, 0)
@@ -283,11 +263,6 @@ fov_circle.Visible = false; fov_circle.Color = color_fov_circle
 fov_circle.Thickness = 1; fov_circle.Transparency = 1
 fov_circle.Filled = false; fov_circle.NumSides = 64
 
-local silent_fov_circle = Drawing.new("Circle")
-silent_fov_circle.Visible = false; silent_fov_circle.Color = color_silent_fov
-silent_fov_circle.Thickness = 1; silent_fov_circle.Transparency = 1
-silent_fov_circle.Filled = false; silent_fov_circle.NumSides = 64
-
 -- -------------------- Drawing helpers --------------------
 local function remove_drawings(character)
     local data = esp_list[character]
@@ -444,8 +419,6 @@ _G.toggle_healthbars = function() healthbars = not healthbars; if _G.set_healthb
 _G.toggle_names      = function() names      = not names;      if _G.set_names      then _G.set_names(names)           end end
 _G.toggle_gadgets    = function() gadgets    = not gadgets;    if _G.set_gadgets    then _G.set_gadgets(gadgets)       end end
 _G.toggle_team_check = function() team_check = not team_check; if _G.set_team_check then _G.set_team_check(team_check) end end
-_G.toggle_no_recoil  = function() no_recoil  = not no_recoil;  if _G.set_no_recoil  then _G.set_no_recoil(no_recoil)  end end
-_G.toggle_no_spread  = function() no_spread  = not no_spread;  if _G.set_no_spread  then _G.set_no_spread(no_spread)  end end
 _G.toggle_fullbright = function()
     fullbright = not fullbright; apply_fullbright(fullbright)
     if _G.set_fullbright then _G.set_fullbright(fullbright) end
@@ -453,15 +426,6 @@ end
 _G.toggle_aim_assist = function() aim_assist = not aim_assist; if _G.set_aim_assist then _G.set_aim_assist(aim_assist) end end
 _G.toggle_show_fov   = function() show_fov_circle = not show_fov_circle; if _G.set_show_fov then _G.set_show_fov(show_fov_circle) end end
 _G.toggle_vis_check  = function() vis_check = not vis_check; if _G.set_vis_check then _G.set_vis_check(vis_check) end end
-_G.toggle_silent_aim = function() silent_aim = not silent_aim; if _G.set_silent_aim then _G.set_silent_aim(silent_aim) end end
-_G.toggle_show_silent_fov = function()
-    show_silent_fov = not show_silent_fov
-    if _G.set_show_silent_fov then _G.set_show_silent_fov(show_silent_fov) end
-end
-_G.toggle_run_and_shoot = function()
-    run_and_shoot = not run_and_shoot
-    if _G.set_run_and_shoot then _G.set_run_and_shoot(run_and_shoot) end
-end
 _G.toggle_chams = function()
     chams = not chams
     if not chams then
@@ -478,37 +442,12 @@ _G.toggle_jump_boost  = function() jump_boost = not jump_boost; if _G.set_jump_b
 _G.set_aim_fov_value        = function(v) aim_fov        = v end
 _G.set_aim_speed_value      = function(v) aim_speed      = v end
 _G.set_aim_key_value        = function(v) aim_key        = v end
-_G.set_silent_aim_fov_value = function(v) silent_aim_fov = v end
-_G.set_silent_aim_key_value = function(v) silent_aim_key = v end
 _G.set_fly_speed_value      = function(v) fly_speed      = v end
 _G.set_jump_power_value     = function(v) jump_power     = v end
-
-_G.set_recoil_vertical_pct = function(v)
-    recoil_vertical = math.clamp((tonumber(v) or 0) / 100, 0, 1)
-end
-_G.set_recoil_horizontal_pct = function(v)
-    recoil_horizontal = math.clamp((tonumber(v) or 0) / 100, 0, 1)
-end
-_G.set_silent_target_mode = function(m)
-    if m == "esp" or m == "viewmodels" or m == "hybrid" then
-        silent_target_mode = m
-        if _G.set_silent_target_mode_ui then _G.set_silent_target_mode_ui(m) end
-    end
-end
-_G.cycle_silent_target_mode = function()
-    if silent_target_mode == "esp" then silent_target_mode = "viewmodels"
-    elseif silent_target_mode == "viewmodels" then silent_target_mode = "hybrid"
-    else silent_target_mode = "esp" end
-    if _G.set_silent_target_mode_ui then _G.set_silent_target_mode_ui(silent_target_mode) end
-end
-_G.get_silent_target_mode = function()
-    return silent_target_mode
-end
 
 -- Color setters (called by color pickers & config loader)
 local function refresh_esp_colors()
     fov_circle.Color        = color_fov_circle
-    silent_fov_circle.Color = color_silent_fov
     for _, data in pairs(esp_list) do
         if data.stroke then data.stroke.Color = color_box    end
         if data.tracer then data.tracer.Color  = color_tracer end
@@ -520,7 +459,6 @@ _G.set_color_box        = function(c) color_box        = c; refresh_esp_colors()
 _G.set_color_skel_vis   = function(c) color_skel_vis   = c end
 _G.set_color_skel_hid   = function(c) color_skel_hid   = c end
 _G.set_color_fov        = function(c) color_fov_circle = c; refresh_esp_colors() end
-_G.set_color_silent_fov = function(c) color_silent_fov = c; refresh_esp_colors() end
 _G.set_color_chams      = function(c)
     color_chams = c
     for _, hl in pairs(chams_list) do hl.FillColor = c; hl.OutlineColor = c end
@@ -558,20 +496,16 @@ _G.get_config = function()
     return {
         -- toggles
         boxes = boxes, skeletons = skeletons, tracers = tracers, healthbars = healthbars,
-        names = names, gadgets = gadgets, team_check = team_check, no_recoil = no_recoil, no_spread = no_spread,
+        names = names, gadgets = gadgets, team_check = team_check,
         fullbright = fullbright, aim_assist = aim_assist, show_fov_circle = show_fov_circle,
-        vis_check = vis_check, silent_aim = silent_aim, show_silent_fov = show_silent_fov,
-        run_and_shoot = run_and_shoot, chams = chams,
+        vis_check = vis_check,
+        chams = chams,
         fly_enabled = fly_enabled, jump_boost = jump_boost,
-        silent_target_mode = silent_target_mode,
-        recoil_vertical_pct = math.floor(recoil_vertical * 100 + 0.5),
-        recoil_horizontal_pct = math.floor(recoil_horizontal * 100 + 0.5),
         -- values
-        aim_fov = aim_fov, aim_speed = aim_speed, silent_aim_fov = silent_aim_fov,
+        aim_fov = aim_fov, aim_speed = aim_speed,
         fly_speed = fly_speed, jump_power = jump_power,
         -- keybinds (serialised as strings)
         aim_key        = enum_to_str(aim_key),
-        silent_aim_key = enum_to_str(silent_aim_key),
         menu_key       = enum_to_str(menu_key),
         -- colors
         color_tracer     = color_to_t(color_tracer),
@@ -579,7 +513,6 @@ _G.get_config = function()
         color_skel_vis   = color_to_t(color_skel_vis),
         color_skel_hid   = color_to_t(color_skel_hid),
         color_fov        = color_to_t(color_fov_circle),
-        color_silent_fov = color_to_t(color_silent_fov),
         color_chams      = color_to_t(color_chams),
         color_throwable  = color_to_t(color_throwable),
         color_placeable  = color_to_t(color_placeable),
@@ -599,15 +532,10 @@ _G.apply_config = function(cfg)
     if cfg.names          ~= nil and cfg.names          ~= names          then _G.toggle_names()           end
     if cfg.gadgets        ~= nil and cfg.gadgets        ~= gadgets        then _G.toggle_gadgets()         end
     if cfg.team_check     ~= nil and cfg.team_check     ~= team_check     then _G.toggle_team_check()      end
-    if cfg.no_recoil      ~= nil and cfg.no_recoil      ~= no_recoil      then _G.toggle_no_recoil()       end
-    if cfg.no_spread      ~= nil and cfg.no_spread      ~= no_spread      then _G.toggle_no_spread()       end
     if cfg.fullbright     ~= nil and cfg.fullbright     ~= fullbright     then _G.toggle_fullbright()      end
     if cfg.aim_assist     ~= nil and cfg.aim_assist     ~= aim_assist     then _G.toggle_aim_assist()      end
     if cfg.show_fov_circle ~= nil and cfg.show_fov_circle ~= show_fov_circle then _G.toggle_show_fov()    end
     if cfg.vis_check      ~= nil and cfg.vis_check      ~= vis_check      then _G.toggle_vis_check()       end
-    if cfg.silent_aim     ~= nil and cfg.silent_aim     ~= silent_aim     then _G.toggle_silent_aim()      end
-    if cfg.show_silent_fov ~= nil and cfg.show_silent_fov ~= show_silent_fov then _G.toggle_show_silent_fov() end
-    if cfg.run_and_shoot  ~= nil and cfg.run_and_shoot  ~= run_and_shoot  then _G.toggle_run_and_shoot()   end
     if cfg.chams          ~= nil and cfg.chams          ~= chams          then _G.toggle_chams()           end
     if cfg.fly_enabled    ~= nil and cfg.fly_enabled    ~= fly_enabled    then _G.toggle_fly()             end
     if cfg.jump_boost     ~= nil and cfg.jump_boost     ~= jump_boost     then _G.toggle_jump_boost()      end
@@ -615,18 +543,12 @@ _G.apply_config = function(cfg)
     -- Sliders
     if cfg.aim_fov       ~= nil then aim_fov       = cfg.aim_fov;       if _G.set_aim_fov       then _G.set_aim_fov(aim_fov)             end end
     if cfg.aim_speed     ~= nil then aim_speed     = cfg.aim_speed;     if _G.set_aim_speed     then _G.set_aim_speed(aim_speed)         end end
-    if cfg.silent_aim_fov ~= nil then silent_aim_fov = cfg.silent_aim_fov; if _G.set_silent_aim_fov then _G.set_silent_aim_fov(silent_aim_fov) end end
     if cfg.fly_speed     ~= nil then fly_speed     = cfg.fly_speed;     if _G.set_fly_speed     then _G.set_fly_speed(fly_speed)         end end
     if cfg.jump_power    ~= nil then jump_power    = cfg.jump_power;    if _G.set_jump_power    then _G.set_jump_power(jump_power)       end end
-    if cfg.silent_target_mode ~= nil and _G.set_silent_target_mode then _G.set_silent_target_mode(cfg.silent_target_mode) end
-    if cfg.recoil_vertical_pct   ~= nil and _G.set_recoil_vertical_pct   then _G.set_recoil_vertical_pct(cfg.recoil_vertical_pct)     end
-    if cfg.recoil_horizontal_pct ~= nil and _G.set_recoil_horizontal_pct then _G.set_recoil_horizontal_pct(cfg.recoil_horizontal_pct) end
 
     -- Keybinds
     local ak = str_to_enum(cfg.aim_key)
     if ak then aim_key  = ak; if _G.ui_set_aim_key  then _G.ui_set_aim_key(ak)   end end
-    local sak = str_to_enum(cfg.silent_aim_key)
-    if sak then silent_aim_key = sak; if _G.ui_set_silent_aim_key then _G.ui_set_silent_aim_key(sak) end end
     local mk = str_to_enum(cfg.menu_key)
     if mk then menu_key = mk; if _G.ui_set_menu_key then _G.ui_set_menu_key(mk)  end end
 
@@ -639,7 +561,6 @@ _G.apply_config = function(cfg)
     ac("color_skel_vis",   _G.set_color_skel_vis)
     ac("color_skel_hid",   _G.set_color_skel_hid)
     ac("color_fov",        _G.set_color_fov)
-    ac("color_silent_fov", _G.set_color_silent_fov)
     ac("color_chams",      _G.set_color_chams)
     ac("color_throwable",  _G.set_color_throwable)
     ac("color_placeable",  _G.set_color_placeable)
@@ -654,83 +575,12 @@ do
     env.gstack = env.gstack or (type(getstack) == "function" and getstack) or (env.dbg and env.dbg.getstack) or function() return 0 end
 end
 
-local function getDebugApi()
-    if type(dbg) == "table" then return dbg end
-    if type(debug) == "table" then return debug end
-    return nil
-end
-
 warn("[Mya] Runtime: dbg=" .. type(dbg) .. " dbg.info=" .. type(dbg and dbg.info) .. " sstack=" .. type(sstack) .. " gstack=" .. type(gstack) .. " hookfn=" .. type(hookfunction) .. " clonefn=" .. type(clonefunction) .. " newcc=" .. type(newcclosure))
-
--- Originals stored at outer scope so unload can restore them
-local _orig_TweenInfo_new  = nil
-local _orig_CFrame_new     = nil
-local _orig_state_get      = nil
-local _state_get_fn_ref    = nil
-
--- -------------------- Run And Shoot (StateObject.get hook) --------------------
-pcall(function()
-    if not StateObject or type(hookfunction) ~= "function" then return end
-    local state_get_fn = nil
-    local all = StateObject.get_all_global()
-    for _, obj in pairs(all) do
-        if type(obj) ~= "table" then continue end
-        if obj.owner and type(obj.owner) == "table" and type(obj.owner.get) == "function" then
-            state_get_fn = obj.owner.get; break
-        end
-        if type(obj.states) == "table" then
-            for _, s in pairs(obj.states) do
-                if type(s) == "table" and type(s.get) == "function" then
-                    state_get_fn = s.get; break
-                end
-            end
-        end
-        if state_get_fn then break end
-    end
-    if not state_get_fn then return end
-    _state_get_fn_ref = state_get_fn
-    _orig_state_get = clonefunction(state_get_fn)
-    local _ras_log = 0
-    hookfunction(state_get_fn, newcclosure(function(self, ...)
-        if run_and_shoot and not unloaded then
-            local val = _orig_state_get(self, ...)
-            if val == true then
-                local c2 = dbg.info(2, "n")
-                local c3 = dbg.info(3, "n")
-                local c4 = dbg.info(4, "n")
-                if _ras_log < 10 then
-                    _ras_log = _ras_log + 1
-                    warn("[Mya] StateGet=true L2=" .. tostring(c2) .. " L3=" .. tostring(c3) .. " L4=" .. tostring(c4))
-                end
-                if c2 == "input_shoot" or c2 == "input_render"
-                or c3 == "input_shoot" or c3 == "input_render"
-                or c4 == "input_shoot" or c4 == "input_render" then
-                    return false
-                end
-            end
-            return val
-        end
-        return _orig_state_get(self, ...)
-    end))
-    warn("[Mya] RunAndShoot OK")
-end)
 
 -- -------------------- Visibility check --------------------
 local vis_params = RaycastParams.new()
 vis_params.FilterType = Enum.RaycastFilterType.Exclude
 vis_params.RespectCanCollide = true
-
-
-local function is_silent_key_pressed()
-    if typeof(silent_aim_key) == "EnumItem" then
-        if silent_aim_key.EnumType == Enum.UserInputType then
-            return uis:IsMouseButtonPressed(silent_aim_key)
-        else
-            return uis:IsKeyDown(silent_aim_key)
-        end
-    end
-    return false
-end
 
 local function check_visibility(cam_pos, target_pos, target_char)
     local dir    = target_pos - cam_pos
@@ -751,257 +601,6 @@ local function check_visibility(cam_pos, target_pos, target_char)
         end
     end
     return false
-end
-
--- -------------------- No Recoil (Astro gun_modification.lua: stack scale + multi-level fallback) --------------------
-pcall(function()
-    local old_tweenInfo_new = clonefunction(TweenInfo.new)
-    _orig_TweenInfo_new = old_tweenInfo_new
-    hookfunction(TweenInfo.new, newcclosure(function(...)
-        if no_recoil and not unloaded then
-            local mv = recoil_vertical
-            local mh = recoil_horizontal
-            local function stack_name(level)
-                local api = getDebugApi()
-                local fn = api and api.info or dbg.info
-                if type(fn) ~= "function" then return false, nil end
-                return pcall(fn, level, "n")
-            end
-            local function apply_at_level(lvl)
-                local s5 = tonumber(gstack(lvl, 5)) or 0
-                local s6 = tonumber(gstack(lvl, 6)) or 0
-                pcall(sstack, lvl, 5, s5 * mv)
-                pcall(sstack, lvl, 6, s6 * mh)
-            end
-            local ok3, n3 = stack_name(3)
-            if ok3 and n3 == "recoil_function" then
-                apply_at_level(3)
-            else
-                for lvl = 2, 5 do
-                    local ok, name = stack_name(lvl)
-                    if ok and name == "recoil_function" then
-                        apply_at_level(lvl)
-                        break
-                    end
-                end
-            end
-        end
-        return old_tweenInfo_new(...)
-    end))
-    warn("[Mya] NoRecoil OK")
-end)
-
--- -------------------- Silent Aim + No Spread --------------------
--- Gun.send_shoot() builds the hitscan ray:
---   v283 = self:get_shoot_look()                              -- stack 3
---   v285 = CFrame.new(validate_pos(…)) * v283.Rotation        -- stack 5
---   then per pellet: direction = v285.LookVector*1000 + spread → workspace:Raycast
---
--- Hook chain (installed in order; each is skipped if the prior succeeded):
---  1. hookfunction(CFrame.new)   – rewrites v285 in send_shoot's stack
---  2. hookmetamethod(__namecall) – intercepts workspace:Raycast
---  3. camera.ScreenPointToRay    – legacy fallback
-
--- Resolve bone part even when skeleton ESP is off / skeleton_list not ready yet
-local function get_silent_bone_part(character, bone_name)
-    local skel = skeleton_list[character]
-    if skel and skel.bones[bone_name] then
-        return skel.bones[bone_name]
-    end
-    local p = character:FindFirstChild(bone_name)
-    if p and p:IsA("BasePart") then return p end
-    return nil
-end
-
--- ESP path (screen-center FOV); works without skeleton drawing toggles
-local function find_silent_target_esp()
-    local vp = camera.ViewportSize
-    local center = Vector2.new(vp.X / 2, vp.Y / 2)
-    local best_pos, best_dist = nil, math.huge
-    local fallback_pos, fallback_dist = nil, math.huge
-    local cam_pos = camera.CFrame.Position
-    for character, _ in pairs(esp_list) do
-        if not is_valid(character) or is_teammate(character) then continue end
-        local torso = character:FindFirstChild("torso")
-        if not torso or torso.Transparency >= 1 then continue end
-
-        local head_bone = get_silent_bone_part(character, "head")
-        if head_bone then
-            local hvp, hon = camera:WorldToViewportPoint(head_bone.Position)
-            if hon and hvp.Z > 0 then
-                local hd = (Vector2.new(hvp.X, hvp.Y) - center).Magnitude
-                if hd <= silent_aim_fov and hd < fallback_dist then
-                    fallback_dist = hd; fallback_pos = head_bone.Position
-                end
-            end
-        end
-
-        for _, bone_name in ipairs(aim_bone_priority) do
-            local bone = get_silent_bone_part(character, bone_name)
-            if not bone then continue end
-            local vp_pos, on_screen = camera:WorldToViewportPoint(bone.Position)
-            if not on_screen or vp_pos.Z <= 0 then continue end
-            local screen_dist = (Vector2.new(vp_pos.X, vp_pos.Y) - center).Magnitude
-            if screen_dist > silent_aim_fov then continue end
-            if check_visibility(cam_pos, bone.Position, character) then
-                if screen_dist < best_dist then best_dist = screen_dist; best_pos = bone.Position end
-                break
-            end
-        end
-    end
-    return best_pos or fallback_pos
-end
-
--- Port of Operation One/Astro silent_aim.lua: opponent viewmodels + mouse-centered FOV (pixels)
-local function find_silent_target_astro_viewmodels()
-    local cam = workspace.CurrentCamera
-    if not cam then return nil end
-    local mousePos
-    if uis.TouchEnabled and not uis.MouseEnabled then
-        local vp = cam.ViewportSize
-        mousePos = Vector2.new(vp.X * 0.5, vp.Y * 0.5)
-    else
-        local pos = uis:GetMouseLocation()
-        mousePos = Vector2.new(pos.X, pos.Y)
-    end
-    local fovSq = silent_aim_fov * silent_aim_fov
-    local folder = workspace:FindFirstChild("Viewmodels")
-    if not folder then return nil end
-    local closestPart = nil
-    local closestDistSq = math.huge
-    for _, vm in ipairs(folder:GetChildren()) do
-        if vm.Name == "Viewmodel" then
-            local torso = vm:FindFirstChild("torso")
-            if torso and torso.Transparency == 1 then continue end
-            for _, partName in ipairs(ASTRO_SILENT_PARTS) do
-                local part = vm:FindFirstChild(partName)
-                if part and part:IsA("BasePart") then
-                    local screenPos, onScreen = cam:WorldToViewportPoint(part.Position)
-                    if onScreen then
-                        local dx = screenPos.X - mousePos.X
-                        local dy = screenPos.Y - mousePos.Y
-                        local distSq = dx * dx + dy * dy
-                        if distSq <= fovSq and distSq < closestDistSq then
-                            closestDistSq = distSq
-                            closestPart = part
-                        end
-                    end
-                end
-            end
-        end
-    end
-    return closestPart and closestPart.Position or nil
-end
-
-local function find_silent_target_world()
-    if silent_target_mode == "viewmodels" then
-        return find_silent_target_astro_viewmodels()
-    elseif silent_target_mode == "hybrid" then
-        return find_silent_target_esp() or find_silent_target_astro_viewmodels()
-    end
-    return find_silent_target_esp()
-end
-
-local old_sptr        = camera.ScreenPointToRay
-local old_namecall    = nil
-local namecall_hooked = false
-local cframe_hooked   = false
-local _last_silent_dir = nil
-local _silent_target_cache = nil
-
-connections[#connections+1] = runservice.RenderStepped:Connect(function()
-    -- Cache for Raycast no-spread; update whenever silent aim is on (do not require silent key — LMB fire would leave cache nil)
-    if silent_aim and not unloaded then
-        local ok, pos = pcall(find_silent_target_world)
-        _silent_target_cache = ok and pos or nil
-    else
-        _silent_target_cache = nil
-    end
-end)
-
--- === Hook 1: hookfunction(CFrame.new) – silent aim (same direct globals as NoRecoil) ===
-pcall(function()
-    local oldCF = clonefunction(CFrame.new)
-    _orig_CFrame_new = oldCF
-
-    hookfunction(CFrame.new, newcclosure(function(...)
-        if not silent_aim or unloaded then
-            return oldCF(...)
-        end
-
-        for lvl = 2, 5 do
-            local ok, name = pcall(dbg.info, lvl, "n")
-            if ok and name == "send_shoot" then
-                -- Resolve at hook time (send_shoot); cache alone can be nil/stale (e.g. key-gated frames)
-                local target_pos = _silent_target_cache
-                if not target_pos then
-                    local okf, p = pcall(find_silent_target_world)
-                    target_pos = okf and p or nil
-                end
-                if target_pos then
-                    local origin = gstack(lvl, 3)
-                    if origin and typeof(origin) == "CFrame" then
-                        local aimCf = CFrame.lookAt(origin.Position, target_pos)
-                        pcall(sstack, lvl, 5, aimCf)
-                        _last_silent_dir = aimCf.LookVector
-                    end
-                end
-                break
-            end
-        end
-
-        return oldCF(...)
-    end))
-    cframe_hooked = true
-    warn("[Mya] SilentAim CFrame OK")
-end)
-
--- === Hook 2: __namecall on workspace:Raycast – no-spread ===
-pcall(function()
-    if type(hookmetamethod) ~= "function" then warn("[Mya] NoSpread SKIPPED: hookmetamethod unavailable") return end
-    local closure = newcclosure or function(fn) return fn end
-    old_namecall = hookmetamethod(game, "__namecall", closure(function(self, ...)
-        local method = getnamecallmethod()
-        if method == "Raycast" and self == workspace and not unloaded then
-            local origin, direction, params = ...
-            if typeof(origin) == "Vector3" and typeof(direction) == "Vector3" then
-                local dir_mag = direction.Magnitude
-                if dir_mag > 800 and params ~= vis_params then
-                    local cam_pos = camera.CFrame.Position
-                    if (origin - cam_pos).Magnitude < 10 then
-                        if silent_aim and _silent_target_cache then
-                            local straight = (_silent_target_cache - origin).Unit * dir_mag
-                            return old_namecall(self, origin, straight, params)
-                        end
-                        if no_spread then
-                            local straight = camera.CFrame.LookVector * dir_mag
-                            return old_namecall(self, origin, straight, params)
-                        end
-                    end
-                end
-            end
-        end
-        return old_namecall(self, ...)
-    end))
-    namecall_hooked = true
-    warn("[Mya] NoSpread namecall OK")
-end)
-
--- === Hook 3 (last resort): camera.ScreenPointToRay ===
-if not cframe_hooked and not namecall_hooked then
-    pcall(function()
-        camera.ScreenPointToRay = function(self, x, y, depth)
-            if silent_aim and is_silent_key_pressed() then
-                local target = find_silent_target_world()
-                if target then
-                    local cam_origin = camera.CFrame.Position
-                    local dir = (target - cam_origin).Unit
-                    return Ray.new(cam_origin, dir * (depth or 1000))
-                end
-            end
-            return old_sptr(self, x, y, depth or 0)
-        end
-    end)
 end
 
 -- ==================== MOVEMENT SYSTEMS ====================
@@ -1108,32 +707,17 @@ _G.MYA_OP1_RUN_UI_SYNC = function()
 		if _G.set_names then _G.set_names(names) end
 		if _G.set_gadgets then _G.set_gadgets(gadgets) end
 		if _G.set_team_check then _G.set_team_check(team_check) end
-		if _G.set_no_recoil then _G.set_no_recoil(no_recoil) end
-		if _G.set_no_spread then _G.set_no_spread(no_spread) end
 		if _G.set_fullbright then _G.set_fullbright(fullbright) end
 		if _G.set_aim_assist then _G.set_aim_assist(aim_assist) end
 		if _G.set_show_fov then _G.set_show_fov(show_fov_circle) end
 		if _G.set_aim_fov then _G.set_aim_fov(aim_fov) end
 		if _G.set_aim_speed then _G.set_aim_speed(aim_speed) end
 		if _G.set_vis_check then _G.set_vis_check(vis_check) end
-		if _G.set_silent_aim then _G.set_silent_aim(silent_aim) end
-		if _G.set_show_silent_fov then _G.set_show_silent_fov(show_silent_fov) end
-		if _G.set_silent_aim_fov then _G.set_silent_aim_fov(silent_aim_fov) end
-		if _G.set_run_and_shoot then _G.set_run_and_shoot(run_and_shoot) end
 		if _G.set_chams then _G.set_chams(chams) end
 		if _G.set_fly then _G.set_fly(fly_enabled) end
 		if _G.set_jump_boost then _G.set_jump_boost(jump_boost) end
 		if _G.set_fly_speed then _G.set_fly_speed(fly_speed) end
 		if _G.set_jump_power then _G.set_jump_power(jump_power) end
-		if _G.sync_recoil_sliders_from_state then
-			_G.sync_recoil_sliders_from_state(
-				math.floor(recoil_vertical * 100 + 0.5),
-				math.floor(recoil_horizontal * 100 + 0.5)
-			)
-		end
-		if _G.set_silent_target_mode_ui and _G.get_silent_target_mode then
-			_G.set_silent_target_mode_ui(_G.get_silent_target_mode())
-		end
 	end)
 end
 
@@ -1181,21 +765,6 @@ connections[#connections+1] = runservice.RenderStepped:Connect(function()
         fov_circle.Visible  = true
     else
         fov_circle.Visible = false
-    end
-
-    if show_silent_fov then
-        local vp = camera.ViewportSize
-        if silent_target_mode == "esp" then
-            silent_fov_circle.Position = Vector2.new(vp.X / 2, vp.Y / 2)
-        else
-            local m = uis:GetMouseLocation()
-            silent_fov_circle.Position = Vector2.new(m.X, m.Y)
-        end
-        silent_fov_circle.Radius  = silent_aim_fov
-        silent_fov_circle.Color   = color_silent_fov
-        silent_fov_circle.Visible = true
-    else
-        silent_fov_circle.Visible = false
     end
 
     -- -- Aim Assist --
@@ -1301,7 +870,7 @@ connections[#connections+1] = runservice.RenderStepped:Connect(function()
 
         update_chams(character)
 
-        if not skeleton_list[character] and (silent_aim or aim_assist) then
+        if not skeleton_list[character] and aim_assist then
             create_skeleton(character)
         end
 
@@ -1505,30 +1074,12 @@ end)
 -- -------------------- Unload --------------------
 _G.unload_mya = function()
     unloaded = true
-    silent_aim = false
-    no_recoil  = false
-    no_spread  = false
-    pcall(function() camera.ScreenPointToRay = old_sptr end)
-    if _orig_state_get and _state_get_fn_ref and type(hookfunction) == "function" then
-        pcall(function() hookfunction(_state_get_fn_ref, _orig_state_get) end)
-    end
-    if _orig_TweenInfo_new and type(hookfunction) == "function" then
-        pcall(function() hookfunction(TweenInfo.new, _orig_TweenInfo_new) end)
-    end
-    if _orig_CFrame_new and type(hookfunction) == "function" then
-        pcall(function() hookfunction(CFrame.new, _orig_CFrame_new) end)
-    end
-    if namecall_hooked then
-        pcall(function()
-            if type(restoremetamethod) == "function" then restoremetamethod(game, "__namecall") end
-        end)
-    end
     stop_fly()
     fly_enabled = false
     jump_boost = false
     for _, conn in ipairs(connections) do if conn and conn.Connected then conn:Disconnect() end end
     connections = {}
-    fov_circle:Remove(); silent_fov_circle:Remove()
+    fov_circle:Remove()
     for character, data in pairs(esp_list) do
         remove_drawings(character); remove_skeleton(character); remove_chams(character)
         if data.folder then data.folder:Destroy() end
@@ -1541,22 +1092,19 @@ _G.unload_mya = function()
     if _G.user_interface then _G.user_interface:Destroy() end
     for _, k in ipairs({
         "toggle_boxes","toggle_skeletons","toggle_tracers","toggle_healthbars","toggle_names",
-        "toggle_gadgets","toggle_no_recoil","toggle_no_spread","toggle_fullbright","toggle_aim_assist","toggle_show_fov",
-        "toggle_vis_check","toggle_silent_aim","toggle_show_silent_fov","toggle_run_and_shoot","toggle_chams","toggle_team_check",
+        "toggle_gadgets","toggle_fullbright","toggle_aim_assist","toggle_show_fov",
+        "toggle_vis_check","toggle_chams","toggle_team_check",
         "toggle_fly","toggle_jump_boost",
         "set_boxes","set_skeletons","set_tracers","set_healthbars","set_names","set_gadgets","set_team_check",
-        "set_no_recoil","set_no_spread","set_fullbright","set_aim_assist","set_show_fov","set_vis_check",
-        "set_silent_aim","set_show_silent_fov","set_run_and_shoot","set_chams",
+        "set_fullbright","set_aim_assist","set_show_fov","set_vis_check",
+        "set_chams",
         "set_fly","set_jump_boost",
         "set_aim_fov","set_aim_speed","set_aim_fov_value","set_aim_speed_value","set_aim_key_value",
-        "set_silent_aim_fov","set_silent_aim_fov_value","set_silent_aim_key_value",
-        "set_recoil_vertical_pct","set_recoil_horizontal_pct","set_silent_target_mode","cycle_silent_target_mode",
-        "set_silent_target_mode_ui","get_silent_target_mode","sync_recoil_sliders_from_state",
         "set_fly_speed","set_fly_speed_value","set_jump_power","set_jump_power_value",
         "set_color_tracer","set_color_box","set_color_skel_vis","set_color_skel_hid",
-        "set_color_fov","set_color_silent_fov","set_color_chams","set_color_throwable","set_color_placeable",
+        "set_color_fov","set_color_chams","set_color_throwable","set_color_placeable",
         "get_config","apply_config","new_menu_key","user_interface","unload_mya",
-        "ui_set_aim_key","ui_set_silent_aim_key","ui_set_menu_key",
+        "ui_set_aim_key","ui_set_menu_key",
     }) do _G[k] = nil end
 end
 

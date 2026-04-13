@@ -226,7 +226,7 @@ hdr_sq.Parent = header
 
 local title_lbl = Instance.new("TextLabel")
 title_lbl.Font = Enum.Font.GothamBold
-title_lbl.Text = "OPERATION ONE"
+title_lbl.Text = "OPERATION ONE | Mya"
 title_lbl.TextColor3 = C.text
 title_lbl.TextSize = 15
 title_lbl.BackgroundTransparency = 1
@@ -266,7 +266,7 @@ content.ClipsDescendants=true; content.Parent=main
 
 -- -------------------- Sub-page infrastructure --------------------
 local SUB_PAGES = {
-    Combat   = { "Aim Assist", "Silent Aim", "Weapons" },
+    Combat   = { "Aim Assist" },
     Movement = { "Fly", "Jump Boost" },
     Visuals  = { "Player ESP", "Gadgets", "World" },
 }
@@ -803,72 +803,12 @@ local aim_speed_set = make_slider(pg, "Smoothness",  6,  0, 100,  25, "%d %%",
 local aim_key_btn, aim_key_update = make_keybind(pg, "Aim Key", 7, Enum.UserInputType.MouseButton2,
     function(k) if _G.set_aim_key_value then _G.set_aim_key_value(k) end end)
 
--- ---- Combat > Silent Aim ----
-pg = all_sub_pages["Combat"]["Silent Aim"]
-section_label(pg, "Silent Aim", 1)
-make_toggle(pg, "Silent Aim",       2,  "toggle_silent_aim")
-local upd_col_sfov = make_toggle_with_color(pg, "Show Silent FOV", 3, "toggle_show_silent_fov", Color3.fromRGB(230, 120, 175),
-    function(c) if _G.set_color_silent_fov then _G.set_color_silent_fov(c) end end)
-
-local silent_fov_set = make_slider(pg, "Silent FOV Radius", 4, 10, 300, 80, "%d px",
-    function(v) if _G.set_silent_aim_fov_value then _G.set_silent_aim_fov_value(v) end end)
-
-local silent_aim_key_btn, silent_aim_key_update = make_keybind(pg, "Silent Aim Key", 5, Enum.UserInputType.MouseButton2,
-    function(k) if _G.set_silent_aim_key_value then _G.set_silent_aim_key_value(k) end end)
-
-section_label(pg, "Targeting", 6)
-local tgt_row = make_row(pg, 7)
-local tgt_lbl = Instance.new("TextLabel")
-tgt_lbl.Font = Enum.Font.Gotham; tgt_lbl.Text = "Silent target mode"; tgt_lbl.TextColor3 = C.text; tgt_lbl.TextSize = 13
-tgt_lbl.BackgroundTransparency = 1; tgt_lbl.Position = UDim2.fromOffset(14, 0); tgt_lbl.Size = UDim2.new(0.55, 0, 1, 0)
-tgt_lbl.TextXAlignment = Enum.TextXAlignment.Left; tgt_lbl.Parent = tgt_row
-local function silent_mode_label(m)
-    if m == "esp" then return "ESP (bones)" end
-    if m == "viewmodels" then return "Viewmodels (mouse)" end
-    return "Hybrid"
-end
-local tgt_mode_btn = Instance.new("TextButton")
-tgt_mode_btn.Font = Enum.Font.GothamSemibold; tgt_mode_btn.TextSize = 11; tgt_mode_btn.TextColor3 = C.text
-tgt_mode_btn.BackgroundColor3 = C.input_bg; tgt_mode_btn.BorderSizePixel = 0
-tgt_mode_btn.Position = UDim2.new(0.56, 0, 0.5, -10); tgt_mode_btn.Size = UDim2.new(0.4, -14, 0, 22)
-tgt_mode_btn.AutoButtonColor = false; tgt_mode_btn.Parent = tgt_row
-Instance.new("UICorner", tgt_mode_btn).CornerRadius = UDim.new(0, 4)
-tgt_mode_btn.MouseButton1Click:Connect(function()
-    if _G.cycle_silent_target_mode then _G.cycle_silent_target_mode() end
-end)
-_G.set_silent_target_mode_ui = function(m)
-    tgt_mode_btn.Text = silent_mode_label(m)
-end
-if _G.get_silent_target_mode then
-    tgt_mode_btn.Text = silent_mode_label(_G.get_silent_target_mode())
-end
-
--- ---- Combat > Weapons ----
-pg = all_sub_pages["Combat"]["Weapons"]
-section_label(pg, "Weapons", 1)
-make_toggle(pg, "No Recoil",        2,  "toggle_no_recoil")
-make_toggle(pg, "No Spread",        3,  "toggle_no_spread")
-make_toggle(pg, "Run And Shoot",    4,  "toggle_run_and_shoot")
-
-local recoil_v_set = make_slider(pg, "Recoil vertical %", 5, 0, 100, 0, "%d %%",
-    function(v) if _G.set_recoil_vertical_pct then _G.set_recoil_vertical_pct(v) end end)
-local recoil_h_set = make_slider(pg, "Recoil horizontal %", 6, 0, 100, 0, "%d %%",
-    function(v) if _G.set_recoil_horizontal_pct then _G.set_recoil_horizontal_pct(v) end end)
-
-_G.sync_recoil_sliders_from_state = function(v_pct, h_pct)
-    if v_pct ~= nil then recoil_v_set(tonumber(v_pct) or 0) end
-    if h_pct ~= nil then recoil_h_set(tonumber(h_pct) or 0) end
-end
-
-
 -- Expose slider updaters for config load
 _G.set_aim_fov   = function(v) aim_fov_set(v)        end
 _G.set_aim_speed = function(v) aim_speed_set(v*100)   end
-_G.set_silent_aim_fov = function(v) silent_fov_set(v) end
 
 -- Keybind updaters for config load
 _G.ui_set_aim_key = function(k) aim_key_update(k) end
-_G.ui_set_silent_aim_key = function(k) silent_aim_key_update(k) end
 
 
 -- ================================================================
@@ -960,22 +900,14 @@ cfg_page.Visible=true; cfg_page.Parent=tab_containers["Configs"]
 local function sync_ui_from_config(cfg)
     if cfg.aim_fov ~= nil        and _G.set_aim_fov        then _G.set_aim_fov(cfg.aim_fov)               end
     if cfg.aim_speed ~= nil      and _G.set_aim_speed      then _G.set_aim_speed(cfg.aim_speed)           end
-    if cfg.silent_aim_fov ~= nil and _G.set_silent_aim_fov then _G.set_silent_aim_fov(cfg.silent_aim_fov) end
     if cfg.fly_speed      ~= nil and _G.set_fly_speed      then _G.set_fly_speed(cfg.fly_speed)           end
     if cfg.jump_power     ~= nil and _G.set_jump_power     then _G.set_jump_power(cfg.jump_power)         end
-    if cfg.silent_target_mode ~= nil and _G.set_silent_target_mode then _G.set_silent_target_mode(cfg.silent_target_mode) end
-    if cfg.recoil_vertical_pct   ~= nil or cfg.recoil_horizontal_pct ~= nil then
-        if _G.sync_recoil_sliders_from_state then
-            _G.sync_recoil_sliders_from_state(cfg.recoil_vertical_pct, cfg.recoil_horizontal_pct)
-        end
-    end
     local function str_to_enum_local(s)
         if not s then return nil end
         local et,en=s:match("^(.+)%.(.+)$"); if not et then return nil end
         local ok,r=pcall(function() return Enum[et][en] end); return ok and r or nil
     end
     local ak=str_to_enum_local(cfg.aim_key);  if ak then aim_key_update(ak)  end
-    local sak=str_to_enum_local(cfg.silent_aim_key); if sak then silent_aim_key_update(sak) end
     local mk=str_to_enum_local(cfg.menu_key); if mk then menu_key_update(mk) end
     local function tc(t) if not t then return nil end return Color3.new(t.r or 1,t.g or 1,t.b or 1) end
     local c_box   =tc(cfg.color_box);        if c_box      then upd_col_box(c_box)           end
@@ -984,7 +916,6 @@ local function sync_ui_from_config(cfg)
     local c_sh    =tc(cfg.color_skel_hid);   if c_sh       then upd_col_skel_hid(c_sh)        end
     local c_ch    =tc(cfg.color_chams);      if c_ch       then upd_col_chams(c_ch)           end
     local c_fov   =tc(cfg.color_fov);        if c_fov      then upd_col_fov(c_fov)            end
-    local c_sfov  =tc(cfg.color_silent_fov); if c_sfov     then upd_col_sfov(c_sfov)          end
     local c_th    =tc(cfg.color_throwable);  if c_th       then upd_col_throw(c_th)           end
     local c_pl    =tc(cfg.color_placeable);  if c_pl       then upd_col_place(c_pl)           end
 end
