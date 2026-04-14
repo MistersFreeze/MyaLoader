@@ -98,6 +98,11 @@ local current_tempo = 500000
 local current_time = 0
 local last_tick = 0
 local sustain = false
+-- Space is also "leave seat" / jump while sitting; MIDI sustain used Space and kicked players off pianos.
+local pedal_uses_space = false
+local function sustain_pedal_key()
+	return pedal_uses_space and Enum.KeyCode.Space or Enum.KeyCode.LeftAlt
+end
 local key88_enabled = true
 local auto_sustain_enabled = true
 local no_note_off_enabled = false
@@ -456,7 +461,7 @@ local function release_all_keys()
         shift = false 
     end
     if sustain then
-        vim:SendKeyEvent(false, Enum.KeyCode.Space, false, game)
+        vim:SendKeyEvent(false, sustain_pedal_key(), false, game)
         sustain = false
     end
     active_notes = {}
@@ -515,15 +520,16 @@ local function play_realtime_events()
                 end
             elseif ev.type == "control" then
                 local s = ev.vel >= 64
+                local pk = sustain_pedal_key()
                 if auto_sustain_enabled then
-                    if s ~= sustain then 
-                        vim:SendKeyEvent(s, Enum.KeyCode.Space, false, game)
-                        sustain = s 
+                    if s ~= sustain then
+                        vim:SendKeyEvent(s, pk, false, game)
+                        sustain = s
                     end
                 else
-                    if not sustain then 
-                        vim:SendKeyEvent(true, Enum.KeyCode.Space, false, game)
-                        sustain = true 
+                    if not sustain then
+                        vim:SendKeyEvent(true, pk, false, game)
+                        sustain = true
                     end
                 end
             end
@@ -961,8 +967,13 @@ local function movement_init()
 end
 
 -- ——— Targeting (spy camera / TP) ———
-local spy_cam_conn = nil
+local SPY_RS_NAME = "MyaNeighborsSpyCam"
+local spy_input_conn = nil
 local spy_target_player = nil
+local spy_yaw = 0
+local spy_pitch = 0
+local spy_dist = 18
+local spy_sens = 0.0025
 
 local function resolve_target_query(q)
 	if typeof(q) ~= "string" then
@@ -986,11 +997,14 @@ local function resolve_target_query(q)
 end
 
 local function stop_spy_camera()
-	if spy_cam_conn then
+	pcall(function()
+		run_service:UnbindFromRenderStep(SPY_RS_NAME)
+	end)
+	if spy_input_conn then
 		pcall(function()
-			spy_cam_conn:Disconnect()
+			spy_input_conn:Disconnect()
 		end)
-		spy_cam_conn = nil
+		spy_input_conn = nil
 	end
 	spy_target_player = nil
 	local cam = workspace.CurrentCamera
@@ -1003,7 +1017,8 @@ local function stop_spy_camera()
 	end
 end
 
--- Third-person follow behind target (Scriptable). CameraSubject alone is often overridden by the game.
+-- Orbit + free look (Scriptable). CameraSubject stays LOCAL humanoid so aim/hitbox stay consistent.
+-- Raycast ignores the target's character so their mesh does not block the view.
 local function start_spy_camera(target)
 	if not target or target == player then
 		return false, "Pick another player"
@@ -1021,12 +1036,35 @@ local function start_spy_camera(target)
 	if not cam then
 		return false, "No camera"
 	end
+	local localHum = get_local_humanoid()
+	if localHum then
+		cam.CameraSubject = localHum
+	end
 	spy_target_player = target
+	spy_dist = 18
+	local back = -hrp.CFrame.LookVector
+	local dir0 = back.Unit
+	spy_yaw = math.atan2(dir0.X, dir0.Z)
+	spy_pitch = math.asin(_math.clamp(dir0.Y, -0.999, 0.999))
+
 	cam.CameraType = Enum.CameraType.Scriptable
-	local dist = 14
-	local height = 4
-	local side = 2.5
-	spy_cam_conn = run_service.RenderStepped:Connect(function()
+
+	spy_input_conn = uis.InputChanged:Connect(function(input, gameProcessed)
+		if gameProcessed or not spy_target_player then
+			return
+		end
+		if input.UserInputType == Enum.UserInputType.MouseMovement then
+			local d = input.Delta
+			spy_yaw = spy_yaw - d.X * spy_sens
+			spy_pitch = spy_pitch - d.Y * spy_sens
+			local pitchMax = math.rad(89)
+			spy_pitch = _math.clamp(spy_pitch, -pitchMax, pitchMax)
+		elseif input.UserInputType == Enum.UserInputType.MouseWheel then
+			spy_dist = _math.clamp(spy_dist - input.Position.Z * 2.5, 4, 90)
+		end
+	end)
+
+	run_service:BindToRenderStep(SPY_RS_NAME, Enum.RenderPriority.Camera.Value, function()
 		if not spy_target_player or not spy_target_player.Parent then
 			stop_spy_camera()
 			return
@@ -1041,11 +1079,33 @@ local function start_spy_camera(target)
 			stop_spy_camera()
 			return
 		end
-		local lookAt = h.Position + Vector3.new(0, 1.5, 0)
-		local back = -h.CFrame.LookVector
-		local right = h.CFrame.RightVector
-		local camPos = lookAt + back * dist + Vector3.new(0, height, 0) + right * side
-		cam.CFrame = CFrame.lookAt(camPos, lookAt)
+		local focus = h.Position + Vector3.new(0, 1.5, 0)
+		local cp = math.cos(spy_pitch)
+		local dir = Vector3.new(cp * math.sin(spy_yaw), math.sin(spy_pitch), cp * math.cos(spy_yaw))
+		local wantPos = focus - dir * spy_dist
+
+		local rp = RaycastParams.new()
+		rp.FilterType = Enum.RaycastFilterType.Blacklist
+		local ignore = { ch }
+		if player.Character then
+			table.insert(ignore, player.Character)
+		end
+		rp.FilterDescendantsInstances = ignore
+		rp.IgnoreWater = true
+		local seg = wantPos - focus
+		local segLen = seg.Magnitude
+		if segLen > 0.05 then
+			local hit = workspace:Raycast(focus, seg, rp)
+			if hit then
+				local safe = hit.Distance - 0.75
+				if safe < 1 then
+					safe = 1
+				end
+				wantPos = focus - dir * _math.min(safe, spy_dist)
+			end
+		end
+
+		cam.CFrame = CFrame.lookAt(wantPos, focus)
 	end)
 	return true
 end
@@ -1156,6 +1216,18 @@ _G.MYA_NEIGHBORS_PIANO = {
 	end,
 	set_auto_sustain = function(v)
 		auto_sustain_enabled = v
+	end,
+	get_pedal_uses_space = function()
+		return pedal_uses_space
+	end,
+	set_pedal_uses_space = function(v)
+		v = not not v
+		if pedal_uses_space ~= v and sustain then
+			local old_key = pedal_uses_space and Enum.KeyCode.Space or Enum.KeyCode.LeftAlt
+			vim:SendKeyEvent(false, old_key, false, game)
+			sustain = false
+		end
+		pedal_uses_space = v
 	end,
 	get_key88 = function()
 		return key88_enabled

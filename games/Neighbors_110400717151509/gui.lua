@@ -734,16 +734,20 @@ end)
 make_toggle_row(settings_page, "Auto sustain", 4, P.get_auto_sustain(), function(v)
 	P.set_auto_sustain(v)
 end)
-make_toggle_row(settings_page, "88 keys (ctrl rows)", 5, P.get_key88(), function(v)
+make_toggle_row(settings_page, "Pedal uses Space (may unseat)", 5, P.get_pedal_uses_space(), function(v)
+	P.set_pedal_uses_space(v)
+	notify("Mya", v and "Sustain → Space" or "Sustain → Left Alt (stay seated)", 2)
+end)
+make_toggle_row(settings_page, "88 keys (ctrl rows)", 6, P.get_key88(), function(v)
 	P.set_key88(v)
 end)
-make_toggle_row(settings_page, "Force note-off", 6, P.get_force_note_off(), function(v)
+make_toggle_row(settings_page, "Force note-off", 7, P.get_force_note_off(), function(v)
 	P.set_force_note_off(v)
 	if v then
 		P.release_all_keys()
 	end
 end)
-make_toggle_row(settings_page, "Humanize timing", 7, P.get_human_player(), function(v)
+make_toggle_row(settings_page, "Humanize timing", 8, P.get_human_player(), function(v)
 	P.set_human_player(v)
 end)
 
@@ -779,14 +783,14 @@ local function resolve_visual_target()
 	return P.resolve_target_query(target_name_box.Text)
 end
 
-row_button(visuals_page, 6, "Spy camera (follow)", function()
+row_button(visuals_page, 6, "Spy camera (orbit)", function()
 	local t = resolve_visual_target()
 	if not t then
 		notify("Mya", "Player not found", 2)
 		return
 	end
 	local ok, err = P.start_spy_camera(t)
-	notify("Mya", ok and "Spying " .. t.Name or (err or "Failed"), 2)
+	notify("Mya", ok and ("Spying " .. t.Name .. " · mouse look · wheel zoom") or (err or "Failed"), 2)
 end)
 row_button(visuals_page, 7, "Teleport to", function()
 	local t = resolve_visual_target()
