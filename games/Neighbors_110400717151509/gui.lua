@@ -1,5 +1,5 @@
 --[[
-    Mya · Neighbors — Piano UI (Operation One layout: pink accent, gethui, tabs)
+    Mya · Neighbors — MIDI player UI (Operation One layout: pink accent, gethui, tabs)
 ]]
 local gethui_support = gethui ~= nil
 local cloneref_fn = type(cloneref) == "function" and cloneref or function(x)
@@ -149,7 +149,7 @@ hdr_sq.Parent = header
 
 local title_lbl = Instance.new("TextLabel")
 title_lbl.Font = Enum.Font.GothamBold
-title_lbl.Text = "NEIGHBORS · Mya · Piano"
+title_lbl.Text = "NEIGHBORS · Mya"
 title_lbl.TextColor3 = C.text
 title_lbl.TextSize = 14
 title_lbl.BackgroundTransparency = 1
@@ -188,7 +188,8 @@ local function make_page()
 	page.AutomaticCanvasSize = Enum.AutomaticSize.Y
 	page.ScrollBarThickness = 3
 	page.ScrollBarImageColor3 = C.accent
-	page.Visible = false
+	page.ScrollingDirection = Enum.ScrollingDirection.Y
+	page.Visible = true
 	page.Parent = content
 	local ul = Instance.new("UIListLayout")
 	ul.SortOrder = Enum.SortOrder.LayoutOrder
@@ -244,6 +245,7 @@ local settings_page = make_page()
 settings_page.Parent = tab_containers["Settings"]
 local misc_page = make_page()
 misc_page.Parent = tab_containers["Misc"]
+-- Tab visibility is toggled on the container Frame; each ScrollingFrame stays Visible = true so content shows.
 
 local function section_label(parent, text, order)
 	local lbl = Instance.new("TextLabel")
@@ -476,7 +478,7 @@ row_button(main_page, 5, "Load (URL or file)", function()
 				end)
 			else
 				status_lbl.Text = "Download failed"
-				notify("Piano", "HttpGet failed", 3)
+				notify("Mya", "HttpGet failed", 3)
 			end
 		end)
 	else
@@ -500,7 +502,7 @@ row_button(main_page, 6, "Refresh MIDI list (see workspace)", function()
 	P.list_midi_files()
 	local files = P.get_midi_files()
 	status_lbl.Text = (#files > 0) and ("Found " .. #files .. " .mid in ./MIDIow") or "No .mid in ./MIDIow"
-	notify("Piano", status_lbl.Text, 2)
+	notify("Mya", status_lbl.Text, 2)
 end)
 
 row_button(main_page, 7, "Play", function()
@@ -580,7 +582,7 @@ P.set_on_midi_loaded(function(total, nEvents)
 	played_slider_set(0)
 	speed_slider_set(P.get_playback_speed_percent())
 	status_lbl.Text = string.format("Loaded %d events · %.2fs", nEvents, total)
-	notify("Piano", "MIDI ready", 2)
+	notify("Mya", "MIDI ready", 2)
 end)
 
 P.register_sliders(function(elapsed)
@@ -596,7 +598,7 @@ end)
 section_label(settings_page, "Playback", 1)
 make_toggle_row(settings_page, "DeBlack", 2, P.get_deblack_enabled(), function(v)
 	P.set_deblack_enabled(v)
-	notify("Piano", v and "DeBlack on" or "DeBlack off", 2)
+	notify("Mya", v and "DeBlack on" or "DeBlack off", 2)
 end)
 make_slider(settings_page, "DeBlack level", 3, 0, 127, P.get_deblack_level(), "%d", function(v)
 	P.set_deblack_level(math.floor(v))
@@ -619,7 +621,7 @@ end)
 
 -- ——— Misc ———
 section_label(misc_page, "Script", 1)
-row_button(misc_page, 2, "Unload (destroy UI + piano)", function()
+row_button(misc_page, 2, "Unload (UI + MIDI engine)", function()
 	if _G.unload_mya then
 		pcall(_G.unload_mya)
 	end
@@ -675,4 +677,4 @@ _G.user_interface = ui
 _G.mya_neighbors_notif_ui = notif_ui
 
 switch_tab("Main")
-notify("Mya", "Neighbors · Piano · Insert to hide", 4)
+notify("Mya", "Neighbors · Insert to hide menu", 4)

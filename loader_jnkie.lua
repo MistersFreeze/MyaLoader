@@ -151,7 +151,7 @@ local function showKeyGate()
 	root.AnchorPoint = Vector2.new(0.5, 0.5)
 	root.Position = UDim2.fromScale(0.5, 0.5)
 	root.Size = UDim2.fromOffset(400, 220)
-	root.BackgroundColor3 = Color3.fromRGB(26, 27, 38)
+	root.BackgroundColor3 = Color3.fromRGB(28, 18, 26)
 	root.Parent = gui
 
 	local c = Instance.new("UICorner")
@@ -159,7 +159,7 @@ local function showKeyGate()
 	c.Parent = root
 
 	local stroke = Instance.new("UIStroke")
-	stroke.Color = Color3.fromRGB(58, 62, 78)
+	stroke.Color = Color3.fromRGB(200, 100, 140)
 	stroke.Parent = root
 
 	local pad = Instance.new("UIPadding")
@@ -174,7 +174,7 @@ local function showKeyGate()
 	title.Size = UDim2.new(1, 0, 0, 28)
 	title.Font = Enum.Font.GothamBold
 	title.TextSize = 18
-	title.TextColor3 = Color3.fromRGB(230, 232, 242)
+	title.TextColor3 = Color3.fromRGB(255, 228, 238)
 	title.TextXAlignment = Enum.TextXAlignment.Left
 	title.Text = "Mya · Enter key"
 	title.Parent = root
@@ -185,7 +185,7 @@ local function showKeyGate()
 	hint.Size = UDim2.new(1, 0, 0, 36)
 	hint.Font = Enum.Font.GothamMedium
 	hint.TextSize = 13
-	hint.TextColor3 = Color3.fromRGB(150, 156, 178)
+	hint.TextColor3 = Color3.fromRGB(200, 160, 182)
 	hint.TextWrapped = true
 	hint.TextXAlignment = Enum.TextXAlignment.Left
 	hint.TextYAlignment = Enum.TextYAlignment.Top
@@ -196,14 +196,14 @@ local function showKeyGate()
 	box.Name = "KeyBox"
 	box.Position = UDim2.new(0, 0, 0, 78)
 	box.Size = UDim2.new(1, 0, 0, 40)
-	box.BackgroundColor3 = Color3.fromRGB(34, 36, 48)
+	box.BackgroundColor3 = Color3.fromRGB(38, 24, 34)
 	box.ClearTextOnFocus = false
 	box.Font = Enum.Font.GothamMedium
 	box.TextSize = 14
-	box.TextColor3 = Color3.fromRGB(230, 232, 242)
+	box.TextColor3 = Color3.fromRGB(255, 228, 238)
 	box.Text = ""
 	box.PlaceholderText = "Your access key"
-	box.PlaceholderColor3 = Color3.fromRGB(100, 104, 120)
+	box.PlaceholderColor3 = Color3.fromRGB(140, 110, 128)
 	box.Parent = root
 
 	local boxCorner = Instance.new("UICorner")
@@ -217,7 +217,7 @@ local function showKeyGate()
 	errLabel.Size = UDim2.new(1, 0, 0, 32)
 	errLabel.Font = Enum.Font.GothamMedium
 	errLabel.TextSize = 12
-	errLabel.TextColor3 = Color3.fromRGB(242, 110, 110)
+	errLabel.TextColor3 = Color3.fromRGB(255, 150, 175)
 	errLabel.TextWrapped = true
 	errLabel.TextXAlignment = Enum.TextXAlignment.Left
 	errLabel.TextYAlignment = Enum.TextYAlignment.Top
@@ -234,11 +234,11 @@ local function showKeyGate()
 	local loadBtn = Instance.new("TextButton")
 	loadBtn.Name = "Load"
 	loadBtn.Size = UDim2.new(0.48, -6, 1, 0)
-	loadBtn.BackgroundColor3 = Color3.fromRGB(122, 162, 247)
+	loadBtn.BackgroundColor3 = Color3.fromRGB(240, 130, 175)
 	loadBtn.Text = "Load Mya"
 	loadBtn.Font = Enum.Font.GothamBold
 	loadBtn.TextSize = 14
-	loadBtn.TextColor3 = Color3.fromRGB(20, 22, 30)
+	loadBtn.TextColor3 = Color3.fromRGB(40, 18, 32)
 	loadBtn.AutoButtonColor = true
 	loadBtn.Parent = row
 
@@ -251,11 +251,11 @@ local function showKeyGate()
 	closeBtn.Position = UDim2.new(1, 0, 0, 0)
 	closeBtn.AnchorPoint = Vector2.new(1, 0)
 	closeBtn.Size = UDim2.new(0.48, -6, 1, 0)
-	closeBtn.BackgroundColor3 = Color3.fromRGB(42, 44, 58)
+	closeBtn.BackgroundColor3 = Color3.fromRGB(48, 30, 42)
 	closeBtn.Text = "Close"
 	closeBtn.Font = Enum.Font.GothamMedium
 	closeBtn.TextSize = 14
-	closeBtn.TextColor3 = Color3.fromRGB(200, 204, 220)
+	closeBtn.TextColor3 = Color3.fromRGB(255, 220, 232)
 	closeBtn.AutoButtonColor = true
 	closeBtn.Parent = row
 
@@ -288,7 +288,7 @@ local function showKeyGate()
 			f.Size = UDim2.fromOffset(380, 100)
 			f.Position = UDim2.fromScale(0.5, 0.5)
 			f.AnchorPoint = Vector2.new(0.5, 0.5)
-			f.BackgroundColor3 = Color3.fromRGB(26, 27, 38)
+			f.BackgroundColor3 = Color3.fromRGB(28, 18, 26)
 			f.Parent = errGui
 			Instance.new("UICorner", f).CornerRadius = UDim.new(0, 10)
 			local t = Instance.new("TextLabel")
@@ -298,7 +298,7 @@ local function showKeyGate()
 			t.TextWrapped = true
 			t.Font = Enum.Font.GothamMedium
 			t.TextSize = 13
-			t.TextColor3 = Color3.fromRGB(242, 110, 110)
+			t.TextColor3 = Color3.fromRGB(255, 150, 175)
 			t.Text = tostring(runErr)
 			t.Parent = f
 		end

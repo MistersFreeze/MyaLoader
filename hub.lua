@@ -7,6 +7,7 @@ return function(BASE_URL: string, config: { [string]: any })
 	local Players = game:GetService("Players")
 	local UserInputService = game:GetService("UserInputService")
 	local TweenService = game:GetService("TweenService")
+	local HttpService = game:GetService("HttpService")
 
 	local localPlayer = Players.LocalPlayer
 	if not localPlayer then
@@ -239,6 +240,7 @@ return function(BASE_URL: string, config: { [string]: any })
 
 	local homePage = makeTab("home", "Home")
 	local gamesPage = makeTab("games", "Games")
+	local creditsPage = makeTab("credits", "Credits")
 	makeCategoryLabel("UNIVERSAL")
 	local dumperPage = makeTab("dumper", "Dumper")
 
@@ -308,6 +310,73 @@ return function(BASE_URL: string, config: { [string]: any })
 				notify("Dumper started")
 			end
 		end)
+	end)
+
+	local creditsScroll = UI.scroll(creditsPage)
+	creditsScroll.Size = UDim2.new(1, 0, 1, 0)
+	local creditsCard = UI.panel(creditsScroll)
+	creditsCard.Size = UDim2.new(1, -4, 0, 0)
+	UI.label(creditsCard, "Credits", 18, false)
+	UI.label(
+		creditsCard,
+		"Mya is maintained by the people below. Spots marked “placeholder” are for future contributors.",
+		14,
+		true
+	)
+
+	local avatarWrap = Instance.new("Frame")
+	avatarWrap.BackgroundTransparency = 1
+	avatarWrap.Size = UDim2.new(1, 0, 0, 84)
+	avatarWrap.Parent = creditsCard
+
+	local avatarRing = Instance.new("Frame")
+	avatarRing.AnchorPoint = Vector2.new(0.5, 0.5)
+	avatarRing.Position = UDim2.new(0.5, 0, 0.5, 0)
+	avatarRing.Size = UDim2.fromOffset(76, 76)
+	avatarRing.BackgroundColor3 = theme.surface
+	avatarRing.Parent = avatarWrap
+	UI.corner(avatarRing)
+
+	local avatarImg = Instance.new("ImageLabel")
+	avatarImg.Name = "Avatar"
+	avatarImg.BackgroundTransparency = 1
+	avatarImg.Position = UDim2.fromOffset(2, 2)
+	avatarImg.Size = UDim2.new(1, -4, 1, -4)
+	avatarImg.ScaleType = Enum.ScaleType.Fit
+	avatarImg.Image = ""
+	avatarImg.Parent = avatarRing
+	UI.corner(avatarImg)
+
+	UI.label(creditsCard, "@ilovehewho · Roblox", 16, false)
+	UI.label(creditsCard, "Discord: @fubelt", 14, false)
+
+	UI.label(creditsCard, "— Additional contributors (placeholder) —", 12, true)
+	UI.label(creditsCard, "• Name / role / link — add when you have more people to credit.", 13, true)
+	UI.label(creditsCard, "• …", 13, true)
+
+	task.defer(function()
+		local ok, body = pcall(function()
+			return game:HttpGet(
+				"https://users.roblox.com/v1/users/search?keyword=ilovehewho&limit=1",
+				true
+			)
+		end)
+		if not ok or not body or not avatarImg.Parent then
+			return
+		end
+		local okj, data = pcall(function()
+			return HttpService:JSONDecode(body)
+		end)
+		if not okj or not data or not data.data or not data.data[1] then
+			return
+		end
+		local uid = data.data[1].id
+		if typeof(uid) ~= "number" then
+			return
+		end
+		avatarImg.Image = "https://www.roblox.com/headshot-thumbnail/image?userId="
+			.. tostring(uid)
+			.. "&width=150&height=150&format=png"
 	end)
 
 	local mountedModule: any = nil

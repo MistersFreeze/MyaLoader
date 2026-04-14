@@ -45,7 +45,7 @@ function M.mount(ctx)
 		_G.MYA_NEIGHBORS_RUN_UI_SYNC()
 	end
 
-	ctx.notify("Neighbors · Piano loaded")
+	ctx.notify("Neighbors · MIDI loaded")
 end
 
 function M.unmount()

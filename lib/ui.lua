@@ -48,10 +48,14 @@ return function(theme: { [string]: any })
 	function UI.label(parent: Instance, text: string, size: number?, muted: boolean?)
 		local t = Instance.new("TextLabel")
 		t.BackgroundTransparency = 1
-		t.Size = UDim2.new(1, 0, 0, size or 22)
 		t.Font = Enum.Font.GothamMedium
 		t.TextSize = size or 15
 		t.TextXAlignment = Enum.TextXAlignment.Left
+		t.TextYAlignment = Enum.TextYAlignment.Top
+		t.TextWrapped = true
+		t.AutomaticSize = Enum.AutomaticSize.Y
+		t.Size = UDim2.new(1, 0, 0, 0)
+		t.RichText = false
 		t.TextColor3 = if muted then theme.textMuted else theme.text
 		t.Text = text
 		t.Parent = parent
@@ -90,7 +94,7 @@ return function(theme: { [string]: any })
 		b.Text = text
 		b.Font = Enum.Font.GothamMedium
 		b.TextSize = 14
-		b.TextColor3 = Color3.fromRGB(20, 22, 30)
+		b.TextColor3 = Color3.fromRGB(40, 18, 32)
 		b.Parent = parent
 		UI.corner(b)
 
