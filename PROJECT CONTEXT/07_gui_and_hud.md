@@ -1,0 +1,35 @@
+# GUI and HUD (hub)
+
+## Root GUI
+
+- **Name:** `MyaHub` — `ScreenGui` under **LocalPlayer.PlayerGui**.
+- **Window:** Centered `Frame` (“Window”), draggable via **title bar** input (mouse and touch).
+- **Chrome:** Minimize (collapses body), close (destroys hub and unmounts game module).
+
+## Tabs
+
+Default tabs (see `hub.lua`):
+
+| Tab id | Label | Role |
+|--------|-------|------|
+| `home` | Home | Welcome copy and current **PlaceId** display. |
+| `games` | Games | Support status and **game module panel** (`ctx.panel` target). |
+| `dumper` | Dumper | Button to HttpGet and run **`universal/dumper.lua`**. |
+
+Sidebar includes a **“UNIVERSAL”** category label above the dumper tab.
+
+## Theme
+
+Visuals come from **`config.THEME`** (colors, corner radius, padding). `lib/ui.lua` reads these keys when building controls.
+
+## Status bar
+
+Bottom **“Status”** strip shows short messages; **`notify`** from the hub and from **`ctx.notify`** in game modules updates this label until the hub closes.
+
+## Behavior when a game loads
+
+If the current experience is **supported** and **`mount`** succeeds, the hub **closes automatically** (ScreenGui destroyed, drag connections disconnected) so the game module’s UI is not obscured. If **unsupported** or **load fails**, the hub remains for debugging.
+
+## Error GUI (`loader.lua`)
+
+If bootstrap fails before the hub runs, **`loader.lua`** shows **`MyaLoaderError`** with a red error string (separate from the hub).

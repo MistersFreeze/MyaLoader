@@ -64,14 +64,17 @@ return function(BASE_URL: string, config: { [string]: any })
 	root.Position = UDim2.fromScale(0.5, 0.5)
 	root.Size = UDim2.fromOffset(540, 400)
 	root.BackgroundColor3 = theme.bg
+	root.BorderSizePixel = 0
 	root.Active = true
-	root.Selectable = true
+	root.Selectable = false
 	root.Parent = gui
 	UI.corner(root)
 
 	local titleBar = Instance.new("Frame")
 	titleBar.Name = "TitleBar"
 	titleBar.BackgroundColor3 = theme.bgElevated
+	titleBar.BorderSizePixel = 0
+	titleBar.Selectable = false
 	titleBar.Size = UDim2.new(1, 0, 0, 44)
 	titleBar.Parent = root
 	UI.corner(titleBar)
@@ -128,15 +131,19 @@ return function(BASE_URL: string, config: { [string]: any })
 	local body = Instance.new("Frame")
 	body.Name = "Body"
 	body.BackgroundTransparency = 1
+	body.BorderSizePixel = 0
 	body.Position = UDim2.new(0, 0, 0, 44)
 	body.Size = UDim2.new(1, 0, 1, -44)
+	body.Selectable = false
 	body.Parent = root
 
 	local sidebar = Instance.new("Frame")
 	sidebar.Name = "Sidebar"
-	sidebar.BackgroundColor3 = theme.bg
+	sidebar.BackgroundTransparency = 1
+	sidebar.BorderSizePixel = 0
 	sidebar.Size = UDim2.new(0, 132, 1, -16)
 	sidebar.Position = UDim2.new(0, 10, 0, 8)
+	sidebar.Selectable = false
 	sidebar.Parent = body
 
 	local sideLayout = Instance.new("UIListLayout")
@@ -147,6 +154,8 @@ return function(BASE_URL: string, config: { [string]: any })
 	local content = Instance.new("Frame")
 	content.Name = "Content"
 	content.BackgroundTransparency = 1
+	content.BorderSizePixel = 0
+	content.Selectable = false
 	content.Position = UDim2.new(0, 152, 0, 8)
 	content.Size = UDim2.new(1, -162, 1, -52)
 	content.Parent = body
@@ -154,6 +163,8 @@ return function(BASE_URL: string, config: { [string]: any })
 	local statusBar = Instance.new("Frame")
 	statusBar.Name = "Status"
 	statusBar.BackgroundColor3 = theme.bgElevated
+	statusBar.BorderSizePixel = 0
+	statusBar.Selectable = false
 	statusBar.AnchorPoint = Vector2.new(0, 1)
 	statusBar.Position = UDim2.new(0, 10, 1, -8)
 	statusBar.Size = UDim2.new(1, -20, 0, 26)
@@ -186,6 +197,7 @@ return function(BASE_URL: string, config: { [string]: any })
 		local b = Instance.new("TextButton")
 		b.Name = id
 		b.BorderSizePixel = 0
+		b.Selectable = false
 		b.Size = UDim2.new(1, -8, 0, 34)
 		b.BackgroundColor3 = theme.bgElevated
 		b.Text = label
