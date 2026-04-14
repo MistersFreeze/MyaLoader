@@ -1,7 +1,15 @@
 --[[
-  Paste this entire file into your executor, OR host it and loadstring(game:HttpGet(url)).
-  Set BASE_URL to your raw GitHub (or other static) root where Mya files are hosted.
-  Example: https://raw.githubusercontent.com/MistersFreeze/MyaLoader/main/
+  Paste this entire file into your executor, OR fetch it with loadstring(game:HttpGet(url)).
+
+  Base URL (where config.lua, hub.lua, games/… live):
+  - Edit BASE_URL below, OR
+  - Set before running: getgenv().MYA_BASE_URL = "https://…/" or "http://127.0.0.1:8080/"
+
+  Local folder over HTTP (no GitHub): from the repo root run:
+    python -m http.server 8080
+  Then in the executor:
+    getgenv().MYA_BASE_URL = "http://127.0.0.1:8080/"
+    loadstring(game:HttpGet("http://127.0.0.1:8080/loader.lua", true))()
 ]]
 
 local BASE_URL = "https://raw.githubusercontent.com/MistersFreeze/MyaLoader/main/"
@@ -17,7 +25,7 @@ end
 local Players = game:GetService("Players")
 local localPlayer = Players.LocalPlayer or Players.PlayerAdded:Wait()
 
-local function showError(message: string)
+local function showError(message)
 	local existing = localPlayer.PlayerGui:FindFirstChild("MyaLoaderError")
 	if existing then
 		existing:Destroy()
@@ -61,7 +69,7 @@ local function boot()
 		error("loadstring is not available in this environment.")
 	end
 
-	local function get(url: string)
+	local function get(url)
 		return game:HttpGet(url, true)
 	end
 

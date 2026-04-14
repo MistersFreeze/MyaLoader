@@ -1,6 +1,7 @@
 --[[
   Hub UI: loads lib via HttpGet, builds window, mounts per-game module by PlaceId.
   Invoked as: loadstring(src)()(BASE_URL, config)
+  Local dev: set getgenv().MYA_LOCAL_ROOT to your repo path before running hub (see loader_local.lua).
 ]]
 
 return function(BASE_URL: string, config: { [string]: any })
@@ -14,15 +15,42 @@ return function(BASE_URL: string, config: { [string]: any })
 		localPlayer = Players.PlayerAdded:Wait()
 	end
 
-	local utilSrc, uErr = (function()
+	-- When BASE_URL is http(s), always fetch over HTTP — even if MYA_LOCAL_ROOT is set
+	-- (e.g. leftover from loader_local), readfile would fail or hit the wrong tree.
+	local function baseUrlIsHttp(base)
+		local b = string.lower(tostring(base))
+		return string.sub(b, 1, 7) == "http://" or string.sub(b, 1, 8) == "https://"
+	end
+
+	local function fetchUtilSource(): (string?, string?)
+		local rel = "lib/util.lua"
+		local url = BASE_URL .. rel
+		local g = typeof(getgenv) == "function" and getgenv()
+		if not baseUrlIsHttp(BASE_URL) and g and g.MYA_LOCAL_ROOT and typeof(readfile) == "function" then
+			local root = g.MYA_LOCAL_ROOT
+			if string.sub(root, -1) ~= "/" and string.sub(root, -1) ~= "\\" then
+				root = root .. "/"
+			end
+			local disk = root .. rel:gsub("/", "\\")
+			local variants = { disk, root .. rel, (root .. rel):gsub("\\", "/") }
+			for _, p in ipairs(variants) do
+				local ok, src = pcall(readfile, p)
+				if ok and typeof(src) == "string" and #src > 0 then
+					return src, nil
+				end
+			end
+			return nil, "readfile failed for lib/util.lua under MYA_LOCAL_ROOT"
+		end
 		local ok, r = pcall(function()
-			return game:HttpGet(BASE_URL .. "lib/util.lua", true)
+			return game:HttpGet(url, true)
 		end)
 		if ok then
 			return r, nil
 		end
 		return nil, tostring(r)
-	end)()
+	end
+
+	local utilSrc, uErr = fetchUtilSource()
 	if not utilSrc then
 		error("[Mya] Failed to load lib/util.lua: " .. tostring(uErr))
 	end

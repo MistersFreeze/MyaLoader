@@ -14,6 +14,8 @@ Executor-oriented Roblox script base: a small **loader**, a **hub** GUI, and **p
 | `games/<GameName>_<PlaceId>/` | Per-game folder: at minimum `init.lua` (`mount` / `unmount`). Multi-file games add `runtime.lua`, `gui.lua`, etc. and load them via `ctx.baseUrl` (see Operation One). |
 | `games/example.lua` | Tiny sample module (single file). |
 | `loader_jnkie.lua` | Optional entry for [Junkie / jnkie.com](https://jnkie.com/) (see below). |
+| `loader_local.lua` | **Local testing:** reads `config.lua` / `hub.lua` from disk — no GitHub push (see below). |
+| `mya_local_root.example.txt` | Copy to `mya_local_root.txt` (gitignored) with one line: path to your Mya clone. |
 
 ## Hosting
 
@@ -24,6 +26,45 @@ Executor-oriented Roblox script base: a small **loader**, a **hub** GUI, and **p
 2. Copy the **raw** base URL for the branch root, e.g. `https://raw.githubusercontent.com/MistersFreeze/MyaLoader/main/`.
 3. Edit `loader.lua` and set `BASE_URL` to that URL (trailing slash required).
 4. In your executor, run the full `loader.lua` script (paste or `loadstring(game:HttpGet(YOUR_LOADER_RAW_URL))()`).
+
+### Local HTTP server (no GitHub, no `readfile` path)
+
+Serve the repo from your machine so `loader.lua` can `HttpGet` every file (same layout as GitHub raw).
+
+1. In a terminal, `cd` to the **Mya repo root** (the folder that contains `loader.lua`, `config.lua`, `hub.lua`).
+2. Run: `python -m http.server 8080` (or another free port).
+3. In the executor:
+
+```lua
+getgenv().MYA_BASE_URL = "http://127.0.0.1:8080/"
+loadstring(game:HttpGet("http://127.0.0.1:8080/loader.lua", true))()
+```
+
+Keep the terminal open while testing. If `HttpGet` to `http://` fails, your executor may require allowing HTTP/localhost in its settings.
+
+### Local development (disk via `readfile`)
+
+1. **Path to your clone** (pick one):
+   - Copy [`mya_local_root.example.txt`](mya_local_root.example.txt) to **`mya_local_root.txt`** and put **one line**: absolute path to the repo, e.g. `C:/Dev/Mya/` (forward slashes, trailing slash). Place this file where your executor’s **`readfile`** looks (often the executor workspace folder).
+   - Or set before running: **`getgenv().MYA_LOCAL_ROOT = "C:/Dev/Mya/"`**
+2. Run **`loader_local.lua`** (it sets **`MYA_LOCAL_ROOT`** / **`MYA_BASE_URL`**). The hub, `lib/util.lua`, and game modules load from disk when the path is under that root.
+
+**Paste in executor (workspace must contain `loader_local.lua` + optional `mya_local_root.txt`):**
+
+```lua
+loadstring(readfile("loader_local.lua"), "@loader_local.lua")()
+```
+
+**Or set the path in code, then load:**
+
+```lua
+getgenv().MYA_LOCAL_ROOT = "C:/path/to/Mya/"
+loadstring(readfile("loader_local.lua"), "@loader_local.lua")()
+```
+
+If you fetch `loader_local.lua` by URL, you still need **`MYA_LOCAL_ROOT`** pointing at your clone so the hub can read the other files from disk — or use the **Local HTTP server** section above and `loader.lua` instead.
+
+Requires **`readfile`**, **`loadstring`**, and a valid path to your local repo.
 
 ### Junkie (jnkie.com)
 

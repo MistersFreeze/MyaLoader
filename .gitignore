@@ -1,2 +1,4 @@
 # Local Junkie dev key (never commit)
 mya_junkie_key.txt
+# Local Mya repo path for loader_local.lua (copy from mya_local_root.example.txt)
+mya_local_root.txt

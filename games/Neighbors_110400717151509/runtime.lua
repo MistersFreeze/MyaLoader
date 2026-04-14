@@ -600,15 +600,27 @@ local function seek_to_position(ratio)
 end
 
 local function list_midi_files()
-    midi_files = {}
-    local ok, files = _pcall(listfiles, "./MIDIow")
-    if ok and files then
-        for _, f in ipairs(files) do
-            if f:match("%.mid$") then
-                table.insert(midi_files, f:match("[^/\\]+$"))
-            end
-        end
-    end
+	midi_files = {}
+	local seen = {}
+	local folders = { "MIDIow", "MIDI" }
+	for _, folder in ipairs(folders) do
+		local ok, files = _pcall(listfiles, "./" .. folder)
+		if ok and files then
+			for _, f in ipairs(files) do
+				if string.match(f, "%.mid$") or string.match(f, "%.MID$") then
+					local name = string.match(f, "[^/\\]+$")
+					if name then
+						local rel = folder .. "/" .. name
+						if not seen[rel] then
+							seen[rel] = true
+							table.insert(midi_files, rel)
+						end
+					end
+				end
+			end
+		end
+	end
+	table.sort(midi_files)
 end
 
 local function load_midi_from_data(data, ui_setter)
