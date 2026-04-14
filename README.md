@@ -13,6 +13,7 @@ Executor-oriented Roblox script base: a small **loader**, a **hub** GUI, and **p
 | `lib/ui.lua` | Themed frames, buttons, scroll areas. |
 | `games/<GameName>_<PlaceId>/` | Per-game folder: at minimum `init.lua` (`mount` / `unmount`). Multi-file games add `runtime.lua`, `gui.lua`, etc. and load them via `ctx.baseUrl` (see Operation One). |
 | `games/example.lua` | Tiny sample module (single file). |
+| `games/_MultiFileGameTemplate_0/` | **Copy for new games:** `init.lua` + `runtime.lua` + `gui.lua` (tabs, toggles, unload). Rename folder to `YourGame_<PlaceId>/` and register in `config.lua`. |
 | `loader_jnkie.lua` | Optional entry for [Junkie / jnkie.com](https://jnkie.com/) (see below). |
 | `loader_local.lua` | **Local testing:** reads `config.lua` / `hub.lua` from disk — no GitHub push (see below). |
 | `mya_local_root.example.txt` | Copy to `mya_local_root.txt` (gitignored) with one line: path to your Mya clone. |

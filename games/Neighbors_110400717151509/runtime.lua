@@ -692,7 +692,390 @@ local function stop_render_loop()
 	end
 end
 
+-- ——— Visuals (ESP + nametags) ———
+local visuals_esp = false
+local visuals_nametags = false
+local visuals_conns = {}
+
+local function visuals_strip(char)
+	if not char then
+		return
+	end
+	local h = char:FindFirstChild("MyaESP")
+	if h then
+		h:Destroy()
+	end
+	local head = char:FindFirstChild("Head")
+	if head then
+		local b = head:FindFirstChild("MyaNametag")
+		if b then
+			b:Destroy()
+		end
+	end
+end
+
+local function visuals_apply(plr, char)
+	if not char then
+		return
+	end
+	visuals_strip(char)
+	local show_esp = visuals_esp and plr ~= player
+	if show_esp then
+		local hl = Instance.new("Highlight")
+		hl.Name = "MyaESP"
+		hl.Parent = char
+		hl.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
+		hl.FillTransparency = 0.55
+		hl.OutlineTransparency = 0
+		hl.FillColor = Color3.fromRGB(200, 100, 160)
+		hl.OutlineColor = Color3.fromRGB(255, 160, 200)
+	end
+	if visuals_nametags then
+		local head = char:FindFirstChild("Head") or char:WaitForChild("Head", 8)
+		if head then
+			local bb = Instance.new("BillboardGui")
+			bb.Name = "MyaNametag"
+			bb.Adornee = head
+			bb.AlwaysOnTop = true
+			bb.Size = UDim2.fromOffset(200, 26)
+			bb.StudsOffset = Vector3.new(0, 2.35, 0)
+			bb.Parent = head
+			local tl = Instance.new("TextLabel")
+			tl.Size = UDim2.fromScale(1, 1)
+			tl.BackgroundTransparency = 1
+			tl.Text = (plr.DisplayName ~= "" and plr.DisplayName) or plr.Name
+			tl.TextColor3 = Color3.fromRGB(255, 235, 245)
+			tl.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
+			tl.TextStrokeTransparency = 0.45
+			tl.Font = Enum.Font.GothamBold
+			tl.TextSize = 14
+			tl.Parent = bb
+		end
+	end
+end
+
+local function visuals_refresh_all()
+	for _, plr in ipairs(players:GetPlayers()) do
+		if plr.Character then
+			visuals_apply(plr, plr.Character)
+		end
+	end
+end
+
+local function visuals_hook_player(plr)
+	local c = plr.CharacterAdded:Connect(function(char)
+		_task.defer(function()
+			visuals_apply(plr, char)
+		end)
+	end)
+	table.insert(visuals_conns, c)
+	if plr.Character then
+		_task.defer(function()
+			visuals_apply(plr, plr.Character)
+		end)
+	end
+end
+
+local function visuals_init()
+	for _, c in ipairs(visuals_conns) do
+		pcall(function()
+			c:Disconnect()
+		end)
+	end
+	visuals_conns = {}
+	table.insert(
+		visuals_conns,
+		players.PlayerAdded:Connect(function(plr)
+			visuals_hook_player(plr)
+		end)
+	)
+	for _, plr in ipairs(players:GetPlayers()) do
+		visuals_hook_player(plr)
+	end
+end
+
+local function visuals_unload()
+	for _, c in ipairs(visuals_conns) do
+		pcall(function()
+			c:Disconnect()
+		end)
+	end
+	visuals_conns = {}
+	for _, plr in ipairs(players:GetPlayers()) do
+		if plr.Character then
+			visuals_strip(plr.Character)
+		end
+	end
+end
+
+-- ——— Movement (fly + noclip) ———
+local workspace = Services.Workspace
+local move_fly = false
+local move_fly_speed = 50
+local move_noclip = false
+local _fly_bv = nil
+local _fly_conn = nil
+local _noclip_step = nil
+local _move_char_conn = nil
+
+local function get_local_root()
+	local c = player.Character
+	return c and c:FindFirstChild("HumanoidRootPart")
+end
+
+local function get_local_humanoid()
+	local c = player.Character
+	return c and c:FindFirstChildWhichIsA("Humanoid")
+end
+
+local function stop_fly_internal()
+	if _fly_conn then
+		pcall(function()
+			_fly_conn:Disconnect()
+		end)
+		_fly_conn = nil
+	end
+	if _fly_bv then
+		pcall(function()
+			_fly_bv:Destroy()
+		end)
+		_fly_bv = nil
+	end
+	local hum = get_local_humanoid()
+	if hum then
+		hum.PlatformStand = false
+	end
+end
+
+local function start_fly_internal()
+	stop_fly_internal()
+	local root = get_local_root()
+	local hum = get_local_humanoid()
+	if not root or not hum then
+		return
+	end
+	hum.PlatformStand = true
+	local bv = Instance.new("BodyVelocity")
+	bv.MaxForce = Vector3.new(500000, 500000, 500000)
+	bv.Velocity = Vector3.zero
+	bv.Parent = root
+	_fly_bv = bv
+	_fly_conn = run_service.RenderStepped:Connect(function()
+		if not move_fly then
+			return
+		end
+		root = get_local_root()
+		if not root or not _fly_bv or _fly_bv.Parent ~= root then
+			return
+		end
+		local cam = workspace.CurrentCamera
+		if not cam then
+			return
+		end
+		local cf = cam.CFrame
+		local dir = Vector3.zero
+		if uis:IsKeyDown(Enum.KeyCode.W) then
+			dir = dir + cf.LookVector
+		end
+		if uis:IsKeyDown(Enum.KeyCode.S) then
+			dir = dir - cf.LookVector
+		end
+		if uis:IsKeyDown(Enum.KeyCode.D) then
+			dir = dir + cf.RightVector
+		end
+		if uis:IsKeyDown(Enum.KeyCode.A) then
+			dir = dir - cf.RightVector
+		end
+		if uis:IsKeyDown(Enum.KeyCode.Space) then
+			dir = dir + Vector3.new(0, 1, 0)
+		end
+		if uis:IsKeyDown(Enum.KeyCode.LeftControl) or uis:IsKeyDown(Enum.KeyCode.C) then
+			dir = dir - Vector3.new(0, 1, 0)
+		end
+		if dir.Magnitude > 0 then
+			_fly_bv.Velocity = dir.Unit * move_fly_speed
+		else
+			_fly_bv.Velocity = Vector3.zero
+		end
+	end)
+end
+
+local function stop_noclip_internal()
+	if _noclip_step then
+		pcall(function()
+			_noclip_step:Disconnect()
+		end)
+		_noclip_step = nil
+	end
+	local char = player.Character
+	if char then
+		for _, p in ipairs(char:GetDescendants()) do
+			if p:IsA("BasePart") then
+				p.CanCollide = true
+			end
+		end
+	end
+end
+
+local function start_noclip_internal()
+	stop_noclip_internal()
+	_noclip_step = run_service.Stepped:Connect(function()
+		if not move_noclip then
+			return
+		end
+		local char = player.Character
+		if not char then
+			return
+		end
+		for _, p in ipairs(char:GetDescendants()) do
+			if p:IsA("BasePart") then
+				p.CanCollide = false
+			end
+		end
+	end)
+end
+
+local function movement_unload()
+	move_fly = false
+	move_noclip = false
+	stop_fly_internal()
+	stop_noclip_internal()
+	if _move_char_conn then
+		pcall(function()
+			_move_char_conn:Disconnect()
+		end)
+		_move_char_conn = nil
+	end
+end
+
+local function movement_init()
+	if _move_char_conn then
+		return
+	end
+	_move_char_conn = player.CharacterAdded:Connect(function()
+		_task.wait(0.2)
+		if move_fly then
+			start_fly_internal()
+		end
+	end)
+end
+
+-- ——— Targeting (spy camera / TP) ———
+local spy_cam_conn = nil
+local spy_target_player = nil
+
+local function resolve_target_query(q)
+	if typeof(q) ~= "string" then
+		return nil
+	end
+	q = q:lower():gsub("^%s+", ""):gsub("%s+$", "")
+	if #q == 0 then
+		return nil
+	end
+	for _, plr in ipairs(players:GetPlayers()) do
+		if plr.Name:lower() == q or plr.DisplayName:lower() == q then
+			return plr
+		end
+	end
+	for _, plr in ipairs(players:GetPlayers()) do
+		if string.find(plr.Name:lower(), q, 1, true) or string.find(plr.DisplayName:lower(), q, 1, true) then
+			return plr
+		end
+	end
+	return nil
+end
+
+local function stop_spy_camera()
+	if spy_cam_conn then
+		pcall(function()
+			spy_cam_conn:Disconnect()
+		end)
+		spy_cam_conn = nil
+	end
+	spy_target_player = nil
+	local cam = workspace.CurrentCamera
+	if cam then
+		cam.CameraType = Enum.CameraType.Custom
+		local hum = get_local_humanoid()
+		if hum then
+			cam.CameraSubject = hum
+		end
+	end
+end
+
+-- Third-person follow behind target (Scriptable). CameraSubject alone is often overridden by the game.
+local function start_spy_camera(target)
+	if not target or target == player then
+		return false, "Pick another player"
+	end
+	stop_spy_camera()
+	local char = target.Character
+	if not char then
+		return false, "No character"
+	end
+	local hrp = char:FindFirstChild("HumanoidRootPart")
+	if not hrp then
+		return false, "No HRP"
+	end
+	local cam = workspace.CurrentCamera
+	if not cam then
+		return false, "No camera"
+	end
+	spy_target_player = target
+	cam.CameraType = Enum.CameraType.Scriptable
+	local dist = 14
+	local height = 4
+	local side = 2.5
+	spy_cam_conn = run_service.RenderStepped:Connect(function()
+		if not spy_target_player or not spy_target_player.Parent then
+			stop_spy_camera()
+			return
+		end
+		local ch = spy_target_player.Character
+		if not ch then
+			stop_spy_camera()
+			return
+		end
+		local h = ch:FindFirstChild("HumanoidRootPart")
+		if not h then
+			stop_spy_camera()
+			return
+		end
+		local lookAt = h.Position + Vector3.new(0, 1.5, 0)
+		local back = -h.CFrame.LookVector
+		local right = h.CFrame.RightVector
+		local camPos = lookAt + back * dist + Vector3.new(0, height, 0) + right * side
+		cam.CFrame = CFrame.lookAt(camPos, lookAt)
+	end)
+	return true
+end
+
+local function reset_camera_to_local()
+	stop_spy_camera()
+	local cam = workspace.CurrentCamera
+	local hum = get_local_humanoid()
+	if not cam or not hum then
+		return false
+	end
+	cam.CameraType = Enum.CameraType.Custom
+	cam.CameraSubject = hum
+	return true
+end
+
+local function teleport_to_target(target)
+	local me = get_local_root()
+	local them = target.Character and target.Character:FindFirstChild("HumanoidRootPart")
+	if not me or not them then
+		return false, "Missing character"
+	end
+	me.CFrame = them.CFrame * CFrame.new(0, 0, 4)
+	return true
+end
+
 local function unload_neighbors_piano()
+	stop_spy_camera()
+	movement_unload()
+	visuals_unload()
 	stop_render_loop()
 	stop_playback()
 	release_all_keys()
@@ -799,7 +1182,57 @@ _G.MYA_NEIGHBORS_PIANO = {
 		playback_speed = _math.clamp(p / 100, 0.5, 2.0)
 	end,
 	release_all_keys = release_all_keys,
+	get_esp_enabled = function()
+		return visuals_esp
+	end,
+	set_esp_enabled = function(v)
+		visuals_esp = not not v
+		visuals_refresh_all()
+	end,
+	get_nametags_enabled = function()
+		return visuals_nametags
+	end,
+	set_nametags_enabled = function(v)
+		visuals_nametags = not not v
+		visuals_refresh_all()
+	end,
+	resolve_target_query = resolve_target_query,
+	start_spy_camera = start_spy_camera,
+	stop_spy_camera = stop_spy_camera,
+	reset_camera_to_local = reset_camera_to_local,
+	teleport_to_target = teleport_to_target,
+	get_fly_enabled = function()
+		return move_fly
+	end,
+	set_fly_enabled = function(v)
+		move_fly = not not v
+		if move_fly then
+			start_fly_internal()
+		else
+			stop_fly_internal()
+		end
+	end,
+	get_fly_speed = function()
+		return move_fly_speed
+	end,
+	set_fly_speed = function(v)
+		move_fly_speed = _math.clamp(tonumber(v) or 50, 5, 200)
+	end,
+	get_noclip_enabled = function()
+		return move_noclip
+	end,
+	set_noclip_enabled = function(v)
+		move_noclip = not not v
+		if move_noclip then
+			start_noclip_internal()
+		else
+			stop_noclip_internal()
+		end
+	end,
 }
 
 _G.unload_mya = unload_neighbors_piano
 _G.MYA_NEIGHBORS_RUN_UI_SYNC = function() end
+
+visuals_init()
+movement_init()

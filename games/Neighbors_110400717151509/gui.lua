@@ -42,6 +42,9 @@ if not P then
 	error("[Mya] Neighbors gui: MYA_NEIGHBORS_PIANO missing (load runtime.lua first)")
 end
 
+local Players = game:GetService("Players")
+local localPlayer = Players.LocalPlayer or Players.PlayerAdded:Wait()
+
 local ui = Instance.new("ScreenGui")
 ui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 ui.Name = rand_str(6)
@@ -50,13 +53,15 @@ ui.DisplayOrder = 10
 ui.ResetOnSpawn = false
 ui.Parent = gethui_support and gethui() or game:GetService("CoreGui")
 
+-- Toasts under PlayerGui avoid "lacking capability Plugin" after yields (e.g. ApplyDescriptionAsync)
+-- when parenting new instances under CoreGui/gethui().
 local notif_ui = Instance.new("ScreenGui")
 notif_ui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 notif_ui.Name = rand_str(5) .. "_N"
 notif_ui.IgnoreGuiInset = true
 notif_ui.DisplayOrder = 100
 notif_ui.ResetOnSpawn = false
-notif_ui.Parent = gethui_support and gethui() or game:GetService("CoreGui")
+notif_ui.Parent = localPlayer:WaitForChild("PlayerGui")
 
 local notif_container = Instance.new("Frame")
 notif_container.BackgroundTransparency = 1
@@ -71,51 +76,56 @@ n_layout.Padding = UDim.new(0, 8)
 
 local function notify(title, text, duration)
 	duration = duration or 3
-	local f = Instance.new("Frame")
-	f.BackgroundColor3 = C.panel
-	f.Size = UDim2.fromOffset(250, 55)
-	f.Position = UDim2.fromOffset(260, 0)
-	Instance.new("UICorner", f).CornerRadius = UDim.new(0, 4)
-	local str = Instance.new("UIStroke", f)
-	str.Color = Color3.fromRGB(40, 40, 55)
-	local lbl_t = Instance.new("TextLabel", f)
-	lbl_t.BackgroundTransparency = 1
-	lbl_t.Position = UDim2.fromOffset(16, 8)
-	lbl_t.Size = UDim2.new(1, -24, 0, 16)
-	lbl_t.Font = Enum.Font.GothamBold
-	lbl_t.Text = title
-	lbl_t.TextColor3 = C.accent
-	lbl_t.TextSize = 12
-	lbl_t.TextXAlignment = Enum.TextXAlignment.Left
-	local lbl_d = Instance.new("TextLabel", f)
-	lbl_d.BackgroundTransparency = 1
-	lbl_d.Position = UDim2.fromOffset(16, 26)
-	lbl_d.Size = UDim2.new(1, -24, 0, 16)
-	lbl_d.Font = Enum.Font.Gotham
-	lbl_d.Text = text
-	lbl_d.TextColor3 = C.text
-	lbl_d.TextSize = 11
-	lbl_d.TextXAlignment = Enum.TextXAlignment.Left
-	lbl_d.TextWrapped = true
-	local stripe = Instance.new("Frame", f)
-	stripe.BackgroundColor3 = C.accent
-	stripe.BorderSizePixel = 0
-	stripe.Size = UDim2.new(0, 3, 1, 0)
-	Instance.new("UICorner", stripe).CornerRadius = UDim.new(0, 4)
-	f.Parent = notif_container
-	ts:Create(f, TweenInfo.new(0.35, Enum.EasingStyle.Cubic, Enum.EasingDirection.Out), { Position = UDim2.new(0, 0, 0, 0) }):Play()
-	task.spawn(function()
-		task.wait(duration)
-		if not f.Parent then
-			return
+	task.defer(function()
+		if not notif_container.Parent then
+			notif_container.Parent = notif_ui
 		end
-		ts:Create(f, TweenInfo.new(0.35), { Position = UDim2.fromOffset(260, 0), BackgroundTransparency = 1 }):Play()
-		task.wait(0.35)
-		f:Destroy()
+		local f = Instance.new("Frame")
+		f.BackgroundColor3 = C.panel
+		f.Size = UDim2.fromOffset(250, 55)
+		f.Position = UDim2.fromOffset(260, 0)
+		Instance.new("UICorner", f).CornerRadius = UDim.new(0, 4)
+		local str = Instance.new("UIStroke", f)
+		str.Color = Color3.fromRGB(40, 40, 55)
+		local lbl_t = Instance.new("TextLabel", f)
+		lbl_t.BackgroundTransparency = 1
+		lbl_t.Position = UDim2.fromOffset(16, 8)
+		lbl_t.Size = UDim2.new(1, -24, 0, 16)
+		lbl_t.Font = Enum.Font.GothamBold
+		lbl_t.Text = title
+		lbl_t.TextColor3 = C.accent
+		lbl_t.TextSize = 12
+		lbl_t.TextXAlignment = Enum.TextXAlignment.Left
+		local lbl_d = Instance.new("TextLabel", f)
+		lbl_d.BackgroundTransparency = 1
+		lbl_d.Position = UDim2.fromOffset(16, 26)
+		lbl_d.Size = UDim2.new(1, -24, 0, 16)
+		lbl_d.Font = Enum.Font.Gotham
+		lbl_d.Text = text
+		lbl_d.TextColor3 = C.text
+		lbl_d.TextSize = 11
+		lbl_d.TextXAlignment = Enum.TextXAlignment.Left
+		lbl_d.TextWrapped = true
+		local stripe = Instance.new("Frame", f)
+		stripe.BackgroundColor3 = C.accent
+		stripe.BorderSizePixel = 0
+		stripe.Size = UDim2.new(0, 3, 1, 0)
+		Instance.new("UICorner", stripe).CornerRadius = UDim.new(0, 4)
+		f.Parent = notif_container
+		ts:Create(f, TweenInfo.new(0.35, Enum.EasingStyle.Cubic, Enum.EasingDirection.Out), { Position = UDim2.new(0, 0, 0, 0) }):Play()
+		task.spawn(function()
+			task.wait(duration)
+			if not f.Parent then
+				return
+			end
+			ts:Create(f, TweenInfo.new(0.35), { Position = UDim2.fromOffset(260, 0), BackgroundTransparency = 1 }):Play()
+			task.wait(0.35)
+			f:Destroy()
+		end)
 	end)
 end
 
-local WIN_W, WIN_H = 360, 520
+local WIN_W, WIN_H = 360, 540
 local main = Instance.new("Frame")
 main.Name = "main"
 main.BackgroundColor3 = C.bg
@@ -158,7 +168,7 @@ title_lbl.Size = UDim2.new(1, -24, 1, 0)
 title_lbl.TextXAlignment = Enum.TextXAlignment.Left
 title_lbl.Parent = header
 
-local TAB_NAMES = { "Piano", "Settings", "Misc" }
+local TAB_NAMES = { "Piano", "Visuals", "Piano Settings", "Misc" }
 local tab_bar = Instance.new("Frame")
 tab_bar.BackgroundColor3 = C.header
 tab_bar.BorderSizePixel = 0
@@ -221,7 +231,7 @@ for i, name in ipairs(TAB_NAMES) do
 	b.Font = Enum.Font.GothamSemibold
 	b.Text = name
 	b.TextColor3 = C.dim
-	b.TextSize = 11
+	b.TextSize = 9
 	b.AutoButtonColor = false
 	b.Parent = tab_bar
 	tab_buttons[name] = b
@@ -241,8 +251,10 @@ end
 
 local piano_page = make_page()
 piano_page.Parent = tab_containers["Piano"]
+local visuals_page = make_page()
+visuals_page.Parent = tab_containers["Visuals"]
 local settings_page = make_page()
-settings_page.Parent = tab_containers["Settings"]
+settings_page.Parent = tab_containers["Piano Settings"]
 local misc_page = make_page()
 misc_page.Parent = tab_containers["Misc"]
 -- Tab visibility is toggled on the container Frame; each ScrollingFrame stays Visible = true so content shows.
@@ -710,7 +722,7 @@ end, function(percent)
 	speed_slider_set(percent)
 end)
 
--- ——— Settings ———
+-- ——— Piano settings ———
 section_label(settings_page, "Playback", 1)
 make_toggle_row(settings_page, "DeBlack", 2, P.get_deblack_enabled(), function(v)
 	P.set_deblack_enabled(v)
@@ -735,14 +747,83 @@ make_toggle_row(settings_page, "Humanize timing", 7, P.get_human_player(), funct
 	P.set_human_player(v)
 end)
 
+-- ——— Visuals ———
+section_label(visuals_page, "Players", 1)
+make_toggle_row(visuals_page, "ESP (chams)", 2, P.get_esp_enabled(), function(v)
+	P.set_esp_enabled(v)
+	notify("Mya", v and "ESP on" or "ESP off", 2)
+end)
+make_toggle_row(visuals_page, "Nametags", 3, P.get_nametags_enabled(), function(v)
+	P.set_nametags_enabled(v)
+	notify("Mya", v and "Nametags on" or "Nametags off", 2)
+end)
+
+section_label(visuals_page, "Target player", 4)
+local target_name_row = make_row(visuals_page, 5, 38)
+local target_name_box = Instance.new("TextBox")
+target_name_box.BackgroundColor3 = C.input_bg
+target_name_box.Size = UDim2.new(1, -28, 0, 28)
+target_name_box.Position = UDim2.new(0.5, 0, 0.5, 0)
+target_name_box.AnchorPoint = Vector2.new(0.5, 0.5)
+target_name_box.Font = Enum.Font.Gotham
+target_name_box.TextSize = 12
+target_name_box.TextColor3 = C.text
+target_name_box.PlaceholderText = "Username or display name…"
+target_name_box.PlaceholderColor3 = C.dim
+target_name_box.ClearTextOnFocus = false
+target_name_box.Text = ""
+Instance.new("UICorner", target_name_box).CornerRadius = UDim.new(0, 6)
+target_name_box.Parent = target_name_row
+
+local function resolve_visual_target()
+	return P.resolve_target_query(target_name_box.Text)
+end
+
+row_button(visuals_page, 6, "Spy camera (follow)", function()
+	local t = resolve_visual_target()
+	if not t then
+		notify("Mya", "Player not found", 2)
+		return
+	end
+	local ok, err = P.start_spy_camera(t)
+	notify("Mya", ok and "Spying " .. t.Name or (err or "Failed"), 2)
+end)
+row_button(visuals_page, 7, "Teleport to", function()
+	local t = resolve_visual_target()
+	if not t then
+		notify("Mya", "Player not found", 2)
+		return
+	end
+	local ok, err = P.teleport_to_target(t)
+	notify("Mya", ok and "Teleported" or (err or "TP failed"), 2)
+end)
+row_button(visuals_page, 8, "Stop spy / reset camera", function()
+	local ok = P.reset_camera_to_local()
+	notify("Mya", ok and "Camera back to you" or "Failed", 2)
+end)
+
 -- ——— Misc ———
 section_label(misc_page, "Script", 1)
-row_button(misc_page, 2, "Unload (UI + MIDI engine)", function()
+row_button(misc_page, 2, "Unload", function()
 	if _G.unload_mya then
 		pcall(_G.unload_mya)
 	end
 end)
-local bind_row = make_row(misc_page, 3, 36)
+
+section_label(misc_page, "Movement", 3)
+make_toggle_row(misc_page, "Fly", 4, P.get_fly_enabled(), function(v)
+	P.set_fly_enabled(v)
+	notify("Mya", v and "Fly on (WASD · Space · Ctrl)" or "Fly off", 2)
+end)
+make_slider(misc_page, "Fly speed", 5, 5, 200, P.get_fly_speed(), "%d", function(v)
+	P.set_fly_speed(v)
+end)
+make_toggle_row(misc_page, "Noclip", 6, P.get_noclip_enabled(), function(v)
+	P.set_noclip_enabled(v)
+	notify("Mya", v and "Noclip on" or "Noclip off", 2)
+end)
+
+local bind_row = make_row(misc_page, 7, 36)
 local bind_lbl = Instance.new("TextLabel")
 bind_lbl.BackgroundTransparency = 1
 bind_lbl.Size = UDim2.new(1, -28, 1, 0)

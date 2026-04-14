@@ -4,6 +4,10 @@
   Register in config.lua:
     SUPPORTED_GAMES = { [PLACE_ID] = "games/MyGame_1234567890123/init.lua" }
   Hub passes ctx.baseUrl and ctx.gameScriptPath for multi-file HttpGet loads.
+
+  Multi-file + custom GUI (tabs, toggles, unload): copy the folder
+    games/_MultiFileGameTemplate_0/
+  Rename to games/YourGame_<PLACEID>/ and register that init.lua path.
 ]]
 
 local M = {}
