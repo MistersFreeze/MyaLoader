@@ -12,6 +12,7 @@ return {
 	-- Example: [game.PlaceId while testing] = "games/example.lua"
 	SUPPORTED_GAMES = {
 		[72920620366355] = "games/Operation-One_72920620366355/init.lua",
+		[110400717151509] = "games/Neighbors_110400717151509/init.lua",
 	},
 
 	THEME = {
