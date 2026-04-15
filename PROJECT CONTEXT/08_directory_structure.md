@@ -8,7 +8,8 @@ Mya/
 ├── config.lua                # Hosted: branding, theme, SUPPORTED_GAMES
 ├── loader.lua                # Hosted: entry for raw URL / paste; fetches config + hub
 ├── loader_jnkie.lua          # Optional Junkie dashboard script; sets MYA_BASE_URL, keys
-├── hub.lua                   # Hosted: hub UI + game module mount
+├── loader_local.lua          # Local dev: readfile + MYA_LOCAL_ROOT
+├── hub.lua                   # Hosted: hub UI + game module mount + Universal tab
 ├── README.md                 # User-facing quickstart (duplicate of some context docs)
 ├── .gitignore                # Ignores local key file name
 ├── mya_junkie_key.example.txt# Example line for Junkie UUID (copy to gitignored file locally)
@@ -18,13 +19,25 @@ Mya/
 ├── games/
 │   ├── _template.lua         # Starter template (not active until registered)
 │   ├── example.lua           # Minimal sample module
-│   └── Operation-One_72920620366355/
-│       ├── init.lua          # Entry registered in config
-│       ├── runtime.lua       # Loaded by init (same folder on host)
-│       └── gui.lua           # Loaded by init (same folder on host)
+│   ├── MyaUniversal/         # Place-agnostic: ESP, aim, fly, noclip, walk/jump (hub tab)
+│   │   ├── init.lua
+│   │   ├── runtime.lua
+│   │   └── gui.lua
+│   ├── Operation-One_72920620366355/
+│   │   ├── init.lua          # Entry registered in config
+│   │   ├── runtime.lua       # Returns bundle loader; concatenates runtime/*.lua
+│   │   ├── runtime_monolith.lua  # Backup of pre-split single file (optional)
+│   │   ├── runtime/          # Fragment chunks (one lexical scope when bundled)
+│   │   └── gui.lua
+│   └── Neighbors_110400717151509/
+│       ├── init.lua
+│       ├── runtime.lua       # Bundle loader; concatenates runtime/*.lua (named fragments)
+│       ├── runtime_monolith.lua
+│       ├── runtime/          # e.g. piano_engine.lua, visuals.lua, movement.lua, …
+│       └── gui.lua
 ├── universal/
 │   └── dumper.lua            # “Pro Script Dumper” (heavy; executor APIs required)
-└── piano.txt                 # Intentionally not documented in this pass
+└── piano.txt                 # Optional / legacy; not required for hub
 ```
 
 ## What is “hosted”
@@ -34,3 +47,9 @@ Anything the loader HttpGets must live at **`BASE_URL` + relative path**. Local-
 ## Naming convention for game folders
 
 Pattern: **`<ReadableName>_<PlaceId>`** with `init.lua` inside for multi-file games—makes the PlaceId obvious in Git and in URLs.
+
+**MyaUniversal** is not keyed by PlaceId in `config`; it is launched from the hub **Universal → Mya Universal** button.
+
+## Runtime bundles
+
+For large games, **`runtime.lua`** may be a thin **loader** that `fetch`es multiple files under **`runtime/`** and runs **`loadstring(table.concat(...))()`** once so all `local` state shares one chunk (same as a single monolithic file).

@@ -8,8 +8,6 @@ return function(BASE_URL: string, config: { [string]: any })
 	local Players = game:GetService("Players")
 	local UserInputService = game:GetService("UserInputService")
 	local TweenService = game:GetService("TweenService")
-	local HttpService = game:GetService("HttpService")
-
 	local localPlayer = Players.LocalPlayer
 	if not localPlayer then
 		localPlayer = Players.PlayerAdded:Wait()
@@ -270,6 +268,7 @@ return function(BASE_URL: string, config: { [string]: any })
 	local gamesPage = makeTab("games", "Games")
 	local creditsPage = makeTab("credits", "Credits")
 	makeCategoryLabel("UNIVERSAL")
+	local universalPage = makeTab("myauniversal", "Mya Universal")
 	local dumperPage = makeTab("dumper", "Dumper")
 
 	local homeScroll = UI.scroll(homePage)
@@ -305,6 +304,44 @@ return function(BASE_URL: string, config: { [string]: any })
 	gameLayout.SortOrder = Enum.SortOrder.LayoutOrder
 	gameLayout.Padding = UDim.new(0, 8)
 	gameLayout.Parent = gamePanel
+
+	local universalScroll = UI.scroll(universalPage)
+	universalScroll.Size = UDim2.new(1, 0, 1, 0)
+	local universalCard = UI.panel(universalScroll)
+	universalCard.Size = UDim2.new(1, -4, 0, 0)
+	UI.label(universalCard, "Mya Universal", 18, false)
+	UI.label(
+		universalCard,
+		"Works in any experience: ESP highlights, aim assist (hold RMB), fly, noclip, walk speed, and jump power. Uses a small in-game menu (Insert).",
+		14,
+		true
+	)
+	UI.primaryButton(universalCard, "Launch Mya Universal", function()
+		notify("Loading Mya Universal…")
+		local url = BASE_URL .. "games/MyaUniversal/init.lua"
+		local mod, err = Util.loadModuleFromUrl(url, "games/MyaUniversal/init.lua")
+		if not mod then
+			notify("Mya Universal load failed: " .. tostring(err))
+			return
+		end
+		if typeof(mod.mount) ~= "function" then
+			notify("Invalid Mya Universal module")
+			return
+		end
+		local ctx = {
+			notify = notify,
+			baseUrl = BASE_URL,
+			theme = theme,
+		}
+		local okM, errM = pcall(function()
+			mod.mount(ctx)
+		end)
+		if not okM then
+			notify("Mya Universal mount error: " .. tostring(errM))
+			return
+		end
+		notify("Mya Universal active · Insert for menu")
+	end)
 
 	local dumperScroll = UI.scroll(dumperPage)
 	dumperScroll.Size = UDim2.new(1, 0, 1, 0)
@@ -352,60 +389,12 @@ return function(BASE_URL: string, config: { [string]: any })
 		true
 	)
 
-	local avatarWrap = Instance.new("Frame")
-	avatarWrap.BackgroundTransparency = 1
-	avatarWrap.Size = UDim2.new(1, 0, 0, 84)
-	avatarWrap.Parent = creditsCard
-
-	local avatarRing = Instance.new("Frame")
-	avatarRing.AnchorPoint = Vector2.new(0.5, 0.5)
-	avatarRing.Position = UDim2.new(0.5, 0, 0.5, 0)
-	avatarRing.Size = UDim2.fromOffset(76, 76)
-	avatarRing.BackgroundColor3 = theme.surface
-	avatarRing.Parent = avatarWrap
-	UI.corner(avatarRing)
-
-	local avatarImg = Instance.new("ImageLabel")
-	avatarImg.Name = "Avatar"
-	avatarImg.BackgroundTransparency = 1
-	avatarImg.Position = UDim2.fromOffset(2, 2)
-	avatarImg.Size = UDim2.new(1, -4, 1, -4)
-	avatarImg.ScaleType = Enum.ScaleType.Fit
-	avatarImg.Image = ""
-	avatarImg.Parent = avatarRing
-	UI.corner(avatarImg)
-
 	UI.label(creditsCard, "@ilovehewho · Roblox", 16, false)
 	UI.label(creditsCard, "Discord: @fubelt", 14, false)
 
 	UI.label(creditsCard, "— Additional contributors (placeholder) —", 12, true)
 	UI.label(creditsCard, "• Name / role / link — add when you have more people to credit.", 13, true)
 	UI.label(creditsCard, "• …", 13, true)
-
-	task.defer(function()
-		local ok, body = pcall(function()
-			return game:HttpGet(
-				"https://users.roblox.com/v1/users/search?keyword=ilovehewho&limit=1",
-				true
-			)
-		end)
-		if not ok or not body or not avatarImg.Parent then
-			return
-		end
-		local okj, data = pcall(function()
-			return HttpService:JSONDecode(body)
-		end)
-		if not okj or not data or not data.data or not data.data[1] then
-			return
-		end
-		local uid = data.data[1].id
-		if typeof(uid) ~= "number" then
-			return
-		end
-		avatarImg.Image = "https://www.roblox.com/headshot-thumbnail/image?userId="
-			.. tostring(uid)
-			.. "&width=150&height=150&format=png"
-	end)
 
 	local mountedModule: any = nil
 	local placeId = game.PlaceId

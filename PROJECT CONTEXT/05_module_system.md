@@ -2,13 +2,15 @@
 
 ## Routing
 
-Support is determined **only** by **`game.PlaceId`** against **`config.SUPPORTED_GAMES`**, a map:
+**Default:** Support is determined by **`game.PlaceId`** against **`config.SUPPORTED_GAMES`**, a map:
 
 ```lua
 [PLACE_ID] = "path/relative/to/host/root.lua"
 ```
 
 Paths are **suffixes** appended to `BASE_URL` (the hosted repo root). Example: `games/Operation-One_72920620366355/init.lua`.
+
+**Universal:** **`games/MyaUniversal/init.lua`** is not registered by PlaceId. The hub **Universal** tab loads it on demand (same `mount` / `unmount` contract; context may omit `panel` / `getPlaceId` where unused).
 
 ## Contract for a game module
 
@@ -31,7 +33,9 @@ Populated in `hub.lua` (see implementation for the exact table):
 - **`baseUrl`** — `BASE_URL` string (hosted root with trailing slash behavior as provided).
 - **`gameScriptPath`** — Config path string for this module (e.g. `games/MyGame_123/init.lua`).
 
-Multi-file games derive a **directory URL** from `baseUrl` + dirname(`gameScriptPath`) and HttpGet additional files themselves (see Operation One).
+Multi-file games derive a **directory URL** from `baseUrl` + dirname(`gameScriptPath`) and HttpGet additional files themselves (see Operation One / Neighbors).
+
+**Runtime bundles:** Some **`runtime.lua`** files **return** `function(env)` where **`env.fetch`** and **`env.base`** load ordered fragments under **`runtime/`**, then **`loadstring` once** on the concatenation so **one** shared lexical scope is preserved (equivalent to a monolith).
 
 ## Lifecycle
 

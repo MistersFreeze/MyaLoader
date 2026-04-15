@@ -1,6 +1,7 @@
 --[[
-  Neighbors (PlaceId 110400717151509) — MIDI piano for in-game keyboard.
-  Loads runtime.lua (VirtualInputManager + MIDI parser) then gui.lua (Operation-One–style UI).
+  Neighbors — MIDI piano for in-game keyboard.
+  Supported PlaceIds: 110400717151509, 12699642568 (same module).
+  Loads runtime.lua (bundles runtime/*.lua) then gui.lua.
 ]]
 
 local M = {}
@@ -50,7 +51,11 @@ function M.mount(ctx)
 	if typeof(runChunk) ~= "function" then
 		error("Neighbors: runtime.lua failed to compile")
 	end
-	runChunk()
+	local loader = runChunk()
+	if typeof(loader) ~= "function" then
+		error("Neighbors: runtime.lua must return the bundle loader")
+	end
+	loader({ base = base, fetch = fetch })
 
 	local guiSrc = fetch(base .. "gui.lua")
 	local guiChunk = loadstring(guiSrc, "@Neighbors/gui")

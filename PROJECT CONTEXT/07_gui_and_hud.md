@@ -14,9 +14,12 @@ Default tabs (see `hub.lua`):
 |--------|-------|------|
 | `home` | Home | Welcome copy and current **PlaceId** display. |
 | `games` | Games | Support status and **game module panel** (`ctx.panel` target). |
+| `myauniversal` | Mya Universal | Button to load **`games/MyaUniversal/init.lua`** (ESP, aim, fly, noclip, walk/jump). |
 | `dumper` | Dumper | Button to HttpGet and run **`universal/dumper.lua`**. |
 
-Sidebar includes a **“UNIVERSAL”** category label above the dumper tab.
+Sidebar includes a **“UNIVERSAL”** category label above these tabs.
+
+**Credits** tab lists text contributors only (no avatar / headshot fetch).
 
 ## Theme
 

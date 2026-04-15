@@ -1,0 +1,147 @@
+
+-- Menu toggle
+connections[#connections+1] = uis.InputBegan:Connect(function(input, processed)
+    if processed or input.KeyCode ~= menu_key then return end
+    local menu_ui = _G.user_interface
+    if menu_ui then menu_ui.Enabled = not menu_ui.Enabled end
+end)
+
+-- -------------------- Unload --------------------
+_G.unload_mya = function()
+    unloaded = true
+    stop_fly()
+    fly_enabled = false
+    jump_boost = false
+    for _, conn in ipairs(connections) do if conn and conn.Connected then conn:Disconnect() end end
+    connections = {}
+    fov_circle:Remove()
+    for character, data in pairs(esp_list) do
+        remove_drawings(character); remove_skeleton(character); remove_chams(character)
+        if data.folder then data.folder:Destroy() end
+    end
+    esp_list = {}; skeleton_list = {}; chams_list = {}
+    for instance in pairs(gadget_data) do cleanup_gadget(instance) end
+    gadget_data = {}
+    apply_fullbright(false)
+    if screen_gui        then screen_gui:Destroy()        end
+    if _G.user_interface then _G.user_interface:Destroy() end
+    for _, k in ipairs({
+        "toggle_boxes","toggle_skeletons","toggle_tracers","toggle_healthbars","toggle_names",
+        "toggle_gadgets","toggle_fullbright","toggle_aim_assist","toggle_show_fov",
+        "toggle_vis_check","toggle_chams","toggle_team_check",
+        "toggle_fly","toggle_jump_boost",
+        "set_boxes","set_skeletons","set_tracers","set_healthbars","set_names","set_gadgets","set_team_check",
+        "set_fullbright","set_aim_assist","set_show_fov","set_vis_check",
+        "set_chams",
+        "set_fly","set_jump_boost",
+        "set_aim_fov","set_aim_speed","set_aim_fov_value","set_aim_speed_value","set_aim_key_value",
+        "set_fly_speed","set_fly_speed_value","set_jump_power","set_jump_power_value",
+        "set_color_tracer","set_color_box","set_color_skel_vis","set_color_skel_hid",
+        "set_color_fov","set_color_chams","set_color_throwable","set_color_placeable",
+        "get_config","apply_config","new_menu_key","user_interface","unload_mya",
+        "ui_set_aim_key","ui_set_menu_key",
+    }) do _G[k] = nil end
+end
+
+-- -------------------- Entry --------------------
+if viewmodels then
+    for _, v in ipairs(viewmodels:GetChildren()) do
+        if v:IsA("Model") then task.delay(0.1, create_esp, v) end
+    end
+    connections[#connections+1] = viewmodels.ChildAdded:Connect(function(v)
+        if not v:IsA("Model") then return end
+        task.delay(0.2, create_esp, v)
+        task.delay(1.0, create_esp, v)
+        task.delay(3.0, create_esp, v)
+    end)
+    connections[#connections+1] = viewmodels.ChildRemoved:Connect(function(v)
+        if esp_list[v] then remove_drawings(v); esp_list[v].folder:Destroy(); esp_list[v] = nil end
+        remove_skeleton(v); remove_chams(v)
+    end)
+
+    connections[#connections+1] = runservice.Heartbeat:Connect(function()
+        if unloaded then return end
+        for _, v in ipairs(viewmodels:GetChildren()) do
+            if v:IsA("Model") and not esp_list[v] then
+                create_esp(v)
+            end
+        end
+    end)
+end
+
+-- -------------------- Anti-Smoke / Anti-Flash --------------------
+-- Anti-Flash (always direct — simple property toggle)
+pcall(function()
+    local_player.PlayerGui.Flash.Enabled = false
+end)
+connections[#connections+1] = local_player.PlayerGui.ChildAdded:Connect(function(child)
+    if child.Name == "Flash" then pcall(function() child.Enabled = false end) end
+end)
+
+-- Anti-Smoke
+do
+    local anti_smoke_src = [[
+local cloneref = cloneref or function(obj) return obj end
+local newcclosure = newcclosure or function(fn) return fn end
+local hookfunction = hookfunction or function(fn, replacement) return fn end
+local workspace = cloneref(game:GetService("Workspace"))
+local tinySize = Vector3.new(0.001, 0.001, 0.001)
+
+local hiddenParts = setmetatable({}, { __mode = "k" })
+local handledSmoke = setmetatable({}, { __mode = "k" })
+
+local originalGetPropertyChangedSignal
+originalGetPropertyChangedSignal = hookfunction(
+    game.GetPropertyChangedSignal,
+    newcclosure(function(self, property)
+        if hiddenParts[self] and (
+            property == "Size" or
+            property == "Transparency" or
+            property == "LocalTransparencyModifier" or
+            property == "Color"
+        ) then
+            return Instance.new("BindableEvent").Event
+        end
+        return originalGetPropertyChangedSignal(self, property)
+    end)
+)
+
+local function hidePart(part)
+    hiddenParts[part] = true
+    part.LocalTransparencyModifier = 1
+    part.Size = tinySize
+end
+
+local function processSmokeObject(obj)
+    if handledSmoke[obj] then return end
+    handledSmoke[obj] = true
+    pcall(function()
+        if obj:IsA("BasePart") then hidePart(obj) end
+        for _, item in ipairs(obj:GetDescendants()) do
+            if item:IsA("BasePart") then
+                hidePart(item)
+            elseif item:IsA("ParticleEmitter") or item:IsA("Smoke") then
+                item.Enabled = false
+            end
+        end
+    end)
+end
+
+for _, child in ipairs(workspace:GetChildren()) do
+    if child.Name == "SmokePart" then processSmokeObject(child) end
+end
+workspace.ChildAdded:Connect(newcclosure(function(child)
+    if child.Name == "SmokePart" then processSmokeObject(child) end
+end))
+]]
+
+    local actor_ok = pcall(function()
+        if type(run_on_actor) ~= "function" or type(getactors) ~= "function" then error("no actor api") end
+        local actors = getactors()
+        if not actors or not actors[1] then error("no actors") end
+        run_on_actor(actors[1], anti_smoke_src)
+    end)
+    if not actor_ok then
+        pcall(function() loadstring(anti_smoke_src)() end)
+    end
+end

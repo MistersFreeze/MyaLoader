@@ -1,6 +1,6 @@
 --[[
   Operation One (PlaceId 72920620366355)
-  Loads runtime.lua (features) then gui.lua (interface) from the same folder on your host.
+  Loads runtime.lua (concatenates runtime/*.lua fragments) then gui.lua from the same folder.
 ]]
 
 local M = {}
@@ -50,7 +50,11 @@ function M.mount(ctx)
 	if typeof(runChunk) ~= "function" then
 		error("Operation One: runtime.lua failed to compile")
 	end
-	runChunk()
+	local runLoader = runChunk()
+	if typeof(runLoader) ~= "function" then
+		error("Operation One: runtime.lua must return the bundle loader")
+	end
+	runLoader({ base = base, fetch = fetch })
 
 	local guiSrc = fetch(base .. "gui.lua")
 	local guiChunk = loadstring(guiSrc, "@Operation-One/gui")

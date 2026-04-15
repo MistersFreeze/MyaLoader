@@ -436,7 +436,23 @@ status_lbl.Text = "Ready"
 status_lbl.Parent = status_row
 
 section_label(piano_page, "MIDI library", 3)
-local dd_toggle_row = make_row(piano_page, 4, 36)
+local search_row = make_row(piano_page, 4, 32)
+local midi_search_box = Instance.new("TextBox")
+midi_search_box.BackgroundColor3 = C.input_bg
+midi_search_box.Size = UDim2.new(1, -28, 0, 28)
+midi_search_box.Position = UDim2.new(0.5, 0, 0.5, 0)
+midi_search_box.AnchorPoint = Vector2.new(0.5, 0.5)
+midi_search_box.Font = Enum.Font.Gotham
+midi_search_box.TextSize = 12
+midi_search_box.TextColor3 = C.text
+midi_search_box.PlaceholderText = "Search MIDI files…"
+midi_search_box.PlaceholderColor3 = C.dim
+midi_search_box.ClearTextOnFocus = false
+midi_search_box.Text = ""
+Instance.new("UICorner", midi_search_box).CornerRadius = UDim.new(0, 6)
+midi_search_box.Parent = search_row
+
+local dd_toggle_row = make_row(piano_page, 5, 36)
 local dd_toggle = Instance.new("TextButton")
 dd_toggle.Size = UDim2.new(1, -28, 0, 28)
 dd_toggle.Position = UDim2.new(0.5, 0, 0.5, 0)
@@ -461,7 +477,7 @@ dd_list.ScrollBarImageColor3 = C.accent
 dd_list.CanvasSize = UDim2.new(0, 0, 0, 0)
 dd_list.AutomaticCanvasSize = Enum.AutomaticSize.Y
 dd_list.Parent = piano_page
-dd_list.LayoutOrder = 5
+dd_list.LayoutOrder = 6
 Instance.new("UICorner", dd_list).CornerRadius = UDim.new(0, 6)
 local dd_layout = Instance.new("UIListLayout")
 dd_layout.SortOrder = Enum.SortOrder.LayoutOrder
@@ -473,8 +489,8 @@ dd_pad.PaddingRight = UDim.new(0, 4)
 dd_pad.PaddingTop = UDim.new(0, 4)
 dd_pad.PaddingBottom = UDim.new(0, 4)
 
-section_label(piano_page, "URL or manual path", 6)
-local url_row = make_row(piano_page, 7, 36)
+section_label(piano_page, "URL or manual path", 7)
+local url_row = make_row(piano_page, 8, 36)
 local url_box = Instance.new("TextBox")
 url_box.BackgroundColor3 = C.input_bg
 url_box.BorderSizePixel = 0
@@ -592,7 +608,14 @@ local function rebuildMidiDropdown()
 	end
 	P.list_midi_files()
 	local files = P.get_midi_files()
-	for i, rel in ipairs(files) do
+	local q = midi_search_box.Text:lower():gsub("^%s+", ""):gsub("%s+$", "")
+	local filtered = {}
+	for _, rel in ipairs(files) do
+		if q == "" or string.find(rel:lower(), q, 1, true) then
+			table.insert(filtered, rel)
+		end
+	end
+	for i, rel in ipairs(filtered) do
 		local b = Instance.new("TextButton")
 		b.Size = UDim2.new(1, -8, 0, 26)
 		b.BackgroundColor3 = C.bg
@@ -619,21 +642,25 @@ dd_toggle.MouseButton1Click:Connect(function()
 	dd_toggle.Text = dd_list.Visible and "▲ Hide MIDI list" or "▼ Select a .mid file…"
 end)
 
+midi_search_box:GetPropertyChangedSignal("Text"):Connect(function()
+	rebuildMidiDropdown()
+end)
+
 P.list_midi_files()
 rebuildMidiDropdown()
 
-row_button(piano_page, 8, "Load (URL or file)", function()
+row_button(piano_page, 9, "Load (URL or file)", function()
 	tryLoadMidi()
 end)
 
-row_button(piano_page, 9, "Refresh MIDI list", function()
+row_button(piano_page, 10, "Refresh MIDI list", function()
 	rebuildMidiDropdown()
 	local n = #P.get_midi_files()
 	status_lbl.Text = (n > 0) and ("Found " .. n .. " .mid in ./MIDIow and ./MIDI") or "No .mid in ./MIDIow or ./MIDI"
 	notify("Mya", status_lbl.Text, 2)
 end)
 
-row_button(piano_page, 10, "Play", function()
+row_button(piano_page, 11, "Play", function()
 	if not P.is_midi_loaded() then
 		status_lbl.Text = "No MIDI loaded"
 		return
@@ -651,7 +678,7 @@ row_button(piano_page, 10, "Play", function()
 	end
 end)
 
-row_button(piano_page, 11, "Pause / Resume", function()
+row_button(piano_page, 12, "Pause / Resume", function()
 	if P.is_paused() then
 		P.resume_playback()
 		status_lbl.Text = "▶ Resumed"
@@ -661,14 +688,14 @@ row_button(piano_page, 11, "Pause / Resume", function()
 	end
 end)
 
-row_button(piano_page, 12, "Stop", function()
+row_button(piano_page, 13, "Stop", function()
 	P.stop_playback()
 	status_lbl.Text = "⏹ Stopped"
 end)
 
 local last_played_change = 0
 local was_playing_before_played = false
-local played_slider_set = make_slider(piano_page, "Position (0–1)", 13, 0, 1, 0, "%.3f", function(ratio)
+local played_slider_set = make_slider(piano_page, "Position (0–1)", 14, 0, 1, 0, "%.3f", function(ratio)
 	if not P.is_midi_loaded() or P.get_total_duration() <= 0 then
 		return
 	end
@@ -690,7 +717,7 @@ end)
 
 local last_speed_change = 0
 local was_playing_before_speed = false
-local speed_slider_set = make_slider(piano_page, "Speed %", 14, 50, 200, P.get_playback_speed_percent(), "%.0f", function(v)
+local speed_slider_set = make_slider(piano_page, "Speed %", 15, 50, 200, P.get_playback_speed_percent(), "%.0f", function(v)
 	if not P.is_paused() and not was_playing_before_speed then
 		was_playing_before_speed = true
 		P.pause_playback()
@@ -826,8 +853,22 @@ make_toggle_row(misc_page, "Noclip", 6, P.get_noclip_enabled(), function(v)
 	P.set_noclip_enabled(v)
 	notify("Mya", v and "Noclip on" or "Noclip off", 2)
 end)
+make_toggle_row(misc_page, "Anti ragdoll", 7, P.get_anti_ragdoll_enabled(), function(v)
+	P.set_anti_ragdoll_enabled(v)
+	notify("Mya", v and "Anti ragdoll on" or "Anti ragdoll off", 2)
+end)
+local walk_slider_set = make_slider(misc_page, "Walk speed", 8, 0, 200, P.get_walk_speed(), "%.0f", function(v)
+	P.set_walk_speed(v)
+end)
+local jump_slider_set = make_slider(misc_page, "Jump power", 9, 0, 200, P.get_jump_power(), "%.0f", function(v)
+	P.set_jump_power(v)
+end)
+task.defer(function()
+	walk_slider_set(P.get_walk_speed())
+	jump_slider_set(P.get_jump_power())
+end)
 
-local bind_row = make_row(misc_page, 7, 36)
+local bind_row = make_row(misc_page, 10, 36)
 local bind_lbl = Instance.new("TextLabel")
 bind_lbl.BackgroundTransparency = 1
 bind_lbl.Size = UDim2.new(1, -28, 1, 0)
