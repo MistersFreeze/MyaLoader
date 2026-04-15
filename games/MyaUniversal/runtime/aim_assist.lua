@@ -13,10 +13,9 @@ local function aim_step()
 		return
 	end
 
-	local vp = camera.ViewportSize
-	local center = Vector2.new(vp.X / 2, vp.Y / 2)
-	local dx = best_screen.X - center.X
-	local dy = best_screen.Y - center.Y
+	local anchor = get_fov_screen_anchor(aim_fov_follow_cursor)
+	local dx = best_screen.X - anchor.X
+	local dy = best_screen.Y - anchor.Y
 
 	local actual_speed = math.pow(aim_speed, 3)
 	if typeof(mousemoverel) ~= "function" then

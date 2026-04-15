@@ -20,27 +20,8 @@ local aim_bind = Enum.UserInputType.MouseButton2
 local aim_assist_fov = num("aim_assist_fov", 140, 40, 400)
 local aim_speed = num("aim_speed", 0.35, 0.05, 1)
 local aim_remainder_x, aim_remainder_y = 0, 0
-
-local silent_on = false
-local silent_fov = num("silent_fov", 140, 40, 400)
-local cached_silent_aim_world = nil
-local silent_max_origin_dist = num("silent_max_origin_dist", 180, 20, 500)
-local silent_min_look_dot = num("silent_min_look_dot", 0.35, 0, 1)
--- Only redirect Workspace:Raycast calls that pass RaycastParams (avoids hijacking 2-arg utility traces / UI).
-local silent_require_raycast_params = D.silent_require_raycast_params ~= false
--- Max bullet distance (direction.Magnitude); longer traces are left alone (sky checks, debug, etc.).
-local silent_max_ray_distance = num("silent_max_ray_distance", 8192, 32, 100000)
-local SILENT_PART_OK = { Head = true, HumanoidRootPart = true, UpperTorso = true, LowerTorso = true }
-local silent_aim_part = "Head"
-do
-	local raw = D.silent_aim_part
-	if type(raw) == "string" then
-		local p = raw:gsub("^%s+", ""):gsub("%s+$", "")
-		if SILENT_PART_OK[p] then
-			silent_aim_part = p
-		end
-	end
-end
+-- true = FOV circle & target pick use mouse position; false = screen center (FPS / static).
+local aim_fov_follow_cursor = D.aim_fov_follow_cursor == true
 
 local team_check_on = false
 local vis_check_on = false
@@ -53,8 +34,8 @@ local trigger_next = 0
 
 local healthbars_on = false
 local esp_distance_on = false
+local esp_names_on = D.esp_names_on == true
 local show_aim_fov_circle = false
-local show_silent_fov_circle = false
 
 local fly_on = false
 local fly_speed = num("fly_speed", 50, 5, 200)
@@ -89,18 +70,13 @@ local render_conn = nil
 
 local drawing_ok = typeof(Drawing) == "table" and typeof(Drawing.new) == "function"
 local health_draw = {}
-local fov_circle_aim, fov_circle_silent = nil, nil
-local old_workspace_raycast = nil
-local old_namecall = nil
+local fov_circle_aim = nil
 
 local color_fov_aim = col("fov_ring_aim", 230, 120, 175)
-local color_fov_silent = col("fov_ring_silent", 120, 200, 255)
 
 local vis_params = RaycastParams.new()
 vis_params.FilterType = Enum.RaycastFilterType.Blacklist
 vis_params.IgnoreWater = true
-
-local silent_ray_bypass = false
 
 local function update_vis_filter()
 	local c = lp.Character
@@ -127,4 +103,19 @@ end
 local function get_root()
 	local c = lp.Character
 	return c and c:FindFirstChild("HumanoidRootPart")
+end
+
+local function get_fov_screen_anchor(follow_cursor)
+	if not camera then
+		return Vector2.zero
+	end
+	local vp = camera.ViewportSize
+	local center = Vector2.new(vp.X / 2, vp.Y / 2)
+	if not follow_cursor then
+		return center
+	end
+	if UserInputService.MouseBehavior == Enum.MouseBehavior.LockCenter then
+		return center
+	end
+	return UserInputService:GetMouseLocation()
 end

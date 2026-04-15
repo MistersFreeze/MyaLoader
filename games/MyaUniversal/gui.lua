@@ -10,6 +10,7 @@ local cloneref_fn = type(cloneref) == "function" and cloneref or function(x)
 end
 local uis = cloneref_fn(game:GetService("UserInputService"))
 local http = game:GetService("HttpService")
+local ts = game:GetService("TweenService")
 
 local CONFIG_FOLDER = "mya_universal_configs"
 local function ensure_config_dir()
@@ -71,6 +72,89 @@ ui.ResetOnSpawn = false
 ui.Parent = gethui_support and gethui() or game:GetService("CoreGui")
 _G.mya_universal_ui = ui
 
+local notif_ui = Instance.new("ScreenGui")
+notif_ui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+notif_ui.Name = rand_str(6) .. "_N"
+notif_ui.IgnoreGuiInset = true
+notif_ui.DisplayOrder = 100
+notif_ui.Enabled = true
+notif_ui.ResetOnSpawn = false
+notif_ui.Parent = gethui_support and gethui() or game:GetService("CoreGui")
+_G.mya_universal_notif_ui = notif_ui
+
+local notif_top = Instance.new("Frame")
+notif_top.BackgroundTransparency = 1
+notif_top.Size = UDim2.fromScale(1, 1)
+notif_top.Parent = notif_ui
+
+local notif_container = Instance.new("Frame", notif_top)
+notif_container.BackgroundTransparency = 1
+notif_container.Size = UDim2.fromOffset(260, 400)
+notif_container.Position = UDim2.new(1, -270, 1, -420)
+
+local n_layout = Instance.new("UIListLayout", notif_container)
+n_layout.FillDirection = Enum.FillDirection.Vertical
+n_layout.HorizontalAlignment = Enum.HorizontalAlignment.Right
+n_layout.VerticalAlignment = Enum.VerticalAlignment.Bottom
+n_layout.Padding = UDim.new(0, 8)
+
+local function notify(title, text, duration)
+	duration = duration or 3
+	local f = Instance.new("Frame")
+	f.BackgroundColor3 = C.panel
+	f.Size = UDim2.fromOffset(250, 55)
+	f.Position = UDim2.fromOffset(260, 0)
+	Instance.new("UICorner", f).CornerRadius = UDim.new(0, 4)
+	local str = Instance.new("UIStroke", f)
+	str.Color = Color3.fromRGB(40, 40, 55)
+
+	local lbl_t = Instance.new("TextLabel", f)
+	lbl_t.BackgroundTransparency = 1
+	lbl_t.Position = UDim2.fromOffset(16, 8)
+	lbl_t.Size = UDim2.new(1, -24, 0, 16)
+	lbl_t.Font = Enum.Font.GothamBold
+	lbl_t.Text = title
+	lbl_t.TextColor3 = C.accent
+	lbl_t.TextSize = 12
+	lbl_t.TextXAlignment = Enum.TextXAlignment.Left
+
+	local lbl_d = Instance.new("TextLabel", f)
+	lbl_d.BackgroundTransparency = 1
+	lbl_d.Position = UDim2.fromOffset(16, 26)
+	lbl_d.Size = UDim2.new(1, -24, 0, 16)
+	lbl_d.Font = Enum.Font.Gotham
+	lbl_d.Text = text
+	lbl_d.TextColor3 = C.text
+	lbl_d.TextSize = 11
+	lbl_d.TextXAlignment = Enum.TextXAlignment.Left
+	lbl_d.TextWrapped = true
+
+	local stripe = Instance.new("Frame", f)
+	stripe.BackgroundColor3 = C.accent
+	stripe.BorderSizePixel = 0
+	stripe.Size = UDim2.new(0, 3, 1, 0)
+	Instance.new("UICorner", stripe).CornerRadius = UDim.new(0, 4)
+
+	f.Parent = notif_container
+	ts:Create(f, TweenInfo.new(0.4, Enum.EasingStyle.Cubic, Enum.EasingDirection.Out), { Position = UDim2.new(0, 0, 0, 0) }):Play()
+
+	task.spawn(function()
+		task.wait(duration)
+		if not f or not f.Parent then
+			return
+		end
+		local t_out = ts:Create(f, TweenInfo.new(0.4, Enum.EasingStyle.Cubic, Enum.EasingDirection.In), { Position = UDim2.fromOffset(260, 0), BackgroundTransparency = 1 })
+		t_out:Play()
+		ts:Create(str, TweenInfo.new(0.4), { Transparency = 1 }):Play()
+		ts:Create(lbl_t, TweenInfo.new(0.4), { TextTransparency = 1 }):Play()
+		ts:Create(lbl_d, TweenInfo.new(0.4), { TextTransparency = 1 }):Play()
+		ts:Create(stripe, TweenInfo.new(0.4), { BackgroundTransparency = 1 }):Play()
+		t_out.Completed:Wait()
+		f:Destroy()
+	end)
+end
+_G.mya_notify = notify
+
 local WIN_W, WIN_H = 360, 580
 local main = Instance.new("Frame")
 main.Name = "main"
@@ -116,7 +200,7 @@ title_lbl.Parent = header
 
 local TAB_NAMES = { "Combat", "Visuals", "Movement", "Configs", "Settings" }
 local SUB_PAGES = {
-	Combat = { "Aim assist", "Silent aim", "Triggerbot" },
+	Combat = { "Aim assist", "Triggerbot" },
 	Visuals = { "ESP" },
 	Movement = { "Flight", "Walk & jump", "Noclip" },
 }
@@ -276,7 +360,6 @@ for _, name in ipairs(TAB_NAMES) do
 end
 
 local combat_aim = all_sub_pages["Combat"]["Aim assist"]
-local combat_silent = all_sub_pages["Combat"]["Silent aim"]
 local combat_trigger = all_sub_pages["Combat"]["Triggerbot"]
 local visuals_esp = all_sub_pages["Visuals"]["ESP"]
 local movement_fly = all_sub_pages["Movement"]["Flight"]
@@ -543,16 +626,9 @@ local set_aim_speed_slider = make_slider(combat_aim, "Aim strength", next_order(
 	P.set_aim_speed(v)
 end)
 local ref_show_aim_fov = make_toggle_row(combat_aim, "Show aim FOV ring", next_order(), P.get_show_aim_fov_circle, P.set_show_aim_fov_circle)
+local ref_aim_fov_follow = make_toggle_row(combat_aim, "FOV follows cursor", next_order(), P.get_aim_fov_follow_cursor, P.set_aim_fov_follow_cursor)
 section_label(combat_aim, "Targeting", next_order())
 local ref_vis = make_toggle_row(combat_aim, "Visibility check", next_order(), P.get_vis_check, P.set_vis_check)
-
-lo = 0
-section_label(combat_silent, "Silent aim", next_order())
-local ref_silent_toggle = make_toggle_row(combat_silent, "Silent aim", next_order(), P.get_silent, P.set_silent)
-local set_silent_fov_slider = make_slider(combat_silent, "Silent aim FOV", next_order(), 40, 400, P.get_silent_fov(), "%.0f", function(v)
-	P.set_silent_fov(v)
-end)
-local ref_show_silent_fov = make_toggle_row(combat_silent, "Show silent FOV ring", next_order(), P.get_show_silent_fov_circle, P.set_show_silent_fov_circle)
 
 lo = 0
 section_label(combat_trigger, "Triggerbot", next_order())
@@ -571,6 +647,7 @@ local ref_esp = make_toggle_row(visuals_esp, "ESP highlights", next_order(), P.g
 local ref_team = make_toggle_row(visuals_esp, "Team check", next_order(), P.get_team_check, P.set_team_check)
 local ref_health = make_toggle_row(visuals_esp, "Health bars", next_order(), P.get_healthbars, P.set_healthbars)
 local ref_esp_dist = make_toggle_row(visuals_esp, "Distance text", next_order(), P.get_esp_distance, P.set_esp_distance)
+local ref_esp_names = make_toggle_row(visuals_esp, "Player names", next_order(), P.get_esp_names, P.set_esp_names)
 
 lo = 0
 section_label(configs_page, "Config manager", next_order())
@@ -650,7 +727,7 @@ local function refresh_configs()
 		end
 		local safe_path = CONFIG_FOLDER .. "/" .. name .. ".json"
 		mkbtn("LOAD", C.accent, function()
-			pcall(function()
+			local ok = pcall(function()
 				ensure_config_dir()
 				local raw = readfile(safe_path)
 				local cfg = http:JSONDecode(raw)
@@ -658,9 +735,16 @@ local function refresh_configs()
 					_G.apply_config(cfg)
 				end
 			end)
+			if typeof(_G.mya_notify) == "function" then
+				if ok then
+					_G.mya_notify("Config", "Loaded: " .. name, 3)
+				else
+					_G.mya_notify("Config", "Load failed: " .. name, 3)
+				end
+			end
 		end)
 		mkbtn("SAVE", C.green, function()
-			pcall(function()
+			local ok = pcall(function()
 				ensure_config_dir()
 				local gc = _G.get_config
 				if typeof(gc) == "function" then
@@ -668,6 +752,13 @@ local function refresh_configs()
 					refresh_configs()
 				end
 			end)
+			if typeof(_G.mya_notify) == "function" then
+				if ok then
+					_G.mya_notify("Config", "Saved: " .. name, 3)
+				else
+					_G.mya_notify("Config", "Save failed: " .. name, 3)
+				end
+			end
 		end)
 		mkbtn("X", C.red, function()
 			pcall(delfile, safe_path)
@@ -723,7 +814,7 @@ create_btn.MouseButton1Click:Connect(function()
 	if n == "" then
 		return
 	end
-	pcall(function()
+	local ok = pcall(function()
 		ensure_config_dir()
 		local gc = _G.get_config
 		if typeof(gc) ~= "function" then
@@ -733,6 +824,13 @@ create_btn.MouseButton1Click:Connect(function()
 	end)
 	cin.Text = ""
 	refresh_configs()
+	if typeof(_G.mya_notify) == "function" then
+		if ok then
+			_G.mya_notify("Config", "Created: " .. n, 3)
+		else
+			_G.mya_notify("Config", "Create failed", 3)
+		end
+	end
 end)
 
 refresh_configs()
@@ -849,7 +947,6 @@ switch_tab("Combat")
 task.defer(function()
 	set_aim_fov_slider(P.get_aim_fov())
 	set_aim_speed_slider(P.get_aim_speed())
-	set_silent_fov_slider(P.get_silent_fov())
 	set_trigger_fov_slider(P.get_trigger_fov())
 	set_trigger_delay_slider(P.get_trigger_delay())
 	set_fly_speed_slider(P.get_fly_speed())
@@ -862,12 +959,12 @@ function _G.MYA_UNIVERSAL_SYNC_UI()
 	ref_team()
 	ref_health()
 	ref_esp_dist()
+	ref_esp_names()
 	ref_aim_toggle()
 	ref_aim_bind()
 	ref_vis()
-	ref_silent_toggle()
 	ref_show_aim_fov()
-	ref_show_silent_fov()
+	ref_aim_fov_follow()
 	ref_fly()
 	ref_walk_mod()
 	ref_jump_mod()
@@ -876,7 +973,6 @@ function _G.MYA_UNIVERSAL_SYNC_UI()
 	ref_trigger_bind()
 	set_aim_fov_slider(P.get_aim_fov())
 	set_aim_speed_slider(P.get_aim_speed())
-	set_silent_fov_slider(P.get_silent_fov())
 	set_trigger_fov_slider(P.get_trigger_fov())
 	set_trigger_delay_slider(P.get_trigger_delay())
 	set_fly_speed_slider(P.get_fly_speed())

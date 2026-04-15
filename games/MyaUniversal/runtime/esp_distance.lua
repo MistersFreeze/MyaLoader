@@ -1,5 +1,7 @@
 local DIST_UP = 1.8
+local NAME_UP = 2.45
 local distance_draw = {}
+local name_draw = {}
 
 function remove_distance_draw(plr)
 	local d = distance_draw[plr]
@@ -10,6 +12,17 @@ function remove_distance_draw(plr)
 		d:Remove()
 	end)
 	distance_draw[plr] = nil
+end
+
+function remove_name_draw(plr)
+	local d = name_draw[plr]
+	if not d then
+		return
+	end
+	pcall(function()
+		d:Remove()
+	end)
+	name_draw[plr] = nil
 end
 
 local function ensure_distance_text(plr)
@@ -32,6 +45,26 @@ local function hide_distance(plr)
 	end
 end
 
+local function hide_name(plr)
+	local d = name_draw[plr]
+	if d then
+		d.Visible = false
+	end
+end
+
+local function ensure_name_text(plr)
+	if not drawing_ok or name_draw[plr] then
+		return
+	end
+	local t = Drawing.new("Text")
+	t.Visible = false
+	t.Size = 13
+	t.Center = true
+	t.Outline = true
+	t.Color = Color3.fromRGB(230, 230, 245)
+	name_draw[plr] = t
+end
+
 local function update_esp_distance()
 	if not drawing_ok or not esp_distance_on or not camera then
 		for plr in pairs(distance_draw) do
@@ -45,6 +78,12 @@ local function update_esp_distance()
 			hide_distance(plr)
 		end
 		return
+	end
+
+	for plr in pairs(distance_draw) do
+		if plr == lp or not plr.Parent or is_teammate(plr) then
+			remove_distance_draw(plr)
+		end
 	end
 
 	for _, plr in ipairs(Players:GetPlayers()) do
@@ -73,4 +112,56 @@ local function update_esp_distance()
 	end
 end
 
+local function update_esp_names()
+	if not drawing_ok or not esp_names_on or not camera then
+		for plr in pairs(name_draw) do
+			hide_name(plr)
+		end
+		return
+	end
+	local myRoot = get_root()
+	if not myRoot then
+		for plr in pairs(name_draw) do
+			hide_name(plr)
+		end
+		return
+	end
+
+	for plr in pairs(name_draw) do
+		if plr == lp or not plr.Parent or is_teammate(plr) then
+			remove_name_draw(plr)
+		end
+	end
+
+	for _, plr in ipairs(Players:GetPlayers()) do
+		if plr ~= lp and not is_teammate(plr) then
+			local char = plr.Character
+			local hrp = char and char:FindFirstChild("HumanoidRootPart")
+			local head = char and char:FindFirstChild("Head")
+			if not char or not hrp or not head or not hrp:IsA("BasePart") or not head:IsA("BasePart") then
+				hide_name(plr)
+			else
+				local pos, onScreen = camera:WorldToViewportPoint(head.Position + Vector3.new(0, NAME_UP, 0))
+				if onScreen and pos.Z > 0 then
+					ensure_name_text(plr)
+					local d = name_draw[plr]
+					d.Position = Vector2.new(pos.X, pos.Y)
+					local disp = plr.DisplayName
+					if type(disp) == "string" and disp ~= "" then
+						d.Text = disp
+					else
+						d.Text = plr.Name
+					end
+					d.Visible = true
+				else
+					hide_name(plr)
+				end
+			end
+		else
+			hide_name(plr)
+		end
+	end
+end
+
 _G.remove_distance_draw = remove_distance_draw
+_G.remove_name_draw = remove_name_draw

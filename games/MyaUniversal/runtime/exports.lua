@@ -1,7 +1,5 @@
 local function unload_mya_universal()
 	_G.MYA_UNIVERSAL_LOADED = false
-	silent_ray_bypass = true
-	pcall(uninstall_silent_hooks)
 	for i = #connections, 1, -1 do
 		local c = connections[i]
 		connections[i] = nil
@@ -27,19 +25,27 @@ local function unload_mya_universal()
 				_G.remove_distance_draw(plr)
 			end
 		end)
+		pcall(function()
+			if _G.remove_name_draw then
+				_G.remove_name_draw(plr)
+			end
+		end)
 	end
 	_G.remove_distance_draw = nil
+	_G.remove_name_draw = nil
+	pcall(function()
+		local n = _G.mya_universal_notif_ui
+		if n and n.Parent then
+			n:Destroy()
+		end
+	end)
+	_G.mya_universal_notif_ui = nil
+	_G.mya_notify = nil
 	if fov_circle_aim then
 		pcall(function()
 			fov_circle_aim:Remove()
 		end)
 		fov_circle_aim = nil
-	end
-	if fov_circle_silent then
-		pcall(function()
-			fov_circle_silent:Remove()
-		end)
-		fov_circle_silent = nil
 	end
 	pcall(function()
 		local ui = _G.mya_universal_ui
@@ -88,32 +94,24 @@ _G.MYA_UNIVERSAL = {
 			aim_speed = math.clamp(n, 0.05, 1)
 		end
 	end,
+	get_aim_fov_follow_cursor = function()
+		return aim_fov_follow_cursor
+	end,
+	set_aim_fov_follow_cursor = function(v)
+		aim_fov_follow_cursor = not not v
+	end,
 	get_team_check = function()
 		return team_check_on
 	end,
 	set_team_check = function(v)
 		team_check_on = not not v
+		esp_refresh()
 	end,
 	get_vis_check = function()
 		return vis_check_on
 	end,
 	set_vis_check = function(v)
 		vis_check_on = not not v
-	end,
-	get_silent = function()
-		return silent_on
-	end,
-	set_silent = function(v)
-		silent_on = not not v
-	end,
-	get_silent_fov = function()
-		return silent_fov
-	end,
-	set_silent_fov = function(v)
-		local n = tonumber(v)
-		if n then
-			silent_fov = math.clamp(n, 40, 400)
-		end
 	end,
 	get_triggerbot = function()
 		return triggerbot_on
@@ -153,12 +151,6 @@ _G.MYA_UNIVERSAL = {
 	set_show_aim_fov_circle = function(v)
 		show_aim_fov_circle = not not v
 	end,
-	get_show_silent_fov_circle = function()
-		return show_silent_fov_circle
-	end,
-	set_show_silent_fov_circle = function(v)
-		show_silent_fov_circle = not not v
-	end,
 	get_esp = function()
 		return esp_on
 	end,
@@ -177,6 +169,12 @@ _G.MYA_UNIVERSAL = {
 	end,
 	set_esp_distance = function(v)
 		esp_distance_on = not not v
+	end,
+	get_esp_names = function()
+		return esp_names_on
+	end,
+	set_esp_names = function(v)
+		esp_names_on = not not v
 	end,
 	get_walk_mod = function()
 		return walk_mod_on
@@ -247,32 +245,6 @@ _G.MYA_UNIVERSAL = {
 			end
 		end
 	end,
-	get_silent_require_raycast_params = function()
-		return silent_require_raycast_params
-	end,
-	set_silent_require_raycast_params = function(v)
-		silent_require_raycast_params = not not v
-	end,
-	get_silent_max_ray_distance = function()
-		return silent_max_ray_distance
-	end,
-	set_silent_max_ray_distance = function(v)
-		local n = tonumber(v)
-		if n then
-			silent_max_ray_distance = math.clamp(n, 32, 100000)
-		end
-	end,
-	get_silent_aim_part = function()
-		return silent_aim_part
-	end,
-	set_silent_aim_part = function(v)
-		if type(v) == "string" then
-			local p = v:gsub("^%s+", ""):gsub("%s+$", "")
-			if SILENT_PART_OK[p] then
-				silent_aim_part = p
-			end
-		end
-	end,
 }
 
 local function enum_to_str(e)
@@ -304,19 +276,18 @@ _G.get_config = function()
 		aim_bind = enum_to_str(aim_bind),
 		aim_assist_fov = aim_assist_fov,
 		aim_speed = aim_speed,
+		aim_fov_follow_cursor = aim_fov_follow_cursor,
 		team_check_on = team_check_on,
 		vis_check_on = vis_check_on,
-		silent_on = silent_on,
-		silent_fov = silent_fov,
 		triggerbot_on = triggerbot_on,
 		trigger_bind = enum_to_str(trigger_bind),
 		trigger_fov = trigger_fov,
 		trigger_delay = trigger_delay,
 		show_aim_fov_circle = show_aim_fov_circle,
-		show_silent_fov_circle = show_silent_fov_circle,
 		esp_on = esp_on,
 		healthbars_on = healthbars_on,
 		esp_distance_on = esp_distance_on,
+		esp_names_on = esp_names_on,
 		walk_mod_on = walk_mod_on,
 		jump_mod_on = jump_mod_on,
 		fly_on = fly_on,
@@ -324,9 +295,6 @@ _G.get_config = function()
 		noclip_on = noclip_on,
 		walk_speed = walk_target,
 		jump_power = jump_target,
-		silent_require_raycast_params = silent_require_raycast_params,
-		silent_max_ray_distance = silent_max_ray_distance,
-		silent_aim_part = silent_aim_part,
 	}
 end
 
@@ -349,17 +317,14 @@ _G.apply_config = function(cfg)
 	if cfg.aim_speed ~= nil then
 		U.set_aim_speed(cfg.aim_speed)
 	end
+	if cfg.aim_fov_follow_cursor ~= nil then
+		U.set_aim_fov_follow_cursor(cfg.aim_fov_follow_cursor)
+	end
 	if cfg.team_check_on ~= nil then
 		U.set_team_check(cfg.team_check_on)
 	end
 	if cfg.vis_check_on ~= nil then
 		U.set_vis_check(cfg.vis_check_on)
-	end
-	if cfg.silent_on ~= nil then
-		U.set_silent(cfg.silent_on)
-	end
-	if cfg.silent_fov ~= nil then
-		U.set_silent_fov(cfg.silent_fov)
 	end
 	if cfg.triggerbot_on ~= nil then
 		U.set_triggerbot(cfg.triggerbot_on)
@@ -379,9 +344,6 @@ _G.apply_config = function(cfg)
 	if cfg.show_aim_fov_circle ~= nil then
 		U.set_show_aim_fov_circle(cfg.show_aim_fov_circle)
 	end
-	if cfg.show_silent_fov_circle ~= nil then
-		U.set_show_silent_fov_circle(cfg.show_silent_fov_circle)
-	end
 	if cfg.esp_on ~= nil then
 		U.set_esp(cfg.esp_on)
 	end
@@ -390,6 +352,9 @@ _G.apply_config = function(cfg)
 	end
 	if cfg.esp_distance_on ~= nil then
 		U.set_esp_distance(cfg.esp_distance_on)
+	end
+	if cfg.esp_names_on ~= nil then
+		U.set_esp_names(cfg.esp_names_on)
 	end
 	if cfg.walk_mod_on ~= nil then
 		U.set_walk_mod(cfg.walk_mod_on)
@@ -411,15 +376,6 @@ _G.apply_config = function(cfg)
 	end
 	if cfg.jump_power ~= nil then
 		U.set_jump(cfg.jump_power)
-	end
-	if cfg.silent_require_raycast_params ~= nil then
-		U.set_silent_require_raycast_params(cfg.silent_require_raycast_params)
-	end
-	if cfg.silent_max_ray_distance ~= nil then
-		U.set_silent_max_ray_distance(cfg.silent_max_ray_distance)
-	end
-	if cfg.silent_aim_part ~= nil then
-		U.set_silent_aim_part(cfg.silent_aim_part)
 	end
 	if typeof(_G.MYA_UNIVERSAL_SYNC_UI) == "function" then
 		_G.MYA_UNIVERSAL_SYNC_UI()

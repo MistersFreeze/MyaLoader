@@ -13,7 +13,6 @@ return function(env)
 		"runtime/fov_rings.lua",
 		"runtime/aim_assist.lua",
 		"runtime/triggerbot.lua",
-		"runtime/silent_aim.lua",
 		"runtime/movement.lua",
 		"runtime/render_hooks.lua",
 		"runtime/exports.lua",

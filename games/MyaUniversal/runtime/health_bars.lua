@@ -53,6 +53,12 @@ local function update_health_bars()
 		return
 	end
 
+	for plr in pairs(health_draw) do
+		if plr == lp or not plr.Parent or is_teammate(plr) then
+			remove_health_draw(plr)
+		end
+	end
+
 	local HEALTHBAR_GAP_PX = 10
 
 	for _, plr in ipairs(Players:GetPlayers()) do

@@ -1,3 +1,6 @@
+local noclip_char_added_conn = nil
+local noclip_descendant_conn = nil
+
 local function refresh_movement()
 	local h = get_hum()
 	if not h then
@@ -112,8 +115,22 @@ end
 
 local function stop_noclip()
 	if noclip_conn then
-		noclip_conn:Disconnect()
+		pcall(function()
+			noclip_conn:Disconnect()
+		end)
 		noclip_conn = nil
+	end
+	if noclip_char_added_conn then
+		pcall(function()
+			noclip_char_added_conn:Disconnect()
+		end)
+		noclip_char_added_conn = nil
+	end
+	if noclip_descendant_conn then
+		pcall(function()
+			noclip_descendant_conn:Disconnect()
+		end)
+		noclip_descendant_conn = nil
 	end
 	for part, was in pairs(noclip_saved) do
 		if part.Parent and part:IsA("BasePart") then
@@ -141,13 +158,53 @@ end
 
 local function start_noclip()
 	stop_noclip()
-	noclip_conn = RunService.Heartbeat:Connect(function()
+	local function step()
 		if not noclip_on or not _G.MYA_UNIVERSAL_LOADED then
 			return
 		end
 		apply_noclip_character(lp.Character)
-	end)
+	end
+	local postSim = RunService.PostSimulation
+	if postSim then
+		noclip_conn = postSim:Connect(step)
+	else
+		noclip_conn = RunService.Heartbeat:Connect(step)
+	end
 	table.insert(connections, noclip_conn)
+
+	local function hook_descendants(c)
+		if noclip_descendant_conn then
+			pcall(function()
+				noclip_descendant_conn:Disconnect()
+			end)
+			noclip_descendant_conn = nil
+		end
+		if not c then
+			return
+		end
+		noclip_descendant_conn = c.DescendantAdded:Connect(function(o)
+			if noclip_on and o:IsA("BasePart") then
+				if noclip_saved[o] == nil then
+					noclip_saved[o] = o.CanCollide
+				end
+				o.CanCollide = false
+			end
+		end)
+	end
+
+	hook_descendants(lp.Character)
+	noclip_char_added_conn = lp.CharacterAdded:Connect(function(c)
+		task.defer(function()
+			if not noclip_on then
+				return
+			end
+			noclip_saved = {}
+			hook_descendants(c)
+			apply_noclip_character(c)
+		end)
+	end)
+	table.insert(connections, noclip_char_added_conn)
+
 	if lp.Character then
 		apply_noclip_character(lp.Character)
 	end
@@ -189,6 +246,11 @@ local function hook_players()
 			pcall(function()
 				if _G.remove_distance_draw then
 					_G.remove_distance_draw(plr)
+				end
+			end)
+			pcall(function()
+				if _G.remove_name_draw then
+					_G.remove_name_draw(plr)
 				end
 			end)
 		end)
