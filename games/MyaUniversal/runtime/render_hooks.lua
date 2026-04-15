@@ -9,6 +9,7 @@ local function render_frame()
 	end
 	update_fov_circles()
 	update_health_bars()
+	update_esp_distance()
 	aim_step()
 	triggerbot_step()
 end
@@ -19,7 +20,7 @@ table.insert(connections, render_conn)
 hook_players()
 table.insert(connections, lp.CharacterAdded:Connect(function()
 	task.wait(0.15)
-	ws_orig, jp_orig = nil, nil
+	ws_orig, jp_orig, jh_orig = nil, nil, nil
 	refresh_movement()
 	if fly_on then
 		start_fly()

@@ -8,9 +8,24 @@ local function refresh_movement()
 	end
 	if jp_orig == nil then
 		jp_orig = h.JumpPower
+		jh_orig = h.JumpHeight
 	end
-	h.WalkSpeed = walk_target
-	h.JumpPower = jump_target
+	if walk_mod_on then
+		h.WalkSpeed = walk_target
+	else
+		h.WalkSpeed = ws_orig
+	end
+	if jump_mod_on then
+		pcall(function()
+			h.UseJumpPower = true
+		end)
+		h.JumpPower = math.clamp(jump_target, 0, 500)
+	else
+		h.JumpPower = jp_orig
+		if jh_orig ~= nil then
+			h.JumpHeight = jh_orig
+		end
+	end
 end
 
 local function restore_movement()
@@ -22,8 +37,11 @@ local function restore_movement()
 		if jp_orig ~= nil then
 			h.JumpPower = jp_orig
 		end
+		if jh_orig ~= nil then
+			h.JumpHeight = jh_orig
+		end
 	end
-	ws_orig, jp_orig = nil, nil
+	ws_orig, jp_orig, jh_orig = nil, nil, nil
 end
 
 local function stop_fly()
@@ -107,26 +125,32 @@ local function stop_noclip()
 	noclip_saved = {}
 end
 
+local function apply_noclip_character(c)
+	if not c then
+		return
+	end
+	for _, p in ipairs(c:GetDescendants()) do
+		if p:IsA("BasePart") then
+			if noclip_saved[p] == nil then
+				noclip_saved[p] = p.CanCollide
+			end
+			p.CanCollide = false
+		end
+	end
+end
+
 local function start_noclip()
 	stop_noclip()
-	noclip_conn = RunService.Stepped:Connect(function()
-		if not noclip_on then
+	noclip_conn = RunService.Heartbeat:Connect(function()
+		if not noclip_on or not _G.MYA_UNIVERSAL_LOADED then
 			return
 		end
-		local c = lp.Character
-		if not c then
-			return
-		end
-		for _, p in ipairs(c:GetDescendants()) do
-			if p:IsA("BasePart") then
-				if noclip_saved[p] == nil then
-					noclip_saved[p] = p.CanCollide
-				end
-				p.CanCollide = false
-			end
-		end
+		apply_noclip_character(lp.Character)
 	end)
 	table.insert(connections, noclip_conn)
+	if lp.Character then
+		apply_noclip_character(lp.Character)
+	end
 end
 
 local function hook_other(plr)
@@ -162,6 +186,11 @@ local function hook_players()
 				highlights[plr] = nil
 			end
 			remove_health_draw(plr)
+			pcall(function()
+				if _G.remove_distance_draw then
+					_G.remove_distance_draw(plr)
+				end
+			end)
 		end)
 	)
 end

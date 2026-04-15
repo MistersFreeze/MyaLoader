@@ -4,18 +4,19 @@
 ]]
 return function(env)
 	local order = {
-		"runtime/01_guard_services.lua",
-		"runtime/02_state_config.lua",
-		"runtime/03_targeting.lua",
-		"runtime/04_esp.lua",
-		"runtime/05_health_bars.lua",
-		"runtime/06_fov_rings.lua",
-		"runtime/07_aim_assist.lua",
-		"runtime/08_triggerbot.lua",
-		"runtime/09_silent_aim.lua",
-		"runtime/10_movement.lua",
-		"runtime/11_render_hooks.lua",
-		"runtime/12_exports.lua",
+		"runtime/guard_services.lua",
+		"runtime/state_config.lua",
+		"runtime/targeting.lua",
+		"runtime/esp.lua",
+		"runtime/esp_distance.lua",
+		"runtime/health_bars.lua",
+		"runtime/fov_rings.lua",
+		"runtime/aim_assist.lua",
+		"runtime/triggerbot.lua",
+		"runtime/silent_aim.lua",
+		"runtime/movement.lua",
+		"runtime/render_hooks.lua",
+		"runtime/exports.lua",
 	}
 	local buf = {}
 	for i = 1, #order do

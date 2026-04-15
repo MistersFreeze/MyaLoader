@@ -52,6 +52,7 @@ local trigger_delay = num("trigger_delay", 0.1, 0.03, 0.5)
 local trigger_next = 0
 
 local healthbars_on = false
+local esp_distance_on = false
 local show_aim_fov_circle = false
 local show_silent_fov_circle = false
 
@@ -62,7 +63,9 @@ local noclip_saved = {}
 
 local walk_target = num("walk_speed", 16, 0, 200)
 local jump_target = num("jump_power", 50, 0, 200)
-local ws_orig, jp_orig = nil, nil
+local walk_mod_on = false
+local jump_mod_on = false
+local ws_orig, jp_orig, jh_orig = nil, nil, nil
 
 local gui_parent = gethui and gethui() or lp:WaitForChild("PlayerGui")
 local esp_gui = Instance.new("ScreenGui")

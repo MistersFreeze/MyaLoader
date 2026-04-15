@@ -53,6 +53,8 @@ local function update_health_bars()
 		return
 	end
 
+	local HEALTHBAR_GAP_PX = 10
+
 	for _, plr in ipairs(Players:GetPlayers()) do
 		if plr ~= lp and not is_teammate(plr) then
 			local char = plr.Character
@@ -78,8 +80,8 @@ local function update_health_bars()
 							local by_bot = math.max(top_vp.Y, bot_vp.Y)
 							local bh = by_bot - by_top
 							if bh > 1 then
-								local left_edge = math.min(top_vp.X, bot_vp.X)
-								local bx = left_edge - 14
+								local right_edge = math.max(top_vp.X, bot_vp.X)
+								local bx = right_edge + HEALTHBAR_GAP_PX
 								local pct = math.clamp(hp / max_hp, 0, 1)
 								data.health_bg.From = Vector2.new(bx, by_top)
 								data.health_bg.To = Vector2.new(bx, by_bot)

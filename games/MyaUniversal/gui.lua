@@ -9,6 +9,27 @@ local cloneref_fn = type(cloneref) == "function" and cloneref or function(x)
 	return x
 end
 local uis = cloneref_fn(game:GetService("UserInputService"))
+local http = game:GetService("HttpService")
+
+local CONFIG_FOLDER = "mya_universal_configs"
+local function ensure_config_dir()
+	if not makefolder then
+		return
+	end
+	pcall(function()
+		local exists = false
+		if isfolder then
+			local ok, res = pcall(isfolder, CONFIG_FOLDER)
+			if ok and res then
+				exists = true
+			end
+		end
+		if not exists then
+			makefolder(CONFIG_FOLDER)
+		end
+	end)
+end
+ensure_config_dir()
 
 local function rand_str(len)
 	local chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
@@ -37,6 +58,8 @@ local C = {
 	input_bg = Color3.fromRGB(28, 30, 38),
 	sub_off = Color3.fromRGB(30, 32, 40),
 	sub_on = Color3.fromRGB(230, 120, 175),
+	red = Color3.fromRGB(220, 80, 80),
+	green = Color3.fromRGB(90, 200, 130),
 }
 
 local ui = Instance.new("ScreenGui")
@@ -91,10 +114,10 @@ title_lbl.Size = UDim2.new(1, -24, 1, 0)
 title_lbl.TextXAlignment = Enum.TextXAlignment.Left
 title_lbl.Parent = header
 
-local TAB_NAMES = { "Combat", "Visuals", "Movement", "Settings" }
+local TAB_NAMES = { "Combat", "Visuals", "Movement", "Configs", "Settings" }
 local SUB_PAGES = {
 	Combat = { "Aim assist", "Silent aim", "Triggerbot" },
-	Visuals = { "ESP", "Health", "FOV rings" },
+	Visuals = { "ESP" },
 	Movement = { "Flight", "Walk & jump", "Noclip" },
 }
 
@@ -221,7 +244,7 @@ for i, name in ipairs(TAB_NAMES) do
 	b.AutoButtonColor = false
 	b.Text = name
 	b.Font = Enum.Font.GothamSemibold
-	b.TextSize = 10
+	b.TextSize = 9
 	b.BackgroundColor3 = C.tab_off
 	b.TextColor3 = C.dim
 	b.BorderSizePixel = 0
@@ -256,11 +279,19 @@ local combat_aim = all_sub_pages["Combat"]["Aim assist"]
 local combat_silent = all_sub_pages["Combat"]["Silent aim"]
 local combat_trigger = all_sub_pages["Combat"]["Triggerbot"]
 local visuals_esp = all_sub_pages["Visuals"]["ESP"]
-local visuals_health = all_sub_pages["Visuals"]["Health"]
-local visuals_fov = all_sub_pages["Visuals"]["FOV rings"]
 local movement_fly = all_sub_pages["Movement"]["Flight"]
 local movement_walk = all_sub_pages["Movement"]["Walk & jump"]
 local movement_noclip = all_sub_pages["Movement"]["Noclip"]
+
+local configs_page = make_page()
+configs_page.Visible = true
+configs_page.Parent = tab_containers["Configs"]
+for _, ch in ipairs(configs_page:GetChildren()) do
+	if ch:IsA("UIPadding") then
+		ch.PaddingBottom = UDim.new(0, 4)
+		break
+	end
+end
 
 local settings_page = make_page()
 settings_page.Visible = true
@@ -511,8 +542,8 @@ end)
 local set_aim_speed_slider = make_slider(combat_aim, "Aim strength", next_order(), 0.05, 1, P.get_aim_speed(), "%.2f", function(v)
 	P.set_aim_speed(v)
 end)
+local ref_show_aim_fov = make_toggle_row(combat_aim, "Show aim FOV ring", next_order(), P.get_show_aim_fov_circle, P.set_show_aim_fov_circle)
 section_label(combat_aim, "Targeting", next_order())
-local ref_team = make_toggle_row(combat_aim, "Team check", next_order(), P.get_team_check, P.set_team_check)
 local ref_vis = make_toggle_row(combat_aim, "Visibility check", next_order(), P.get_vis_check, P.set_vis_check)
 
 lo = 0
@@ -521,6 +552,7 @@ local ref_silent_toggle = make_toggle_row(combat_silent, "Silent aim", next_orde
 local set_silent_fov_slider = make_slider(combat_silent, "Silent aim FOV", next_order(), 40, 400, P.get_silent_fov(), "%.0f", function(v)
 	P.set_silent_fov(v)
 end)
+local ref_show_silent_fov = make_toggle_row(combat_silent, "Show silent FOV ring", next_order(), P.get_show_silent_fov_circle, P.set_show_silent_fov_circle)
 
 lo = 0
 section_label(combat_trigger, "Triggerbot", next_order())
@@ -536,15 +568,174 @@ end)
 lo = 0
 section_label(visuals_esp, "ESP", next_order())
 local ref_esp = make_toggle_row(visuals_esp, "ESP highlights", next_order(), P.get_esp, P.set_esp)
+local ref_team = make_toggle_row(visuals_esp, "Team check", next_order(), P.get_team_check, P.set_team_check)
+local ref_health = make_toggle_row(visuals_esp, "Health bars", next_order(), P.get_healthbars, P.set_healthbars)
+local ref_esp_dist = make_toggle_row(visuals_esp, "Distance text", next_order(), P.get_esp_distance, P.set_esp_distance)
 
 lo = 0
-section_label(visuals_health, "Health", next_order())
-local ref_health = make_toggle_row(visuals_health, "Health bars", next_order(), P.get_healthbars, P.set_healthbars)
+section_label(configs_page, "Config manager", next_order())
+local list_scroller = Instance.new("ScrollingFrame")
+list_scroller.LayoutOrder = next_order()
+list_scroller.Size = UDim2.new(1, 0, 0, 160)
+list_scroller.BackgroundTransparency = 1
+list_scroller.BorderSizePixel = 0
+list_scroller.ScrollBarThickness = 3
+list_scroller.ScrollBarImageColor3 = C.accent
+list_scroller.CanvasSize = UDim2.fromOffset(0, 0)
+list_scroller.AutomaticCanvasSize = Enum.AutomaticSize.Y
+list_scroller.Parent = configs_page
+local list_pad = Instance.new("UIPadding", list_scroller)
+list_pad.PaddingLeft = UDim.new(0, 12)
+list_pad.PaddingRight = UDim.new(0, 12)
+local list_layout = Instance.new("UIListLayout", list_scroller)
+list_layout.Padding = UDim.new(0, 6)
+list_layout.SortOrder = Enum.SortOrder.LayoutOrder
 
-lo = 0
-section_label(visuals_fov, "FOV rings", next_order())
-local ref_show_aim_fov = make_toggle_row(visuals_fov, "Aim assist FOV ring", next_order(), P.get_show_aim_fov_circle, P.set_show_aim_fov_circle)
-local ref_show_silent_fov = make_toggle_row(visuals_fov, "Silent FOV ring", next_order(), P.get_show_silent_fov_circle, P.set_show_silent_fov_circle)
+local function refresh_configs()
+	for _, c in ipairs(list_scroller:GetChildren()) do
+		if c:IsA("Frame") then
+			c:Destroy()
+		end
+	end
+	local files = {}
+	pcall(function()
+		ensure_config_dir()
+		if listfiles then
+			files = listfiles(CONFIG_FOLDER)
+		end
+	end)
+	local function make_card(name)
+		local card = Instance.new("Frame")
+		card.BackgroundColor3 = C.panel
+		card.Size = UDim2.new(1, 0, 0, 52)
+		card.Parent = list_scroller
+		Instance.new("UICorner", card).CornerRadius = UDim.new(0, 6)
+		local stroke = Instance.new("UIStroke", card)
+		stroke.Color = Color3.fromRGB(40, 40, 55)
+		local card_pad = Instance.new("UIPadding", card)
+		card_pad.PaddingLeft = UDim.new(0, 12)
+		card_pad.PaddingRight = UDim.new(0, 12)
+		local lbl = Instance.new("TextLabel")
+		lbl.Font = Enum.Font.GothamMedium
+		lbl.Text = name
+		lbl.TextColor3 = C.text
+		lbl.TextSize = 12
+		lbl.BackgroundTransparency = 1
+		lbl.Size = UDim2.new(0.45, 0, 1, 0)
+		lbl.TextXAlignment = Enum.TextXAlignment.Left
+		lbl.Parent = card
+		local btn_row = Instance.new("Frame")
+		btn_row.BackgroundTransparency = 1
+		btn_row.Size = UDim2.new(0.55, 0, 1, 0)
+		btn_row.Position = UDim2.fromScale(0.45, 0)
+		btn_row.Parent = card
+		local bl = Instance.new("UIListLayout", btn_row)
+		bl.FillDirection = Enum.FillDirection.Horizontal
+		bl.HorizontalAlignment = Enum.HorizontalAlignment.Right
+		bl.VerticalAlignment = Enum.VerticalAlignment.Center
+		bl.Padding = UDim.new(0, 6)
+		local function mkbtn(txt, col, cb)
+			local btn = Instance.new("TextButton")
+			btn.AutoButtonColor = false
+			btn.BackgroundColor3 = C.bg
+			btn.Text = txt
+			btn.Font = Enum.Font.GothamBold
+			btn.TextSize = 10
+			btn.TextColor3 = col
+			btn.Size = UDim2.fromOffset(44, 28)
+			btn.Parent = btn_row
+			Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 4)
+			btn.MouseButton1Click:Connect(cb)
+			return btn
+		end
+		local safe_path = CONFIG_FOLDER .. "/" .. name .. ".json"
+		mkbtn("LOAD", C.accent, function()
+			pcall(function()
+				ensure_config_dir()
+				local raw = readfile(safe_path)
+				local cfg = http:JSONDecode(raw)
+				if typeof(_G.apply_config) == "function" then
+					_G.apply_config(cfg)
+				end
+			end)
+		end)
+		mkbtn("SAVE", C.green, function()
+			pcall(function()
+				ensure_config_dir()
+				local gc = _G.get_config
+				if typeof(gc) == "function" then
+					writefile(safe_path, http:JSONEncode(gc()))
+					refresh_configs()
+				end
+			end)
+		end)
+		mkbtn("X", C.red, function()
+			pcall(delfile, safe_path)
+			refresh_configs()
+		end)
+	end
+	if files then
+		for _, p in ipairs(files) do
+			local n = string.match(p, "([^\\/]+)%.json$")
+			if n then
+				make_card(n)
+			end
+		end
+	end
+end
+
+local cfg_footer = Instance.new("Frame")
+cfg_footer.LayoutOrder = next_order()
+cfg_footer.BackgroundColor3 = C.panel
+cfg_footer.BorderSizePixel = 0
+cfg_footer.Size = UDim2.new(1, 0, 0, 40)
+cfg_footer.Parent = configs_page
+Instance.new("UICorner", cfg_footer).CornerRadius = UDim.new(0, 6)
+local foot_pad = Instance.new("UIPadding", cfg_footer)
+foot_pad.PaddingLeft = UDim.new(0, 12)
+foot_pad.PaddingRight = UDim.new(0, 12)
+local cin = Instance.new("TextBox")
+cin.Font = Enum.Font.Gotham
+cin.PlaceholderText = "New config name..."
+cin.PlaceholderColor3 = C.dim
+cin.Text = ""
+cin.TextColor3 = C.text
+cin.TextSize = 12
+cin.BackgroundTransparency = 1
+cin.Position = UDim2.fromOffset(0, 0)
+cin.Size = UDim2.new(1, -84, 1, 0)
+cin.TextXAlignment = Enum.TextXAlignment.Left
+cin.Parent = cfg_footer
+local create_btn = Instance.new("TextButton")
+create_btn.AutoButtonColor = false
+create_btn.BackgroundColor3 = C.accent
+create_btn.Text = "CREATE"
+create_btn.Font = Enum.Font.GothamBold
+create_btn.TextSize = 11
+create_btn.TextColor3 = Color3.new(1, 1, 1)
+create_btn.Size = UDim2.fromOffset(76, 28)
+create_btn.AnchorPoint = Vector2.new(1, 0.5)
+create_btn.Position = UDim2.new(1, 0, 0.5, 0)
+create_btn.Parent = cfg_footer
+Instance.new("UICorner", create_btn).CornerRadius = UDim.new(0, 4)
+create_btn.MouseButton1Click:Connect(function()
+	local n = cin.Text:gsub("^%s+", ""):gsub("%s+$", "")
+	if n == "" then
+		return
+	end
+	pcall(function()
+		ensure_config_dir()
+		local gc = _G.get_config
+		if typeof(gc) ~= "function" then
+			return
+		end
+		writefile(CONFIG_FOLDER .. "/" .. n .. ".json", http:JSONEncode(gc()))
+	end)
+	cin.Text = ""
+	refresh_configs()
+end)
+
+refresh_configs()
 
 lo = 0
 section_label(movement_fly, "Flight", next_order())
@@ -555,10 +746,12 @@ end)
 
 lo = 0
 section_label(movement_walk, "Walk & jump", next_order())
+local ref_walk_mod = make_toggle_row(movement_walk, "Walk speed override", next_order(), P.get_walk_mod, P.set_walk_mod)
 local set_walk_slider = make_slider(movement_walk, "Walk speed", next_order(), 0, 200, P.get_walk(), "%.0f", function(v)
 	P.set_walk(v)
 end)
-local set_jump_slider = make_slider(movement_walk, "Jump power", next_order(), 0, 200, P.get_jump(), "%.0f", function(v)
+local ref_jump_mod = make_toggle_row(movement_walk, "Jump power override", next_order(), P.get_jump_mod, P.set_jump_mod)
+local set_jump_slider = make_slider(movement_walk, "Jump power", next_order(), 0, 500, P.get_jump(), "%.0f", function(v)
 	P.set_jump(v)
 end)
 
@@ -666,15 +859,18 @@ end)
 
 function _G.MYA_UNIVERSAL_SYNC_UI()
 	ref_esp()
+	ref_team()
 	ref_health()
+	ref_esp_dist()
 	ref_aim_toggle()
 	ref_aim_bind()
-	ref_team()
 	ref_vis()
 	ref_silent_toggle()
 	ref_show_aim_fov()
 	ref_show_silent_fov()
 	ref_fly()
+	ref_walk_mod()
+	ref_jump_mod()
 	ref_nc()
 	ref_trigger_toggle()
 	ref_trigger_bind()
