@@ -148,7 +148,16 @@ local function read_var_int(data, offset)
     return value, bytes_read
 end
 
+-- Set when MIDI header uses SMPTE division (LibreScore/MuseScore rarely; metrical is default).
+local midi_smpte_us_per_tick = nil
+
 local function calculate_realtime_position(ticks, ticks_per_beat, tempo_changes)
+	if midi_smpte_us_per_tick and midi_smpte_us_per_tick > 0 then
+		return ticks * midi_smpte_us_per_tick / 1000000
+	end
+	if not ticks_per_beat or ticks_per_beat <= 0 then
+		ticks_per_beat = 480
+	end
     local current_tick = 0
     local current_time_ms = 0
     local current_tempo = 500000
@@ -248,7 +257,8 @@ local function parse_midi_improved(data, loading_label)
     local offset = 1
     local track_end_offset = 0
     local is_header_parsed = false
-    local ticks_per_beat = 0
+    local ticks_per_beat = 480
+    midi_smpte_us_per_tick = nil
     local last_status_byte = nil
     local track_time = 0
     local note_on_stack = {}
@@ -269,7 +279,24 @@ local function parse_midi_improved(data, loading_label)
         if not is_header_parsed then
             if #buffer < 14 then break end
             if string.sub(buffer, 1, 4) ~= 'MThd' then break end
-            ticks_per_beat = string.unpack(">H", buffer, 13)
+            local div_raw = string.unpack(">H", buffer, 13)
+            if bit32.band(div_raw, 0x8000) ~= 0 then
+                local tpf = bit32.band(div_raw, 0xFF)
+                if tpf == 0 then
+                    tpf = 1
+                end
+                local fps_byte = bit32.band(bit32.rshift(div_raw, 8), 0x7F)
+                local fps = fps_byte
+                if fps == 29 then
+                    fps = 29.97
+                elseif fps == 0 then
+                    fps = 25
+                end
+                midi_smpte_us_per_tick = 1000000 / (fps * tpf)
+                ticks_per_beat = 480
+            else
+                ticks_per_beat = div_raw > 0 and div_raw or 480
+            end
             offset = 15
             is_header_parsed = true
         end
@@ -408,6 +435,27 @@ local function parse_midi_improved(data, loading_label)
                 end
             end
             offset = offset + length
+            last_status_byte = nil
+        elseif status == 0xF0 or status == 0xF7 then
+            local syx_len, lb = read_var_int(buffer, offset)
+            if not syx_len or lb == 0 then
+                break
+            end
+            offset = offset + lb + syx_len
+            last_status_byte = nil
+        elseif bit32.band(status, 0xF0) == 0xF0 and status < 0xF8 then
+            local skip = 0
+            if status == 0xF1 or status == 0xF3 then
+                skip = 1
+            elseif status == 0xF2 then
+                skip = 2
+            elseif status == 0xF6 then
+                skip = 0
+            else
+                skip = 1
+            end
+            offset = offset + skip
+            last_status_byte = nil
         else
             local data_len = (command == 0xC0 or command == 0xD0) and 1 or 2
             offset = offset + data_len
@@ -641,13 +689,16 @@ local function load_midi_from_data(data, ui_setter)
             return parse_midi_improved(data, nil)
         end)
         
-        if not ok or not parsed then
-            ui_setter("❌ Invalid MIDI or parse error")
+        if not ok then
+            ui_setter("❌ " .. tostring(parsed))
             is_loading = false
             return
         end
-
-        parsed = apply_deblack(parsed)
+        if not parsed then
+            ui_setter("❌ Invalid MIDI (empty or not SMF)")
+            is_loading = false
+            return
+        end
 
         events = parsed
         tempo_events = tempochg or {}
