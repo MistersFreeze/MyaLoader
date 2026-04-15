@@ -89,4 +89,28 @@ function Util.loadModuleFromUrl(url: string, chunkName: string?): (any?, string?
 	return result, nil
 end
 
+-- Hub / loader UI: above CoreGui escape menu (PlayerGui alone often stays underneath).
+local LOADER_DISPLAY_ORDER = 2147483647
+
+function Util.loaderScreenGuiParent(): Instance
+	if typeof(gethui) == "function" then
+		return gethui()
+	end
+	local ok, cg = pcall(function()
+		return game:GetService("CoreGui")
+	end)
+	if ok and cg then
+		return cg
+	end
+	return game:GetService("Players").LocalPlayer:WaitForChild("PlayerGui")
+end
+
+function Util.configureLoaderScreenGui(gui: ScreenGui)
+	gui.IgnoreGuiInset = true
+	gui.DisplayOrder = LOADER_DISPLAY_ORDER
+	pcall(function()
+		gui.ScreenInsets = Enum.ScreenInsets.None
+	end)
+end
+
 return Util

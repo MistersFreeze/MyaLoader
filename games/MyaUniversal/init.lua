@@ -40,12 +40,40 @@ function M.mount(ctx)
 		return game:HttpGet(u, true)
 	end
 
+	local cfgSrc = fetch(base .. "config.lua")
+	local cfgFn = loadstring(cfgSrc, "@MyaUniversal/config")
+	if typeof(cfgFn) ~= "function" then
+		error("MyaUniversal: config compile failed")
+	end
+	local defaults = cfgFn()
+	local genv = typeof(getgenv) == "function" and getgenv() or nil
+	local userCfg = genv and genv.MYA_UNIVERSAL_CONFIG
+	local merged = {}
+	if type(defaults) == "table" then
+		for k, v in pairs(defaults) do
+			merged[k] = v
+		end
+	end
+	if type(userCfg) == "table" then
+		for k, v in pairs(userCfg) do
+			merged[k] = v
+		end
+	end
+	_G.MYA_UNIVERSAL_CONFIG = merged
+
 	local runSrc = fetch(base .. "runtime.lua")
-	local runFn = loadstring(runSrc, "@MyaUniversal/runtime")
-	if typeof(runFn) ~= "function" then
+	local runLoader = loadstring(runSrc, "@MyaUniversal/runtime")
+	if typeof(runLoader) ~= "function" then
 		error("MyaUniversal: runtime compile failed")
 	end
-	runFn()
+	local runBundle = runLoader()
+	if typeof(runBundle) ~= "function" then
+		error("MyaUniversal: runtime.lua must return function(env)")
+	end
+	runBundle({ base = base, fetch = fetch })
+	if typeof(_G.MYA_UNIVERSAL) ~= "table" then
+		error("MyaUniversal: runtime did not initialize MYA_UNIVERSAL (runtime error or bad load order)")
+	end
 
 	local guiSrc = fetch(base .. "gui.lua")
 	local guiFn = loadstring(guiSrc, "@MyaUniversal/gui")

@@ -35,6 +35,8 @@ local C = {
 	slid_bg = Color3.fromRGB(38, 40, 48),
 	slid_fg = Color3.fromRGB(230, 120, 175),
 	input_bg = Color3.fromRGB(28, 30, 38),
+	sub_off = Color3.fromRGB(30, 32, 40),
+	sub_on = Color3.fromRGB(230, 120, 175),
 }
 
 local ui = Instance.new("ScreenGui")
@@ -46,7 +48,7 @@ ui.ResetOnSpawn = false
 ui.Parent = gethui_support and gethui() or game:GetService("CoreGui")
 _G.mya_universal_ui = ui
 
-local WIN_W, WIN_H = 360, 560
+local WIN_W, WIN_H = 360, 580
 local main = Instance.new("Frame")
 main.Name = "main"
 main.BackgroundColor3 = C.bg
@@ -89,7 +91,13 @@ title_lbl.Size = UDim2.new(1, -24, 1, 0)
 title_lbl.TextXAlignment = Enum.TextXAlignment.Left
 title_lbl.Parent = header
 
-local TAB_NAMES = { "Combat", "Visuals", "Movement" }
+local TAB_NAMES = { "Combat", "Visuals", "Movement", "Settings" }
+local SUB_PAGES = {
+	Combat = { "Aim assist", "Silent aim", "Triggerbot" },
+	Visuals = { "ESP", "Health", "FOV rings" },
+	Movement = { "Flight", "Walk & jump", "Noclip" },
+}
+
 local tab_bar = Instance.new("Frame")
 tab_bar.BackgroundColor3 = C.header
 tab_bar.BorderSizePixel = 0
@@ -98,9 +106,23 @@ tab_bar.Size = UDim2.new(1, -4, 0, 30)
 tab_bar.Parent = main
 Instance.new("UIListLayout", tab_bar).FillDirection = Enum.FillDirection.Horizontal
 
+local sub_bar = Instance.new("Frame")
+sub_bar.BackgroundColor3 = C.bg
+sub_bar.BorderSizePixel = 0
+sub_bar.Position = UDim2.fromOffset(4, 70)
+sub_bar.Size = UDim2.new(1, -4, 0, 26)
+sub_bar.Visible = false
+sub_bar.Parent = main
+local _sub_layout = Instance.new("UIListLayout", sub_bar)
+_sub_layout.FillDirection = Enum.FillDirection.Horizontal
+_sub_layout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+_sub_layout.Padding = UDim.new(0, 4)
+_sub_layout.VerticalAlignment = Enum.VerticalAlignment.Center
+
 local tab_buttons = {}
 local tab_containers = {}
-local active_tab = nil
+local all_sub_buttons = {}
+local all_sub_pages = {}
 
 local content = Instance.new("Frame")
 content.BackgroundTransparency = 1
@@ -125,31 +147,72 @@ local function make_page()
 	ul.Parent = page
 	local up = Instance.new("UIPadding")
 	up.PaddingTop = UDim.new(0, 6)
+	up.PaddingBottom = UDim.new(0, 12)
 	up.Parent = page
 	return page
 end
 
-for _, name in ipairs(TAB_NAMES) do
-	local c = Instance.new("Frame")
-	c.Name = name
-	c.BackgroundTransparency = 1
-	c.Size = UDim2.fromScale(1, 1)
-	c.Visible = false
-	c.Parent = content
-	tab_containers[name] = c
-
-	local page = make_page()
-	page.Parent = c
+local function switch_sub(tab_name, sub_name)
+	local subs = all_sub_pages[tab_name]
+	local btns = all_sub_buttons[tab_name]
+	if not subs then
+		return
+	end
+	for n, pg in pairs(subs) do
+		pg.Visible = (n == sub_name)
+	end
+	if btns then
+		for n, b in pairs(btns) do
+			b.BackgroundColor3 = (n == sub_name) and C.sub_on or C.sub_off
+			b.TextColor3 = (n == sub_name) and Color3.fromRGB(45, 18, 32) or C.dim
+		end
+	end
 end
 
 local function switch_tab(name)
-	active_tab = name
+	local has_subs = SUB_PAGES[name] ~= nil
 	for n, cont in pairs(tab_containers) do
 		cont.Visible = (n == name)
 	end
 	for n, b in pairs(tab_buttons) do
 		b.BackgroundColor3 = (n == name) and C.tab_on or C.tab_off
 		b.TextColor3 = (n == name) and Color3.fromRGB(45, 18, 32) or C.dim
+	end
+	sub_bar.Visible = has_subs
+	if has_subs then
+		content.Position = UDim2.fromOffset(4, 96)
+		content.Size = UDim2.new(1, -4, 1, -96)
+	else
+		content.Position = UDim2.fromOffset(4, 70)
+		content.Size = UDim2.new(1, -4, 1, -70)
+	end
+	for _, c in ipairs(sub_bar:GetChildren()) do
+		if c:IsA("TextButton") then
+			c:Destroy()
+		end
+	end
+	if has_subs then
+		local sub_names = SUB_PAGES[name]
+		all_sub_buttons[name] = all_sub_buttons[name] or {}
+		for i, sn in ipairs(sub_names) do
+			local sb = Instance.new("TextButton")
+			sb.LayoutOrder = i
+			sb.BackgroundColor3 = C.sub_off
+			sb.BorderSizePixel = 0
+			sb.Size = UDim2.fromOffset(math.floor((WIN_W - 8 - (#sub_names - 1) * 4) / #sub_names), 20)
+			sb.Font = Enum.Font.GothamSemibold
+			sb.Text = sn
+			sb.TextColor3 = C.dim
+			sb.TextSize = 10
+			sb.AutoButtonColor = false
+			sb.Parent = sub_bar
+			Instance.new("UICorner", sb).CornerRadius = UDim.new(0, 8)
+			sb.MouseButton1Click:Connect(function()
+				switch_sub(name, sn)
+			end)
+			all_sub_buttons[name][sn] = sb
+		end
+		switch_sub(name, sub_names[1])
 	end
 end
 
@@ -158,7 +221,7 @@ for i, name in ipairs(TAB_NAMES) do
 	b.AutoButtonColor = false
 	b.Text = name
 	b.Font = Enum.Font.GothamSemibold
-	b.TextSize = 11
+	b.TextSize = 10
 	b.BackgroundColor3 = C.tab_off
 	b.TextColor3 = C.dim
 	b.BorderSizePixel = 0
@@ -171,9 +234,37 @@ for i, name in ipairs(TAB_NAMES) do
 	end)
 end
 
-local combat_page = tab_containers["Combat"]:FindFirstChildWhichIsA("ScrollingFrame")
-local visuals_page = tab_containers["Visuals"]:FindFirstChildWhichIsA("ScrollingFrame")
-local movement_page = tab_containers["Movement"]:FindFirstChildWhichIsA("ScrollingFrame")
+for _, name in ipairs(TAB_NAMES) do
+	local cont = Instance.new("Frame")
+	cont.BackgroundTransparency = 1
+	cont.Size = UDim2.fromScale(1, 1)
+	cont.Visible = false
+	cont.Parent = content
+	tab_containers[name] = cont
+	if SUB_PAGES[name] then
+		all_sub_pages[name] = {}
+		for _, sn in ipairs(SUB_PAGES[name]) do
+			local pg = make_page()
+			pg.Visible = false
+			pg.Parent = cont
+			all_sub_pages[name][sn] = pg
+		end
+	end
+end
+
+local combat_aim = all_sub_pages["Combat"]["Aim assist"]
+local combat_silent = all_sub_pages["Combat"]["Silent aim"]
+local combat_trigger = all_sub_pages["Combat"]["Triggerbot"]
+local visuals_esp = all_sub_pages["Visuals"]["ESP"]
+local visuals_health = all_sub_pages["Visuals"]["Health"]
+local visuals_fov = all_sub_pages["Visuals"]["FOV rings"]
+local movement_fly = all_sub_pages["Movement"]["Flight"]
+local movement_walk = all_sub_pages["Movement"]["Walk & jump"]
+local movement_noclip = all_sub_pages["Movement"]["Noclip"]
+
+local settings_page = make_page()
+settings_page.Visible = true
+settings_page.Parent = tab_containers["Settings"]
 
 local function section_label(parent, text, order)
 	local lbl = Instance.new("TextLabel")
@@ -333,51 +424,151 @@ local function make_toggle_row(parent, label, order, get_fn, set_fn)
 	return refresh
 end
 
+local listening_btn = nil
+local listening_set = nil
+local listening_get = nil
+local listening_armed = false
+
+local function bind_display_name(bind)
+	if typeof(bind) ~= "EnumItem" then
+		return "?"
+	end
+	if bind.EnumType == Enum.UserInputType then
+		if bind == Enum.UserInputType.MouseButton1 then
+			return "Mouse 1"
+		end
+		if bind == Enum.UserInputType.MouseButton2 then
+			return "Mouse 2"
+		end
+		if bind == Enum.UserInputType.MouseButton3 then
+			return "Mouse 3"
+		end
+		return bind.Name
+	end
+	if bind.EnumType == Enum.KeyCode then
+		return bind.Name
+	end
+	return "?"
+end
+
+local function make_keybind_row(parent, label, order, get_fn, set_fn)
+	local row = make_row(parent, order)
+	local lbl = Instance.new("TextLabel")
+	lbl.Font = Enum.Font.Gotham
+	lbl.Text = label
+	lbl.TextColor3 = C.text
+	lbl.TextSize = 13
+	lbl.BackgroundTransparency = 1
+	lbl.Position = UDim2.fromOffset(14, 0)
+	lbl.Size = UDim2.new(0.5, -8, 1, 0)
+	lbl.TextXAlignment = Enum.TextXAlignment.Left
+	lbl.Parent = row
+	local bb = Instance.new("TextButton")
+	bb.AutoButtonColor = false
+	bb.Font = Enum.Font.GothamSemibold
+	bb.TextSize = 11
+	bb.TextColor3 = C.text
+	bb.BackgroundColor3 = C.input_bg
+	bb.Position = UDim2.new(0.52, 0, 0.5, -10)
+	bb.Size = UDim2.new(0.44, -14, 0, 22)
+	bb.Text = bind_display_name(get_fn())
+	Instance.new("UICorner", bb).CornerRadius = UDim.new(0, 4)
+	bb.Parent = row
+	local function refresh()
+		bb.Text = bind_display_name(get_fn())
+	end
+	bb.MouseButton1Click:Connect(function()
+		if listening_btn and listening_btn ~= bb then
+			listening_btn.Text = bind_display_name(listening_get())
+		end
+		listening_btn = bb
+		listening_set = set_fn
+		listening_get = get_fn
+		listening_armed = false
+		bb.Text = "···"
+		task.delay(0.18, function()
+			if listening_btn == bb then
+				listening_armed = true
+			end
+		end)
+	end)
+	return refresh
+end
+
 local lo = 0
 local function next_order()
 	lo = lo + 1
 	return lo
 end
 
-section_label(combat_page, "Aim assist", next_order())
-local ref_aim_toggle = make_toggle_row(combat_page, "Aim assist (hold RMB)", next_order(), P.get_aim, P.set_aim)
-local set_aim_fov_slider = make_slider(combat_page, "Aim assist FOV (px)", next_order(), 40, 400, P.get_aim_fov(), "%.0f", function(v)
+lo = 0
+section_label(combat_aim, "Aim assist", next_order())
+local ref_aim_toggle = make_toggle_row(combat_aim, "Aim assist", next_order(), P.get_aim, P.set_aim)
+local ref_aim_bind = make_keybind_row(combat_aim, "Aim assist bind", next_order(), P.get_aim_bind, P.set_aim_bind)
+local set_aim_fov_slider = make_slider(combat_aim, "Aim assist FOV", next_order(), 40, 400, P.get_aim_fov(), "%.0f", function(v)
 	P.set_aim_fov(v)
 end)
-local set_aim_speed_slider = make_slider(combat_page, "Aim strength", next_order(), 0.05, 1, P.get_aim_speed(), "%.2f", function(v)
+local set_aim_speed_slider = make_slider(combat_aim, "Aim strength", next_order(), 0.05, 1, P.get_aim_speed(), "%.2f", function(v)
 	P.set_aim_speed(v)
 end)
+section_label(combat_aim, "Targeting", next_order())
+local ref_team = make_toggle_row(combat_aim, "Team check", next_order(), P.get_team_check, P.set_team_check)
+local ref_vis = make_toggle_row(combat_aim, "Visibility check", next_order(), P.get_vis_check, P.set_vis_check)
 
-section_label(combat_page, "Silent aim", next_order())
-local ref_silent_toggle = make_toggle_row(combat_page, "Silent aim (ray hook)", next_order(), P.get_silent, P.set_silent)
-local set_silent_fov_slider = make_slider(combat_page, "Silent aim FOV (px)", next_order(), 40, 400, P.get_silent_fov(), "%.0f", function(v)
+lo = 0
+section_label(combat_silent, "Silent aim", next_order())
+local ref_silent_toggle = make_toggle_row(combat_silent, "Silent aim", next_order(), P.get_silent, P.set_silent)
+local set_silent_fov_slider = make_slider(combat_silent, "Silent aim FOV", next_order(), 40, 400, P.get_silent_fov(), "%.0f", function(v)
 	P.set_silent_fov(v)
 end)
 
-section_label(combat_page, "FOV display", next_order())
-local ref_show_aim_fov = make_toggle_row(combat_page, "Show aim assist FOV ring", next_order(), P.get_show_aim_fov_circle, P.set_show_aim_fov_circle)
-local ref_show_silent_fov = make_toggle_row(combat_page, "Show silent FOV ring", next_order(), P.get_show_silent_fov_circle, P.set_show_silent_fov_circle)
+lo = 0
+section_label(combat_trigger, "Triggerbot", next_order())
+local ref_trigger_toggle = make_toggle_row(combat_trigger, "Triggerbot", next_order(), P.get_triggerbot, P.set_triggerbot)
+local ref_trigger_bind = make_keybind_row(combat_trigger, "Triggerbot bind", next_order(), P.get_trigger_bind, P.set_trigger_bind)
+local set_trigger_fov_slider = make_slider(combat_trigger, "Trigger FOV", next_order(), 5, 120, P.get_trigger_fov(), "%.0f", function(v)
+	P.set_trigger_fov(v)
+end)
+local set_trigger_delay_slider = make_slider(combat_trigger, "Trigger delay", next_order(), 0.03, 0.5, P.get_trigger_delay(), "%.2f", function(v)
+	P.set_trigger_delay(v)
+end)
 
 lo = 0
-section_label(visuals_page, "Players", next_order())
-local ref_esp = make_toggle_row(visuals_page, "ESP highlights", next_order(), P.get_esp, P.set_esp)
-local ref_health = make_toggle_row(visuals_page, "Health bars", next_order(), P.get_healthbars, P.set_healthbars)
+section_label(visuals_esp, "ESP", next_order())
+local ref_esp = make_toggle_row(visuals_esp, "ESP highlights", next_order(), P.get_esp, P.set_esp)
 
 lo = 0
-section_label(movement_page, "Character", next_order())
-local ref_fly = make_toggle_row(movement_page, "Fly", next_order(), P.get_fly, P.set_fly)
-local set_fly_speed_slider = make_slider(movement_page, "Fly speed", next_order(), 5, 200, P.get_fly_speed(), "%.0f", function(v)
+section_label(visuals_health, "Health", next_order())
+local ref_health = make_toggle_row(visuals_health, "Health bars", next_order(), P.get_healthbars, P.set_healthbars)
+
+lo = 0
+section_label(visuals_fov, "FOV rings", next_order())
+local ref_show_aim_fov = make_toggle_row(visuals_fov, "Aim assist FOV ring", next_order(), P.get_show_aim_fov_circle, P.set_show_aim_fov_circle)
+local ref_show_silent_fov = make_toggle_row(visuals_fov, "Silent FOV ring", next_order(), P.get_show_silent_fov_circle, P.set_show_silent_fov_circle)
+
+lo = 0
+section_label(movement_fly, "Flight", next_order())
+local ref_fly = make_toggle_row(movement_fly, "Fly", next_order(), P.get_fly, P.set_fly)
+local set_fly_speed_slider = make_slider(movement_fly, "Fly speed", next_order(), 5, 200, P.get_fly_speed(), "%.0f", function(v)
 	P.set_fly_speed(v)
 end)
-local ref_nc = make_toggle_row(movement_page, "Noclip", next_order(), P.get_noclip, P.set_noclip)
-local set_walk_slider = make_slider(movement_page, "Walk speed", next_order(), 0, 200, P.get_walk(), "%.0f", function(v)
+
+lo = 0
+section_label(movement_walk, "Walk & jump", next_order())
+local set_walk_slider = make_slider(movement_walk, "Walk speed", next_order(), 0, 200, P.get_walk(), "%.0f", function(v)
 	P.set_walk(v)
 end)
-local set_jump_slider = make_slider(movement_page, "Jump power", next_order(), 0, 200, P.get_jump(), "%.0f", function(v)
+local set_jump_slider = make_slider(movement_walk, "Jump power", next_order(), 0, 200, P.get_jump(), "%.0f", function(v)
 	P.set_jump(v)
 end)
 
-local hint_row = make_row(movement_page, next_order(), 40)
+lo = 0
+section_label(movement_noclip, "Noclip", next_order())
+local ref_nc = make_toggle_row(movement_noclip, "Noclip", next_order(), P.get_noclip, P.set_noclip)
+
+lo = 0
+section_label(settings_page, "Menu", next_order())
+local hint_row = make_row(settings_page, next_order(), 52)
 local hint = Instance.new("TextLabel")
 hint.BackgroundTransparency = 1
 hint.Size = UDim2.new(1, -28, 1, 0)
@@ -387,21 +578,22 @@ hint.TextSize = 11
 hint.TextColor3 = C.dim
 hint.TextXAlignment = Enum.TextXAlignment.Left
 hint.TextWrapped = true
-hint.Text = "Insert · toggle menu  ·  Drag header to move  ·  Silent aim needs executor hook support"
+hint.Text = "Insert toggles this window. Drag the header to move. Click a bind button, then press a key or mouse button."
 hint.Parent = hint_row
 
-local close = Instance.new("TextButton")
-close.Size = UDim2.new(1, -24, 0, 34)
-close.Position = UDim2.new(0, 12, 1, -44)
-close.BackgroundColor3 = Color3.fromRGB(80, 50, 60)
-close.TextColor3 = C.text
-close.Font = Enum.Font.GothamBold
-close.TextSize = 13
-close.Text = "Unload Mya Universal"
-close.AutoButtonColor = false
-close.Parent = main
-Instance.new("UICorner", close).CornerRadius = UDim.new(0, 6)
-close.MouseButton1Click:Connect(function()
+local unload_row = make_row(settings_page, next_order(), 44)
+local unload_btn = Instance.new("TextButton")
+unload_btn.Size = UDim2.new(1, -28, 0, 32)
+unload_btn.Position = UDim2.fromOffset(14, 6)
+unload_btn.BackgroundColor3 = Color3.fromRGB(80, 50, 60)
+unload_btn.TextColor3 = C.text
+unload_btn.Font = Enum.Font.GothamBold
+unload_btn.TextSize = 13
+unload_btn.Text = "Unload Mya Universal"
+unload_btn.AutoButtonColor = false
+unload_btn.Parent = unload_row
+Instance.new("UICorner", unload_btn).CornerRadius = UDim.new(0, 6)
+unload_btn.MouseButton1Click:Connect(function()
 	if typeof(_G.unload_mya_universal) == "function" then
 		_G.unload_mya_universal()
 	end
@@ -409,6 +601,25 @@ end)
 
 local menu_key = Enum.KeyCode.Insert
 uis.InputBegan:Connect(function(input, gp)
+	if listening_btn and listening_set and listening_get and listening_armed then
+		if input.UserInputType == Enum.UserInputType.Keyboard then
+			if input.KeyCode ~= Enum.KeyCode.Unknown then
+				listening_set(input.KeyCode)
+			end
+		elseif
+			input.UserInputType == Enum.UserInputType.MouseButton1
+			or input.UserInputType == Enum.UserInputType.MouseButton2
+			or input.UserInputType == Enum.UserInputType.MouseButton3
+		then
+			listening_set(input.UserInputType)
+		end
+		listening_btn.Text = bind_display_name(listening_get())
+		listening_btn = nil
+		listening_set = nil
+		listening_get = nil
+		listening_armed = false
+		return
+	end
 	if gp then
 		return
 	end
@@ -446,6 +657,8 @@ task.defer(function()
 	set_aim_fov_slider(P.get_aim_fov())
 	set_aim_speed_slider(P.get_aim_speed())
 	set_silent_fov_slider(P.get_silent_fov())
+	set_trigger_fov_slider(P.get_trigger_fov())
+	set_trigger_delay_slider(P.get_trigger_delay())
 	set_fly_speed_slider(P.get_fly_speed())
 	set_walk_slider(P.get_walk())
 	set_jump_slider(P.get_jump())
@@ -455,14 +668,21 @@ function _G.MYA_UNIVERSAL_SYNC_UI()
 	ref_esp()
 	ref_health()
 	ref_aim_toggle()
+	ref_aim_bind()
+	ref_team()
+	ref_vis()
 	ref_silent_toggle()
 	ref_show_aim_fov()
 	ref_show_silent_fov()
 	ref_fly()
 	ref_nc()
+	ref_trigger_toggle()
+	ref_trigger_bind()
 	set_aim_fov_slider(P.get_aim_fov())
 	set_aim_speed_slider(P.get_aim_speed())
 	set_silent_fov_slider(P.get_silent_fov())
+	set_trigger_fov_slider(P.get_trigger_fov())
+	set_trigger_delay_slider(P.get_trigger_delay())
 	set_fly_speed_slider(P.get_fly_speed())
 	set_walk_slider(P.get_walk())
 	set_jump_slider(P.get_jump())

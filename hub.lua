@@ -83,7 +83,15 @@ return function(BASE_URL: string, config: { [string]: any })
 	gui.Name = "MyaHub"
 	gui.ResetOnSpawn = false
 	gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
-	gui.Parent = localPlayer:WaitForChild("PlayerGui")
+	gui.Parent = Util.loaderScreenGuiParent()
+	Util.configureLoaderScreenGui(gui)
+
+	-- First-person games lock the mouse to the camera; unlock so the hub can be clicked.
+	task.defer(function()
+		pcall(function()
+			UserInputService.MouseBehavior = Enum.MouseBehavior.Default
+		end)
+	end)
 
 	local root = Instance.new("Frame")
 	root.Name = "Window"
@@ -197,7 +205,7 @@ return function(BASE_URL: string, config: { [string]: any })
 	statusBar.Size = UDim2.new(1, -20, 0, 26)
 	statusBar.Parent = body
 	UI.corner(statusBar)
-	local statusLabel = UI.label(statusBar, "Ready", 13, true)
+	local statusLabel = UI.label(statusBar, "Ready · Insert hides or shows the hub", 13, true)
 	statusLabel.Position = UDim2.new(0, 10, 0, 0)
 	statusLabel.Size = UDim2.new(1, -20, 1, 0)
 	statusLabel.TextYAlignment = Enum.TextYAlignment.Center
@@ -423,6 +431,7 @@ return function(BASE_URL: string, config: { [string]: any })
 
 	local placeIdConn: RBXScriptConnection? = nil
 	local uisDragConn: RBXScriptConnection? = nil
+	local insertToggleConn: RBXScriptConnection? = nil
 
 	local function closeHubAfterGameLoad()
 		if placeIdConn then
@@ -432,6 +441,10 @@ return function(BASE_URL: string, config: { [string]: any })
 		if uisDragConn then
 			uisDragConn:Disconnect()
 			uisDragConn = nil
+		end
+		if insertToggleConn then
+			insertToggleConn:Disconnect()
+			insertToggleConn = nil
 		end
 		if gui and gui.Parent then
 			gui:Destroy()
@@ -540,6 +553,18 @@ return function(BASE_URL: string, config: { [string]: any })
 
 	closeBtn.MouseButton1Click:Connect(function()
 		clearGameMount()
+		if placeIdConn then
+			placeIdConn:Disconnect()
+			placeIdConn = nil
+		end
+		if uisDragConn then
+			uisDragConn:Disconnect()
+			uisDragConn = nil
+		end
+		if insertToggleConn then
+			insertToggleConn:Disconnect()
+			insertToggleConn = nil
+		end
 		gui:Destroy()
 	end)
 
@@ -548,6 +573,16 @@ return function(BASE_URL: string, config: { [string]: any })
 		minimized = not minimized
 		body.Visible = not minimized
 		root.Size = if minimized then UDim2.fromOffset(540, 44) else UDim2.fromOffset(540, 400)
+	end)
+
+	insertToggleConn = UserInputService.InputBegan:Connect(function(input, gameProcessed)
+		if gameProcessed then
+			return
+		end
+		if input.KeyCode ~= Enum.KeyCode.Insert then
+			return
+		end
+		gui.Enabled = not gui.Enabled
 	end)
 
 	-- After all connections exist (so closeHub can disconnect drag), load game and auto-close hub.

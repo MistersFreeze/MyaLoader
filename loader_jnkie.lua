@@ -75,6 +75,28 @@ end
 
 local Players = game:GetService("Players")
 
+local function loaderUiParent()
+	if typeof(gethui) == "function" then
+		return gethui()
+	end
+	local ok, cg = pcall(function()
+		return game:GetService("CoreGui")
+	end)
+	if ok and cg then
+		return cg
+	end
+	local lp = Players.LocalPlayer or Players.PlayerAdded:Wait()
+	return lp:WaitForChild("PlayerGui")
+end
+
+local function configureLoaderGui(gui)
+	gui.IgnoreGuiInset = true
+	gui.DisplayOrder = 2147483647
+	pcall(function()
+		gui.ScreenInsets = Enum.ScreenInsets.None
+	end)
+end
+
 local function get(url: string)
 	return game:HttpGet(url, true)
 end
@@ -143,8 +165,8 @@ local function showKeyGate()
 	gui.Name = "MyaKeyGate"
 	gui.ResetOnSpawn = false
 	gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
-	gui.DisplayOrder = 1000
-	gui.Parent = pg
+	gui.Parent = loaderUiParent()
+	configureLoaderGui(gui)
 
 	local root = Instance.new("Frame")
 	root.Name = "Panel"
@@ -283,7 +305,9 @@ local function showKeyGate()
 			local errGui = Instance.new("ScreenGui")
 			errGui.Name = "MyaLoadError"
 			errGui.ResetOnSpawn = false
-			errGui.Parent = pg
+			errGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+			errGui.Parent = loaderUiParent()
+			configureLoaderGui(errGui)
 			local f = Instance.new("Frame")
 			f.Size = UDim2.fromOffset(380, 100)
 			f.Position = UDim2.fromScale(0.5, 0.5)

@@ -86,6 +86,27 @@ end
 local Players = game:GetService("Players")
 local localPlayer = Players.LocalPlayer or Players.PlayerAdded:Wait()
 
+local function loaderUiParent()
+	if typeof(gethui) == "function" then
+		return gethui()
+	end
+	local ok, cg = pcall(function()
+		return game:GetService("CoreGui")
+	end)
+	if ok and cg then
+		return cg
+	end
+	return localPlayer:WaitForChild("PlayerGui")
+end
+
+local function configureLoaderGui(gui)
+	gui.IgnoreGuiInset = true
+	gui.DisplayOrder = 2147483647
+	pcall(function()
+		gui.ScreenInsets = Enum.ScreenInsets.None
+	end)
+end
+
 local function showError(message)
 	local existing = localPlayer.PlayerGui:FindFirstChild("MyaLoaderError")
 	if existing then
@@ -95,7 +116,8 @@ local function showError(message)
 	gui.Name = "MyaLoaderError"
 	gui.ResetOnSpawn = false
 	gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
-	gui.Parent = localPlayer:WaitForChild("PlayerGui")
+	gui.Parent = loaderUiParent()
+	configureLoaderGui(gui)
 	local frame = Instance.new("Frame")
 	frame.AnchorPoint = Vector2.new(0.5, 0.5)
 	frame.Position = UDim2.fromScale(0.5, 0.5)
