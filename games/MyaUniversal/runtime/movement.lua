@@ -237,9 +237,17 @@ local function hook_players()
 		Players.PlayerRemoving:Connect(function(plr)
 			local h = highlights[plr]
 			if h then
-				pcall(function()
-					h:Destroy()
-				end)
+				if type(h) == "table" then
+					for _, x in ipairs(h) do
+						pcall(function()
+							x:Destroy()
+						end)
+					end
+				else
+					pcall(function()
+						h:Destroy()
+					end)
+				end
 				highlights[plr] = nil
 			end
 			remove_health_draw(plr)

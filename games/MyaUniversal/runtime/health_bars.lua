@@ -54,7 +54,7 @@ local function update_health_bars()
 	end
 
 	for plr in pairs(health_draw) do
-		if plr == lp or not plr.Parent or is_teammate(plr) then
+		if plr == lp or not plr.Parent or is_esp_teammate(plr) then
 			remove_health_draw(plr)
 		end
 	end
@@ -62,7 +62,7 @@ local function update_health_bars()
 	local HEALTHBAR_GAP_PX = 10
 
 	for _, plr in ipairs(Players:GetPlayers()) do
-		if plr ~= lp and not is_teammate(plr) then
+		if plr ~= lp and not is_esp_teammate(plr) then
 			local char = plr.Character
 			if not char then
 				hide_health(plr)

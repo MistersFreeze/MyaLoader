@@ -1,13 +1,15 @@
 local function aim_step()
 	if not aim_on or not camera then
+		aim_lock_plr = nil
 		return
 	end
 	if not bind_pressed(aim_bind) then
 		aim_remainder_x, aim_remainder_y = 0, 0
+		aim_lock_plr = nil
 		return
 	end
 
-	local best_screen = select(1, get_best_target(aim_assist_fov))
+	local best_screen = select(1, get_best_target(aim_assist_fov, true))
 	if not best_screen then
 		aim_remainder_x, aim_remainder_y = 0, 0
 		return

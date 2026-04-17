@@ -16,7 +16,9 @@ local function normalizeBase(url)
 end
 
 function M.mount(ctx)
-	local base = normalizeBase(ctx.baseUrl or "") .. "games/MyaUniversal/"
+	local repoBase = normalizeBase(ctx.baseUrl or "")
+	_G.MYA_REPO_BASE = repoBase
+	local base = repoBase .. "games/MyaUniversal/"
 
 	local function fetch(u)
 		local g = typeof(getgenv) == "function" and getgenv()
@@ -39,6 +41,7 @@ function M.mount(ctx)
 		end
 		return game:HttpGet(u, true)
 	end
+	_G.MYA_FETCH = fetch
 
 	local cfgSrc = fetch(base .. "config.lua")
 	local cfgFn = loadstring(cfgSrc, "@MyaUniversal/config")

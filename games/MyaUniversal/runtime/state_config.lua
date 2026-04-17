@@ -1,4 +1,18 @@
 local D = _G.MYA_UNIVERSAL_CONFIG or {}
+local function cfg_bind_enum(k, default)
+	local s = D[k]
+	if type(s) ~= "string" then
+		return default
+	end
+	local et, en = s:match("^([^.]+)%.(.+)$")
+	if not et or not en then
+		return default
+	end
+	local ok, r = pcall(function()
+		return Enum[et][en]
+	end)
+	return ok and r or default
+end
 local function num(k, def, lo, hi)
 	local v = tonumber(D[k])
 	if v == nil then
@@ -15,6 +29,8 @@ local function col(k, r, g, b)
 end
 
 local esp_on = false
+-- Per-part ESP: green = camera LOS to that body part, pink = occluded (Visuals → ESP).
+local esp_visibility_colors_on = D.esp_visibility_colors_on == true
 local aim_on = false
 local aim_bind = Enum.UserInputType.MouseButton2
 local aim_assist_fov = num("aim_assist_fov", 140, 40, 400)
@@ -22,9 +38,28 @@ local aim_speed = num("aim_speed", 0.35, 0.05, 1)
 local aim_remainder_x, aim_remainder_y = 0, 0
 -- true = FOV circle & target pick use mouse position; false = screen center (FPS / static).
 local aim_fov_follow_cursor = D.aim_fov_follow_cursor == true
+-- Aim assist: keep current target until they leave FOV (no switch when another enters FOV).
+local keep_on_target_on = D.keep_on_target_on == true
+local aim_lock_plr = nil
 
-local team_check_on = false
+-- Aim assist / get_best_target (and triggerbot FOV pick) — ignore teammates when on.
+local aim_team_check_on = D.aim_team_check_on == true
+-- ESP, distance text, health bars — hide teammates when on.
+local esp_team_check_on = D.esp_team_check_on == true
+-- Legacy single key: if present and per-mode keys omitted, apply to both.
+if D.team_check_on == true then
+	if D.aim_team_check_on == nil then
+		aim_team_check_on = true
+	end
+	if D.esp_team_check_on == nil then
+		esp_team_check_on = true
+	end
+end
 local vis_check_on = false
+
+-- Best-effort weapon tweaks (scans Tool/Character NumberValues; game-dependent).
+local no_recoil_on = D.no_recoil_on == true
+local no_spread_on = D.no_spread_on == true
 
 local triggerbot_on = false
 local trigger_bind = Enum.KeyCode.E
@@ -39,12 +74,15 @@ local show_aim_fov_circle = false
 
 local fly_on = false
 local fly_speed = num("fly_speed", 50, 5, 200)
+local fly_bind = cfg_bind_enum("fly_bind", Enum.KeyCode.Unknown)
 local noclip_on = false
 local noclip_saved = {}
+local noclip_bind = cfg_bind_enum("noclip_bind", Enum.KeyCode.Unknown)
 
 local walk_target = num("walk_speed", 16, 0, 200)
 local jump_target = num("jump_power", 50, 0, 200)
 local walk_mod_on = false
+local walk_mod_bind = cfg_bind_enum("walk_mod_bind", Enum.KeyCode.Unknown)
 local jump_mod_on = false
 local ws_orig, jp_orig, jh_orig = nil, nil, nil
 

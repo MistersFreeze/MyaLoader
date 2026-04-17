@@ -1,373 +1,171 @@
 --[[
-    Mya · Operation One — tactical UI (standalone from legacy purple theme)
-]]--
+    Mya · Operation One — shared hub shell (`lib/mya_game_ui.lua`)
+]]
 local gethui_support = gethui ~= nil
-local uis  = cloneref ~= nil and cloneref(game:GetService("UserInputService")) or game:GetService("UserInputService")
+local cloneref_fn = type(cloneref) == "function" and cloneref or function(x)
+	return x
+end
+local uis = cloneref_fn(game:GetService("UserInputService"))
 local http = game:GetService("HttpService")
-local ts   = game:GetService("TweenService")
+local ts = game:GetService("TweenService")
 
 local CONFIG_FOLDER = "mya_op1_configs"
 
 local function normalize_fs_path(path)
-    if type(path) ~= "string" then return path end
-    return path:gsub("\\", "/")
+	if type(path) ~= "string" then
+		return path
+	end
+	return path:gsub("\\", "/")
 end
 
 local function ensure_config_dir()
-    if not makefolder then return end
-    pcall(function()
-        local exists = false
-        if isfolder then
-            local ok, res = pcall(isfolder, CONFIG_FOLDER)
-            if ok and res then exists = true end
-        end
-        if not exists then makefolder(CONFIG_FOLDER) end
-    end)
+	if not makefolder then
+		return
+	end
+	pcall(function()
+		local exists = false
+		if isfolder then
+			local ok, res = pcall(isfolder, CONFIG_FOLDER)
+			if ok and res then
+				exists = true
+			end
+		end
+		if not exists then
+			makefolder(CONFIG_FOLDER)
+		end
+	end)
 end
 ensure_config_dir()
 
 local function rand_str(len)
-    local chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
-    local r = {}
-    for i = 1, len do r[i] = chars:sub(math.random(1,#chars), math.random(1,#chars)) end
-    return table.concat(r)
+	local chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+	local r = {}
+	for i = 1, len do
+		r[i] = chars:sub(math.random(1, #chars), math.random(1, #chars))
+	end
+	return table.concat(r)
 end
 
--- -------------------- Colour palette (pink accent) --------------------
-local C = {
-	bg = Color3.fromRGB(14, 16, 20),
-	panel = Color3.fromRGB(22, 24, 30),
-	header = Color3.fromRGB(18, 20, 26),
-	tab_off = Color3.fromRGB(26, 28, 34),
-	tab_on = Color3.fromRGB(230, 120, 175),
-	accent = Color3.fromRGB(230, 120, 175),
-	row_hover = Color3.fromRGB(32, 34, 42),
-	tog_off = Color3.fromRGB(48, 50, 58),
-	tog_on = Color3.fromRGB(230, 120, 175),
-	text = Color3.fromRGB(236, 238, 244),
-	dim = Color3.fromRGB(120, 124, 138),
-	red = Color3.fromRGB(220, 80, 80),
-	green = Color3.fromRGB(90, 200, 130),
-	slid_bg = Color3.fromRGB(38, 40, 48),
-	slid_fg = Color3.fromRGB(230, 120, 175),
-	input_bg = Color3.fromRGB(28, 30, 38),
-	picker_bg = Color3.fromRGB(16, 18, 22),
-	sub_off = Color3.fromRGB(30, 32, 40),
-	sub_on = Color3.fromRGB(230, 120, 175),
-}
+local fetch = _G.MYA_FETCH
+local repoBase = _G.MYA_REPO_BASE
+if typeof(fetch) ~= "function" or typeof(repoBase) ~= "string" or #repoBase == 0 then
+	error("[Operation One] MYA_FETCH / MYA_REPO_BASE missing — mount via hub with ctx.baseUrl.")
+end
+local libSrc = fetch(repoBase .. "lib/mya_game_ui.lua")
+if typeof(libSrc) ~= "string" or #libSrc == 0 then
+	error("[Operation One] Could not load lib/mya_game_ui.lua from repo base: " .. repoBase)
+end
+local libFn = loadstring(libSrc, "@lib/mya_game_ui")
+if typeof(libFn) ~= "function" then
+	error("[Operation One] lib/mya_game_ui.lua failed to compile")
+end
+local MyaUI = libFn()
+local THEME, C = MyaUI.defaultTheme()
 
--- -------------------- Root GUI --------------------
 local ui = Instance.new("ScreenGui")
 ui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
-ui.Name           = rand_str(5)
+ui.Name = rand_str(5)
 ui.IgnoreGuiInset = true
-ui.DisplayOrder   = 10
-ui.Parent         = gethui_support and gethui() or game:GetService("CoreGui")
+ui.DisplayOrder = 10
+ui.ResetOnSpawn = false
+ui.Parent = gethui_support and gethui() or game:GetService("CoreGui")
 
--- Separate ScreenGui so notifications stay visible when the main menu is hidden
-local notif_ui = Instance.new("ScreenGui")
-notif_ui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
-notif_ui.Name           = rand_str(5) .. "_N"
-notif_ui.IgnoreGuiInset = true
-notif_ui.DisplayOrder   = 100
-notif_ui.Enabled        = true
-notif_ui.ResetOnSpawn   = false
-notif_ui.Parent         = gethui_support and gethui() or game:GetService("CoreGui")
+local notify, _notif_ui = MyaUI.createNotifyStack({
+	C = C,
+	THEME = THEME,
+	ts = ts,
+	gethui_support = gethui_support,
+})
+_G.mya_notify = notify
 
 local blocker = Instance.new("TextButton")
 blocker.BackgroundTransparency = 1
-blocker.Size    = UDim2.fromScale(1, 1)
-blocker.ZIndex  = 1
-blocker.Modal   = true
-blocker.Text    = ""
+blocker.Size = UDim2.fromScale(1, 1)
+blocker.ZIndex = 1
+blocker.Modal = true
+blocker.Text = ""
 blocker.Visible = false
-blocker.Parent  = ui
+blocker.Parent = ui
 
 local old_mouse_icon = uis.MouseIconEnabled
 local old_mouse_behavior = uis.MouseBehavior
 
+local current_picker_close = nil
+
 ui:GetPropertyChangedSignal("Enabled"):Connect(function()
-    blocker.Visible = ui.Enabled
-    if ui.Enabled then
-        old_mouse_icon = uis.MouseIconEnabled
-        old_mouse_behavior = uis.MouseBehavior
-        uis.MouseIconEnabled = false
-        uis.MouseBehavior = Enum.MouseBehavior.Default
-    else
-        uis.MouseIconEnabled = old_mouse_icon
-        uis.MouseBehavior = old_mouse_behavior
-        if current_picker_close then current_picker_close() end
-    end
+	blocker.Visible = ui.Enabled
+	if ui.Enabled then
+		old_mouse_icon = uis.MouseIconEnabled
+		old_mouse_behavior = uis.MouseBehavior
+		uis.MouseIconEnabled = false
+		uis.MouseBehavior = Enum.MouseBehavior.Default
+	else
+		uis.MouseIconEnabled = old_mouse_icon
+		uis.MouseBehavior = old_mouse_behavior
+		if current_picker_close then
+			current_picker_close()
+		end
+	end
 end)
 
-local notif_top = Instance.new("Frame")
-notif_top.Name = "NotifTop"
-notif_top.BackgroundTransparency = 1
-notif_top.Size = UDim2.fromScale(1, 1)
-notif_top.Parent = notif_ui
-
-local notif_container = Instance.new("Frame", notif_top)
-notif_container.Name = "NotifContainer"
-notif_container.BackgroundTransparency = 1
-notif_container.Size = UDim2.fromOffset(260, 400)
-notif_container.Position = UDim2.new(1, -270, 1, -420)
-
-local n_layout = Instance.new("UIListLayout", notif_container)
-n_layout.FillDirection = Enum.FillDirection.Vertical
-n_layout.HorizontalAlignment = Enum.HorizontalAlignment.Right
-n_layout.VerticalAlignment = Enum.VerticalAlignment.Bottom
-n_layout.Padding = UDim.new(0, 8)
-
-local function notify(title, text, duration)
-    duration = duration or 3
-    local f = Instance.new("Frame")
-    f.BackgroundColor3 = C.panel
-    f.Size = UDim2.fromOffset(250, 55)
-    f.Position = UDim2.fromOffset(260, 0)
-    Instance.new("UICorner", f).CornerRadius = UDim.new(0, 4)
-    local str = Instance.new("UIStroke", f)
-    str.Color = Color3.fromRGB(40,40,55)
-
-    local lbl_t = Instance.new("TextLabel", f)
-    lbl_t.BackgroundTransparency=1; lbl_t.Position=UDim2.fromOffset(16, 8); lbl_t.Size=UDim2.new(1, -24, 0, 16)
-    lbl_t.Font=Enum.Font.GothamBold; lbl_t.Text=title; lbl_t.TextColor3=C.accent; lbl_t.TextSize=12; lbl_t.TextXAlignment=Enum.TextXAlignment.Left
-
-    local lbl_d = Instance.new("TextLabel", f)
-    lbl_d.BackgroundTransparency=1; lbl_d.Position=UDim2.fromOffset(16, 26); lbl_d.Size=UDim2.new(1, -24, 0, 16)
-    lbl_d.Font=Enum.Font.Gotham; lbl_d.Text=text; lbl_d.TextColor3=C.text; lbl_d.TextSize=11; lbl_d.TextXAlignment=Enum.TextXAlignment.Left; lbl_d.TextWrapped = true
-
-    local stripe = Instance.new("Frame", f)
-    stripe.BackgroundColor3=C.accent; stripe.BorderSizePixel=0; stripe.Size=UDim2.new(0,3,1,0)
-    Instance.new("UICorner", stripe).CornerRadius = UDim.new(0, 4)
-
-    f.Parent = notif_container
-    ts:Create(f, TweenInfo.new(0.4, Enum.EasingStyle.Cubic, Enum.EasingDirection.Out), {Position = UDim2.new(0,0,0,0)}):Play()
-
-    task.spawn(function()
-        task.wait(duration)
-        if not f then return end
-        local t_out = ts:Create(f, TweenInfo.new(0.4, Enum.EasingStyle.Cubic, Enum.EasingDirection.In), {Position = UDim2.fromOffset(260, 0), BackgroundTransparency = 1})
-        t_out:Play()
-        ts:Create(str, TweenInfo.new(0.4), {Transparency=1}):Play()
-        ts:Create(lbl_t, TweenInfo.new(0.4), {TextTransparency=1}):Play()
-        ts:Create(lbl_d, TweenInfo.new(0.4), {TextTransparency=1}):Play()
-        ts:Create(stripe, TweenInfo.new(0.4), {BackgroundTransparency=1}):Play()
-        t_out.Completed:Wait()
-        f:Destroy()
-    end)
-end
-_G.mya_notify = notify
-
--- Custom Cursor
 local cursor = Instance.new("Frame")
-cursor.Name = "cursor"; cursor.Size = UDim2.fromOffset(18, 18); cursor.AnchorPoint = Vector2.new(0.5, 0.5)
-cursor.BackgroundTransparency = 1; cursor.ZIndex = 5000; cursor.Visible = false; cursor.Parent = ui
+cursor.Name = "cursor"
+cursor.Size = UDim2.fromOffset(18, 18)
+cursor.AnchorPoint = Vector2.new(0.5, 0.5)
+cursor.BackgroundTransparency = 1
+cursor.ZIndex = 5000
+cursor.Visible = false
+cursor.Parent = ui
 
 local function make_cursor_segment(size, pos)
-    local f = Instance.new("Frame")
-    f.BackgroundColor3 = Color3.new(1,1,1); f.BorderSizePixel = 0; f.Size = size; f.Position = pos; f.Parent = cursor
-    return f
+	local f = Instance.new("Frame")
+	f.BackgroundColor3 = Color3.new(1, 1, 1)
+	f.BorderSizePixel = 0
+	f.Size = size
+	f.Position = pos
+	f.Parent = cursor
+	return f
 end
 make_cursor_segment(UDim2.new(1, 0, 0, 1), UDim2.fromScale(0, 0.5))
 make_cursor_segment(UDim2.new(0, 1, 1, 0), UDim2.fromScale(0.5, 0))
 
 game:GetService("RunService").RenderStepped:Connect(function()
-    if ui.Enabled then
-        local m = uis:GetMouseLocation()
-        cursor.Position = UDim2.fromOffset(m.X, m.Y)
-        cursor.Visible = true
-        uis.MouseIconEnabled = false
-    else
-        cursor.Visible = false
-    end
+	if ui.Enabled then
+		local m = uis:GetMouseLocation()
+		cursor.Position = UDim2.fromOffset(m.X, m.Y)
+		cursor.Visible = true
+		uis.MouseIconEnabled = false
+	else
+		cursor.Visible = false
+	end
 end)
 
-local current_picker_close = nil
+local shell = MyaUI.createHubShell({
+	ui = ui,
+	THEME = THEME,
+	C = C,
+	ts = ts,
+	uis = uis,
+	titleText = "Mya  ·  Operation One",
+	tabNames = { "Combat", "Movement", "Visuals", "Misc", "Configs" },
+	subPages = {
+		Combat = { "Aim Assist" },
+		Movement = { "Fly", "Jump Boost" },
+		Visuals = { "Player ESP", "Gadgets", "World" },
+	},
+	statusDefault = "Ready · Insert toggles menu",
+	discordInvite = "https://discord.gg/YeyepQG6K9",
+	winW = 360,
+	winH = 560,
+})
 
--- -------------------- Main Window --------------------
-local WIN_W, WIN_H = 360, 560
-
-local main = Instance.new("Frame")
-main.Name = "main"
-main.BackgroundColor3 = C.bg
-main.BackgroundTransparency = 0
-main.BorderSizePixel = 0
+local main = shell.main
 main.Position = UDim2.new(0.5, 80, 0.5, 0)
-main.AnchorPoint = Vector2.new(0.5, 0.5)
-main.Size = UDim2.fromOffset(WIN_W, WIN_H)
-main.Active = true
-main.ZIndex = 10
-main.Parent = ui
-Instance.new("UICorner", main).CornerRadius = UDim.new(0, 8)
 
-local accentBar = Instance.new("Frame")
-accentBar.Name = "AccentBar"
-accentBar.BackgroundColor3 = C.accent
-accentBar.BorderSizePixel = 0
-accentBar.Size = UDim2.new(0, 4, 1, 0)
-accentBar.Position = UDim2.new(0, 0, 0, 0)
-accentBar.Parent = main
-Instance.new("UICorner", accentBar).CornerRadius = UDim.new(0, 8)
-
-local header = Instance.new("Frame")
-header.BackgroundColor3 = C.header
-header.BorderSizePixel = 0
-header.Size = UDim2.new(1, -4, 0, 40)
-header.Position = UDim2.new(0, 4, 0, 0)
-header.ZIndex = 10
-header.Parent = main
-Instance.new("UICorner", header).CornerRadius = UDim.new(0, 8)
-local hdr_sq = Instance.new("Frame")
-hdr_sq.BackgroundColor3 = C.header
-hdr_sq.BorderSizePixel = 0
-hdr_sq.Position = UDim2.fromOffset(0, 28)
-hdr_sq.Size = UDim2.new(1, 0, 0, 14)
-hdr_sq.Parent = header
-
-local title_lbl = Instance.new("TextLabel")
-title_lbl.Font = Enum.Font.GothamBold
-title_lbl.Text = "OPERATION ONE | Mya"
-title_lbl.TextColor3 = C.text
-title_lbl.TextSize = 15
-title_lbl.BackgroundTransparency = 1
-title_lbl.BorderSizePixel = 0
-title_lbl.Position = UDim2.fromOffset(14, 0)
-title_lbl.Size = UDim2.new(1, -24, 1, 0)
-title_lbl.TextXAlignment = Enum.TextXAlignment.Left
-title_lbl.TextYAlignment = Enum.TextYAlignment.Center
-title_lbl.Parent = header
-
--- -------------------- Tab bar --------------------
-local TAB_NAMES = { "Combat", "Movement", "Visuals", "Misc", "Configs" }
-
-local tab_bar = Instance.new("Frame")
-tab_bar.BackgroundColor3=C.header; tab_bar.BorderSizePixel=0
-tab_bar.Position=UDim2.fromOffset(4,40); tab_bar.Size=UDim2.new(1,-4,0,30)
-tab_bar.ZIndex=10; tab_bar.Parent=main
-Instance.new("UIListLayout",tab_bar).FillDirection=Enum.FillDirection.Horizontal
-
-local tab_buttons = {}; local tab_containers = {}; local active_tab = nil
-
--- Sub-nav bar (hidden for tabs without sub-pages)
-local sub_bar = Instance.new("Frame")
-sub_bar.BackgroundColor3 = C.bg; sub_bar.BorderSizePixel = 0
-sub_bar.Position = UDim2.fromOffset(4, 70); sub_bar.Size = UDim2.new(1, -4, 0, 26)
-sub_bar.ZIndex = 10; sub_bar.Visible = false; sub_bar.Parent = main
-local sub_bar_layout = Instance.new("UIListLayout", sub_bar)
-sub_bar_layout.FillDirection = Enum.FillDirection.Horizontal
-sub_bar_layout.HorizontalAlignment = Enum.HorizontalAlignment.Center
-sub_bar_layout.Padding = UDim.new(0, 4)
-sub_bar_layout.VerticalAlignment = Enum.VerticalAlignment.Center
-
-local content = Instance.new("Frame")
-content.BackgroundTransparency=1; content.BorderSizePixel=0
-content.Position=UDim2.fromOffset(4,70); content.Size=UDim2.new(1,-4,1,-70)
-content.ClipsDescendants=true; content.Parent=main
-
--- -------------------- Sub-page infrastructure --------------------
-local SUB_PAGES = {
-    Combat   = { "Aim Assist" },
-    Movement = { "Fly", "Jump Boost" },
-    Visuals  = { "Player ESP", "Gadgets", "World" },
-}
-
-local all_sub_buttons = {}
-local all_sub_pages   = {}
-
-local function make_page()
-    local page = Instance.new("ScrollingFrame")
-    page.BackgroundTransparency=1; page.BorderSizePixel=0
-    page.Size=UDim2.fromScale(1,1); page.CanvasSize=UDim2.fromOffset(0,0)
-    page.AutomaticCanvasSize=Enum.AutomaticSize.Y; page.ScrollBarThickness=3
-    page.ScrollBarImageColor3=C.accent; page.Visible=false; page.Parent=content
-    local ul=Instance.new("UIListLayout"); ul.SortOrder=Enum.SortOrder.LayoutOrder; ul.Padding=UDim.new(0,0); ul.Parent=page
-    local up=Instance.new("UIPadding"); up.PaddingTop=UDim.new(0,6); up.Parent=page
-    return page
-end
-
-local function switch_sub(tab_name, sub_name)
-    local subs = all_sub_pages[tab_name]
-    local btns = all_sub_buttons[tab_name]
-    if not subs then return end
-    for n, pg in pairs(subs) do pg.Visible = (n == sub_name) end
-    for n, b  in pairs(btns) do
-        b.BackgroundColor3 = (n == sub_name) and C.sub_on or C.sub_off
-        b.TextColor3       = (n == sub_name) and Color3.fromRGB(45, 18, 32) or C.dim
-    end
-end
-
-local function switch_tab(name)
-    active_tab = name
-    local has_subs = SUB_PAGES[name] ~= nil
-
-    for n, cont in pairs(tab_containers) do cont.Visible = (n == name) end
-    for n, b in pairs(tab_buttons) do
-        b.BackgroundColor3 = (n == name) and C.tab_on or C.tab_off
-        b.TextColor3       = (n == name) and Color3.fromRGB(45, 18, 32) or C.dim
-    end
-
-    -- Show/hide sub-nav bar and adjust content position
-    sub_bar.Visible = has_subs
-    if has_subs then
-        content.Position = UDim2.fromOffset(4, 96)
-        content.Size     = UDim2.new(1, -4, 1, -96)
-    else
-        content.Position = UDim2.fromOffset(4, 70)
-        content.Size     = UDim2.new(1, -4, 1, -70)
-    end
-
-    -- Rebuild sub-bar buttons
-    for _, c in ipairs(sub_bar:GetChildren()) do
-        if c:IsA("TextButton") then c:Destroy() end
-    end
-    if has_subs then
-        local sub_names = SUB_PAGES[name]
-        all_sub_buttons[name] = all_sub_buttons[name] or {}
-        for i, sn in ipairs(sub_names) do
-            local sb = Instance.new("TextButton")
-            sb.LayoutOrder = i; sb.BackgroundColor3 = C.sub_off; sb.BorderSizePixel = 0
-            sb.Size = UDim2.fromOffset(math.floor((WIN_W - 8 - (#sub_names - 1) * 4) / #sub_names), 20)
-            sb.Font = Enum.Font.GothamSemibold; sb.Text = sn; sb.TextColor3 = C.dim; sb.TextSize = 10
-            sb.AutoButtonColor = false; sb.Parent = sub_bar
-            Instance.new("UICorner", sb).CornerRadius = UDim.new(0, 8)
-            sb.MouseButton1Click:Connect(function() switch_sub(name, sn) end)
-            all_sub_buttons[name][sn] = sb
-        end
-        switch_sub(name, sub_names[1])
-    end
-end
-
--- Create tab buttons
-for i, name in ipairs(TAB_NAMES) do
-    local b = Instance.new("TextButton")
-    b.LayoutOrder=i; b.BackgroundColor3=C.tab_off; b.BorderSizePixel=0
-    b.Size=UDim2.new(1/#TAB_NAMES,0,1,0); b.Font=Enum.Font.GothamSemibold
-    b.Text=name; b.TextColor3=C.dim; b.TextSize=11; b.AutoButtonColor=false; b.Parent=tab_bar
-    tab_buttons[name] = b
-    b.MouseButton1Click:Connect(function() switch_tab(name) end)
-end
-
--- Create tab containers (invisible wrappers that hold sub-pages or direct pages)
-for _, name in ipairs(TAB_NAMES) do
-    local cont = Instance.new("Frame")
-    cont.BackgroundTransparency = 1; cont.Size = UDim2.fromScale(1, 1)
-    cont.Visible = false; cont.Parent = content
-    tab_containers[name] = cont
-
-    if SUB_PAGES[name] then
-        all_sub_pages[name] = {}
-        for _, sn in ipairs(SUB_PAGES[name]) do
-            local pg = Instance.new("ScrollingFrame")
-            pg.BackgroundTransparency=1; pg.BorderSizePixel=0
-            pg.Size=UDim2.fromScale(1,1); pg.CanvasSize=UDim2.fromOffset(0,0)
-            pg.AutomaticCanvasSize=Enum.AutomaticSize.Y; pg.ScrollBarThickness=3
-            pg.ScrollBarImageColor3=C.accent; pg.Visible=false; pg.Parent=cont
-            local ul=Instance.new("UIListLayout"); ul.SortOrder=Enum.SortOrder.LayoutOrder; ul.Padding=UDim.new(0,0); ul.Parent=pg
-            local up=Instance.new("UIPadding"); up.PaddingTop=UDim.new(0,6); up.Parent=pg
-            all_sub_pages[name][sn] = pg
-        end
-    end
-end
+local switch_tab = shell.switch_tab
+local tab_containers = shell.tab_containers
+local all_sub_pages = shell.all_sub_pages
+local make_page = shell.make_page
 
 -- -------------------- Row builders --------------------
 local function section_label(parent, text, order)
@@ -873,13 +671,9 @@ make_toggle(pg, "Fullbright",   2,  "toggle_fullbright")
 -- ================================================================
 --                     MISC TAB (no sub-pages)
 -- ================================================================
-local misc_page = Instance.new("ScrollingFrame")
-misc_page.BackgroundTransparency=1; misc_page.BorderSizePixel=0
-misc_page.Size=UDim2.fromScale(1,1); misc_page.CanvasSize=UDim2.fromOffset(0,0)
-misc_page.AutomaticCanvasSize=Enum.AutomaticSize.Y; misc_page.ScrollBarThickness=3
-misc_page.ScrollBarImageColor3=C.accent; misc_page.Visible=true; misc_page.Parent=tab_containers["Misc"]
-local ul=Instance.new("UIListLayout"); ul.SortOrder=Enum.SortOrder.LayoutOrder; ul.Padding=UDim.new(0,0); ul.Parent=misc_page
-local up=Instance.new("UIPadding"); up.PaddingTop=UDim.new(0,6); up.Parent=misc_page
+local misc_page = make_page()
+misc_page.Visible = true
+misc_page.Parent = tab_containers["Misc"]
 
 section_label(misc_page, "Interface", 1)
 local _, menu_key_update = make_keybind(misc_page, "Menu Bind", 2, Enum.KeyCode.Insert,
@@ -1066,23 +860,6 @@ sbtn.MouseButton1Click:Connect(function()
 end)
 
 refresh_configs()
-
--- -------------------- Drag Logic --------------------
-local drag_con
-header.InputBegan:Connect(function(inp)
-    if inp.UserInputType == Enum.UserInputType.MouseButton1 then
-        local st, sp = inp.Position, main.Position
-        drag_con = uis.InputChanged:Connect(function(i)
-            if i.UserInputType == Enum.UserInputType.MouseMovement then
-                local d = i.Position - st
-                main.Position = UDim2.new(sp.X.Scale, sp.X.Offset + d.X, sp.Y.Scale, sp.Y.Offset + d.Y)
-            end
-        end)
-    end
-end)
-header.InputEnded:Connect(function(inp)
-    if inp.UserInputType == Enum.UserInputType.MouseButton1 then if drag_con then drag_con:Disconnect() end end
-end)
 
 switch_tab("Combat")
 _G.user_interface = ui

@@ -100,18 +100,52 @@ _G.MYA_UNIVERSAL = {
 	set_aim_fov_follow_cursor = function(v)
 		aim_fov_follow_cursor = not not v
 	end,
+	get_keep_on_target = function()
+		return keep_on_target_on
+	end,
+	set_keep_on_target = function(v)
+		keep_on_target_on = not not v
+		if not keep_on_target_on then
+			aim_lock_plr = nil
+		end
+	end,
+	get_aim_team_check = function()
+		return aim_team_check_on
+	end,
+	set_aim_team_check = function(v)
+		aim_team_check_on = not not v
+	end,
+	get_esp_team_check = function()
+		return esp_team_check_on
+	end,
+	set_esp_team_check = function(v)
+		esp_team_check_on = not not v
+		esp_refresh()
+	end,
+	-- Backward compat: old single "team check" mapped to aim-only getters/setters.
 	get_team_check = function()
-		return team_check_on
+		return aim_team_check_on
 	end,
 	set_team_check = function(v)
-		team_check_on = not not v
-		esp_refresh()
+		aim_team_check_on = not not v
 	end,
 	get_vis_check = function()
 		return vis_check_on
 	end,
 	set_vis_check = function(v)
 		vis_check_on = not not v
+	end,
+	get_no_recoil = function()
+		return no_recoil_on
+	end,
+	set_no_recoil = function(v)
+		no_recoil_on = not not v
+	end,
+	get_no_spread = function()
+		return no_spread_on
+	end,
+	set_no_spread = function(v)
+		no_spread_on = not not v
 	end,
 	get_triggerbot = function()
 		return triggerbot_on
@@ -158,6 +192,13 @@ _G.MYA_UNIVERSAL = {
 		esp_on = not not v
 		esp_refresh()
 	end,
+	get_esp_visibility_colors = function()
+		return esp_visibility_colors_on
+	end,
+	set_esp_visibility_colors = function(v)
+		esp_visibility_colors_on = not not v
+		esp_refresh()
+	end,
 	get_healthbars = function()
 		return healthbars_on
 	end,
@@ -183,6 +224,16 @@ _G.MYA_UNIVERSAL = {
 		walk_mod_on = not not v
 		refresh_movement()
 	end,
+	get_walk_mod_bind = function()
+		return walk_mod_bind
+	end,
+	set_walk_mod_bind = function(v)
+		if typeof(v) == "EnumItem" then
+			if v.EnumType == Enum.KeyCode or v.EnumType == Enum.UserInputType then
+				walk_mod_bind = v
+			end
+		end
+	end,
 	get_jump_mod = function()
 		return jump_mod_on
 	end,
@@ -199,6 +250,16 @@ _G.MYA_UNIVERSAL = {
 			start_fly()
 		else
 			stop_fly()
+		end
+	end,
+	get_fly_bind = function()
+		return fly_bind
+	end,
+	set_fly_bind = function(v)
+		if typeof(v) == "EnumItem" then
+			if v.EnumType == Enum.KeyCode or v.EnumType == Enum.UserInputType then
+				fly_bind = v
+			end
 		end
 	end,
 	get_fly_speed = function()
@@ -219,6 +280,16 @@ _G.MYA_UNIVERSAL = {
 			start_noclip()
 		else
 			stop_noclip()
+		end
+	end,
+	get_noclip_bind = function()
+		return noclip_bind
+	end,
+	set_noclip_bind = function(v)
+		if typeof(v) == "EnumItem" then
+			if v.EnumType == Enum.KeyCode or v.EnumType == Enum.UserInputType then
+				noclip_bind = v
+			end
 		end
 	end,
 	get_walk = function()
@@ -277,22 +348,30 @@ _G.get_config = function()
 		aim_assist_fov = aim_assist_fov,
 		aim_speed = aim_speed,
 		aim_fov_follow_cursor = aim_fov_follow_cursor,
-		team_check_on = team_check_on,
+		keep_on_target_on = keep_on_target_on,
+		aim_team_check_on = aim_team_check_on,
+		esp_team_check_on = esp_team_check_on,
 		vis_check_on = vis_check_on,
+		no_recoil_on = no_recoil_on,
+		no_spread_on = no_spread_on,
 		triggerbot_on = triggerbot_on,
 		trigger_bind = enum_to_str(trigger_bind),
 		trigger_fov = trigger_fov,
 		trigger_delay = trigger_delay,
 		show_aim_fov_circle = show_aim_fov_circle,
 		esp_on = esp_on,
+		esp_visibility_colors_on = esp_visibility_colors_on,
 		healthbars_on = healthbars_on,
 		esp_distance_on = esp_distance_on,
 		esp_names_on = esp_names_on,
 		walk_mod_on = walk_mod_on,
+		walk_mod_bind = enum_to_str(walk_mod_bind),
 		jump_mod_on = jump_mod_on,
 		fly_on = fly_on,
 		fly_speed = fly_speed,
+		fly_bind = enum_to_str(fly_bind),
 		noclip_on = noclip_on,
+		noclip_bind = enum_to_str(noclip_bind),
 		walk_speed = walk_target,
 		jump_power = jump_target,
 	}
@@ -320,11 +399,27 @@ _G.apply_config = function(cfg)
 	if cfg.aim_fov_follow_cursor ~= nil then
 		U.set_aim_fov_follow_cursor(cfg.aim_fov_follow_cursor)
 	end
-	if cfg.team_check_on ~= nil then
-		U.set_team_check(cfg.team_check_on)
+	if cfg.keep_on_target_on ~= nil then
+		U.set_keep_on_target(cfg.keep_on_target_on)
+	end
+	if cfg.aim_team_check_on ~= nil then
+		U.set_aim_team_check(cfg.aim_team_check_on)
+	elseif cfg.team_check_on ~= nil then
+		U.set_aim_team_check(cfg.team_check_on)
+	end
+	if cfg.esp_team_check_on ~= nil then
+		U.set_esp_team_check(cfg.esp_team_check_on)
+	elseif cfg.team_check_on ~= nil then
+		U.set_esp_team_check(cfg.team_check_on)
 	end
 	if cfg.vis_check_on ~= nil then
 		U.set_vis_check(cfg.vis_check_on)
+	end
+	if cfg.no_recoil_on ~= nil then
+		U.set_no_recoil(cfg.no_recoil_on)
+	end
+	if cfg.no_spread_on ~= nil then
+		U.set_no_spread(cfg.no_spread_on)
 	end
 	if cfg.triggerbot_on ~= nil then
 		U.set_triggerbot(cfg.triggerbot_on)
@@ -347,6 +442,9 @@ _G.apply_config = function(cfg)
 	if cfg.esp_on ~= nil then
 		U.set_esp(cfg.esp_on)
 	end
+	if cfg.esp_visibility_colors_on ~= nil then
+		U.set_esp_visibility_colors(cfg.esp_visibility_colors_on)
+	end
 	if cfg.healthbars_on ~= nil then
 		U.set_healthbars(cfg.healthbars_on)
 	end
@@ -359,6 +457,12 @@ _G.apply_config = function(cfg)
 	if cfg.walk_mod_on ~= nil then
 		U.set_walk_mod(cfg.walk_mod_on)
 	end
+	if cfg.walk_mod_bind ~= nil then
+		local b = str_to_enum(cfg.walk_mod_bind)
+		if b then
+			U.set_walk_mod_bind(b)
+		end
+	end
 	if cfg.jump_mod_on ~= nil then
 		U.set_jump_mod(cfg.jump_mod_on)
 	end
@@ -368,8 +472,20 @@ _G.apply_config = function(cfg)
 	if cfg.fly_speed ~= nil then
 		U.set_fly_speed(cfg.fly_speed)
 	end
+	if cfg.fly_bind ~= nil then
+		local b = str_to_enum(cfg.fly_bind)
+		if b then
+			U.set_fly_bind(b)
+		end
+	end
 	if cfg.noclip_on ~= nil then
 		U.set_noclip(cfg.noclip_on)
+	end
+	if cfg.noclip_bind ~= nil then
+		local b = str_to_enum(cfg.noclip_bind)
+		if b then
+			U.set_noclip_bind(b)
+		end
 	end
 	if cfg.walk_speed ~= nil then
 		U.set_walk(cfg.walk_speed)

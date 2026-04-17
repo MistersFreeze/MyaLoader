@@ -1,5 +1,6 @@
-local DIST_UP = 1.8
+-- Name: above head. Distance: below character (feet / bottom of ESP), not stacked with the name.
 local NAME_UP = 2.45
+local DIST_BELOW_HRP = 3.2
 local distance_draw = {}
 local name_draw = {}
 
@@ -81,13 +82,13 @@ local function update_esp_distance()
 	end
 
 	for plr in pairs(distance_draw) do
-		if plr == lp or not plr.Parent or is_teammate(plr) then
+		if plr == lp or not plr.Parent or is_esp_teammate(plr) then
 			remove_distance_draw(plr)
 		end
 	end
 
 	for _, plr in ipairs(Players:GetPlayers()) do
-		if plr ~= lp and not is_teammate(plr) then
+		if plr ~= lp and not is_esp_teammate(plr) then
 			local char = plr.Character
 			local hrp = char and char:FindFirstChild("HumanoidRootPart")
 			local head = char and char:FindFirstChild("Head")
@@ -95,7 +96,7 @@ local function update_esp_distance()
 				hide_distance(plr)
 			else
 				local distStuds = (myRoot.Position - hrp.Position).Magnitude
-				local pos, onScreen = camera:WorldToViewportPoint(head.Position + Vector3.new(0, DIST_UP, 0))
+				local pos, onScreen = camera:WorldToViewportPoint(hrp.Position + Vector3.new(0, -DIST_BELOW_HRP, 0))
 				if onScreen and pos.Z > 0 then
 					ensure_distance_text(plr)
 					local d = distance_draw[plr]
@@ -128,13 +129,13 @@ local function update_esp_names()
 	end
 
 	for plr in pairs(name_draw) do
-		if plr == lp or not plr.Parent or is_teammate(plr) then
+		if plr == lp or not plr.Parent or is_esp_teammate(plr) then
 			remove_name_draw(plr)
 		end
 	end
 
 	for _, plr in ipairs(Players:GetPlayers()) do
-		if plr ~= lp and not is_teammate(plr) then
+		if plr ~= lp and not is_esp_teammate(plr) then
 			local char = plr.Character
 			local hrp = char and char:FindFirstChild("HumanoidRootPart")
 			local head = char and char:FindFirstChild("Head")

@@ -6,8 +6,10 @@ local function render_frame()
 	update_health_bars()
 	update_esp_distance()
 	update_esp_names()
+	update_esp_visibility_colors()
 	aim_step()
 	triggerbot_step()
+	weapon_mod_step()
 end
 
 render_conn = RunService.RenderStepped:Connect(render_frame)

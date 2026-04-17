@@ -45,6 +45,10 @@ function M.mount(ctx)
 		return game:HttpGet(u, true)
 	end
 
+	local repoBase = normalizeBase(ctx.baseUrl)
+	_G.MYA_REPO_BASE = repoBase
+	_G.MYA_FETCH = fetch
+
 	local runSrc = fetch(base .. "runtime.lua")
 	local runChunk = loadstring(runSrc, "@Operation-One/runtime")
 	if typeof(runChunk) ~= "function" then

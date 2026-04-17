@@ -121,7 +121,7 @@ return function(BASE_URL: string, config: { [string]: any })
 	local titleText = Instance.new("TextLabel")
 	titleText.BackgroundTransparency = 1
 	titleText.Position = UDim2.new(0, 14, 0, 0)
-	titleText.Size = UDim2.new(1, -120, 1, 0)
+	titleText.Size = UDim2.new(1, -200, 1, 0)
 	titleText.Font = Enum.Font.GothamBold
 	titleText.TextSize = 16
 	titleText.TextXAlignment = Enum.TextXAlignment.Left
@@ -129,17 +129,58 @@ return function(BASE_URL: string, config: { [string]: any })
 	titleText.Text = config.BRAND .. "  ·  " .. tostring(config.VERSION or "")
 	titleText.Parent = titleBar
 
+	local DISCORD_INVITE = "https://discord.gg/YeyepQG6K9"
+
+	-- Returns "browser" | "clipboard" | "none" (for status line feedback).
+	local function openDiscordInvite(): string
+		local url = DISCORD_INVITE
+		local mode = "none"
+		pcall(function()
+			local g = typeof(getgenv) == "function" and getgenv()
+			if g and typeof(g.openbrowser) == "function" then
+				g.openbrowser(url)
+				mode = "browser"
+			end
+		end)
+		if mode == "none" then
+			local ok = pcall(function()
+				game:GetService("GuiService"):OpenBrowserWindow(url)
+			end)
+			if ok then
+				mode = "browser"
+			end
+		end
+		if mode == "none" and typeof(setclipboard) == "function" then
+			setclipboard(url)
+			mode = "clipboard"
+		end
+		return mode
+	end
+
 	local btnRow = Instance.new("Frame")
 	btnRow.BackgroundTransparency = 1
 	btnRow.AnchorPoint = Vector2.new(1, 0.5)
 	btnRow.Position = UDim2.new(1, -8, 0.5, 0)
-	btnRow.Size = UDim2.new(0, 72, 0, 28)
+	btnRow.Size = UDim2.new(0, 146, 0, 28)
 	btnRow.Parent = titleBar
+
+	local discordBtn = Instance.new("TextButton")
+	discordBtn.BorderSizePixel = 0
+	discordBtn.Size = UDim2.new(0, 68, 1, 0)
+	discordBtn.Position = UDim2.new(0, 0, 0, 0)
+	discordBtn.BackgroundColor3 = theme.surface
+	discordBtn.Text = "Discord"
+	discordBtn.TextColor3 = theme.accent
+	discordBtn.Font = Enum.Font.GothamSemibold
+	discordBtn.TextSize = 12
+	discordBtn.AutoButtonColor = false
+	discordBtn.Parent = btnRow
+	UI.corner(discordBtn)
 
 	local minBtn = Instance.new("TextButton")
 	minBtn.BorderSizePixel = 0
 	minBtn.Size = UDim2.new(0, 32, 1, 0)
-	minBtn.Position = UDim2.new(0, 0, 0, 0)
+	minBtn.Position = UDim2.new(0, 74, 0, 0)
 	minBtn.BackgroundColor3 = theme.surface
 	minBtn.Text = "—"
 	minBtn.TextColor3 = theme.textMuted
@@ -152,8 +193,8 @@ return function(BASE_URL: string, config: { [string]: any })
 	local closeBtn = Instance.new("TextButton")
 	closeBtn.BorderSizePixel = 0
 	closeBtn.Size = UDim2.new(0, 32, 1, 0)
-	closeBtn.Position = UDim2.new(1, 0, 0, 0)
-	closeBtn.AnchorPoint = Vector2.new(1, 0)
+	closeBtn.Position = UDim2.new(0, 110, 0, 0)
+	closeBtn.AnchorPoint = Vector2.new(0, 0)
 	closeBtn.BackgroundColor3 = theme.surface
 	closeBtn.Text = "×"
 	closeBtn.TextColor3 = theme.danger
@@ -213,6 +254,94 @@ return function(BASE_URL: string, config: { [string]: any })
 	local function notify(msg: string)
 		statusLabel.Text = tostring(msg)
 	end
+
+	-- In-window toast when invite is copied (clipboard fallback).
+	local toastToken = 0
+	local toastPendingHide: thread? = nil
+	local toastFrame = Instance.new("Frame")
+	toastFrame.Name = "ClipboardToast"
+	toastFrame.BackgroundColor3 = theme.surface
+	toastFrame.BorderSizePixel = 0
+	toastFrame.AnchorPoint = Vector2.new(0.5, 0)
+	toastFrame.Position = UDim2.new(0.5, 0, 0, 12)
+	toastFrame.Size = UDim2.fromOffset(300, 46)
+	toastFrame.Visible = false
+	toastFrame.ZIndex = 50
+	-- Parent to body so the toast hides when the hub is minimized (title-only).
+	toastFrame.Parent = body
+	UI.corner(toastFrame)
+	local toastStroke = Instance.new("UIStroke")
+	toastStroke.Color = theme.accent
+	toastStroke.Thickness = 1
+	toastStroke.Transparency = 0.4
+	toastStroke.Parent = toastFrame
+	local toastLabel = Instance.new("TextLabel")
+	toastLabel.BackgroundTransparency = 1
+	toastLabel.Size = UDim2.new(1, -20, 1, 0)
+	toastLabel.Position = UDim2.fromOffset(10, 0)
+	toastLabel.Font = Enum.Font.GothamMedium
+	toastLabel.TextSize = 14
+	toastLabel.TextColor3 = theme.text
+	toastLabel.TextXAlignment = Enum.TextXAlignment.Center
+	toastLabel.TextYAlignment = Enum.TextYAlignment.Center
+	toastLabel.TextWrapped = true
+	toastLabel.Text = "Copied to clipboard — paste to open Discord"
+	toastLabel.Parent = toastFrame
+
+	local function showClipboardCopiedToast()
+		toastToken += 1
+		local token = toastToken
+		if toastPendingHide then
+			task.cancel(toastPendingHide)
+			toastPendingHide = nil
+		end
+		toastFrame.Visible = true
+		toastFrame.BackgroundTransparency = 1
+		toastStroke.Transparency = 1
+		toastLabel.TextTransparency = 1
+		toastFrame.Position = UDim2.new(0.5, 0, 0, 4)
+
+		local tiIn = TweenInfo.new(0.38, Enum.EasingStyle.Back, Enum.EasingDirection.Out)
+		TweenService:Create(toastFrame, tiIn, {
+			BackgroundTransparency = 0.06,
+			Position = UDim2.new(0.5, 0, 0, 14),
+		}):Play()
+		TweenService:Create(toastStroke, tiIn, { Transparency = 0.35 }):Play()
+		TweenService:Create(toastLabel, tiIn, { TextTransparency = 0 }):Play()
+
+		toastPendingHide = task.delay(2.35, function()
+			toastPendingHide = nil
+			if token ~= toastToken then
+				return
+			end
+			local tiOut = TweenInfo.new(0.45, Enum.EasingStyle.Quad, Enum.EasingDirection.In)
+			local tBg = TweenService:Create(toastFrame, tiOut, {
+				BackgroundTransparency = 1,
+				Position = UDim2.new(0.5, 0, 0, -2),
+			})
+			TweenService:Create(toastStroke, tiOut, { Transparency = 1 }):Play()
+			TweenService:Create(toastLabel, tiOut, { TextTransparency = 1 }):Play()
+			tBg:Play()
+			tBg.Completed:Connect(function()
+				if token ~= toastToken then
+					return
+				end
+				toastFrame.Visible = false
+			end)
+		end)
+	end
+
+	discordBtn.MouseButton1Click:Connect(function()
+		local mode = openDiscordInvite()
+		if mode == "clipboard" then
+			notify("Discord invite copied to clipboard")
+			showClipboardCopiedToast()
+		elseif mode == "browser" then
+			notify("Opening Discord…")
+		else
+			notify("Discord: " .. DISCORD_INVITE)
+		end
+	end)
 
 	local tabs: { [string]: Frame } = {}
 	local tabButtons: { [string]: TextButton } = {}
@@ -300,12 +429,46 @@ return function(BASE_URL: string, config: { [string]: any })
 	local gamesCard = UI.panel(gamesScroll)
 	gamesCard.Size = UDim2.new(1, -4, 0, 0)
 
+	-- Catalog of PlaceIds from config (display names; keep in sync with config.SUPPORTED_GAMES).
+	local GAME_DISPLAY_NAMES: { [number]: string } = {
+		[72920620366355] = "Operation One",
+		[110400717151509] = "Neighbors",
+		[12699642568] = "Neighbors",
+	}
+	local gamesCatalog = Instance.new("Frame")
+	gamesCatalog.BackgroundTransparency = 1
+	gamesCatalog.Size = UDim2.new(1, 0, 0, 0)
+	gamesCatalog.AutomaticSize = Enum.AutomaticSize.Y
+	gamesCatalog.LayoutOrder = 0
+	gamesCatalog.Parent = gamesCard
+	local catalogLayout = Instance.new("UIListLayout")
+	catalogLayout.SortOrder = Enum.SortOrder.LayoutOrder
+	catalogLayout.Padding = UDim.new(0, 6)
+	catalogLayout.Parent = gamesCatalog
+	UI.label(gamesCatalog, "Supported games", 16, false)
+	local supportedIds = {}
+	for id in pairs(config.SUPPORTED_GAMES or {}) do
+		table.insert(supportedIds, id)
+	end
+	table.sort(supportedIds)
+	for _, id in ipairs(supportedIds) do
+		local name = GAME_DISPLAY_NAMES[id]
+		if not name then
+			local path = (config.SUPPORTED_GAMES or {})[id]
+			name = if typeof(path) == "string" then path else "Unknown"
+		end
+		UI.label(gamesCatalog, name .. " — PlaceId " .. tostring(id), 14, true)
+	end
+	if #supportedIds == 0 then
+		UI.label(gamesCatalog, "No games listed in hub config yet.", 14, true)
+	end
+
 	local gamePanel = Instance.new("Frame")
 	gamePanel.Name = "GamePanel"
 	gamePanel.BackgroundTransparency = 1
 	gamePanel.Size = UDim2.new(1, 0, 0, 0)
 	gamePanel.AutomaticSize = Enum.AutomaticSize.Y
-	gamePanel.LayoutOrder = 1
+	gamePanel.LayoutOrder = 2
 	gamePanel.Parent = gamesCard
 
 	local gameLayout = Instance.new("UIListLayout")
@@ -410,7 +573,7 @@ return function(BASE_URL: string, config: { [string]: any })
 	local gamePath = supported[placeId]
 
 	local supportTitle = UI.label(gamesCard, "", 16, false)
-	supportTitle.LayoutOrder = 0
+	supportTitle.LayoutOrder = 1
 
 	local function clearGameMount()
 		if mountedModule and typeof(mountedModule.unmount) == "function" then

@@ -9,7 +9,7 @@ local function triggerbot_step()
 	if t < trigger_next then
 		return
 	end
-	local _, worldPos, char = get_best_target(trigger_fov)
+	local _, worldPos, char = get_best_target(trigger_fov, false)
 	if not worldPos or not char then
 		return
 	end
