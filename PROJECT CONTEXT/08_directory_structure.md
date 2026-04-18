@@ -15,13 +15,16 @@ Mya/
 ├── mya_junkie_key.example.txt# Example line for Junkie UUID (copy to gitignored file locally)
 ├── lib/
 │   ├── util.lua              # HttpGet wrapper, loadstring helpers, loadModuleFromUrl
-│   └── ui.lua                # Themed UI factory
+│   ├── ui.lua                # Themed UI factory (hub + ctx.uiFactory)
+│   ├── mya_combat_helpers.lua  # Team filter, LOS raycasts, hit-part parsing (Mya Universal runtime + reusable)
+│   └── mya_game_ui.lua       # In-game hub shell + theme + notify (Mya Universal, OP1, Neighbors gui.lua)
 ├── games/
 │   ├── _template.lua         # Starter template (not active until registered)
 │   ├── example.lua           # Minimal sample module
 │   ├── MyaUniversal/         # Place-agnostic: ESP, aim, fly, noclip, walk/jump (hub tab)
-│   │   ├── init.lua
-│   │   ├── runtime.lua
+│   │   ├── init.lua          # Passes repoBase + base + fetch; runtime loads ../lib/mya_combat_helpers.lua
+│   │   ├── runtime.lua       # Bundle loader: prepends Combat, concatenates runtime/*.lua
+│   │   ├── runtime/          # targeting, silent_aim, esp, movement, exports, …
 │   │   └── gui.lua
 │   ├── Operation-One_72920620366355/
 │   │   ├── init.lua          # Entry registered in config

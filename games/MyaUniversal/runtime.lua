@@ -1,8 +1,23 @@
 --[[
   Mya Universal — runtime bundle entry (Operation One style).
   Fragments in runtime/ share one chunk scope; order matters.
+  Prepends lib/mya_combat_helpers.lua as `Combat` (shared targeting/LOS helpers).
 ]]
 return function(env)
+	local repoBase = env.repoBase
+	if type(repoBase) ~= "string" or #repoBase == 0 then
+		error("MyaUniversal: repoBase missing — init must pass repoBase alongside base")
+	end
+	local combatSrc = env.fetch(repoBase .. "lib/mya_combat_helpers.lua")
+	if type(combatSrc) ~= "string" or #combatSrc == 0 then
+		error("MyaUniversal: missing lib/mya_combat_helpers.lua")
+	end
+	local combatFn, cErr = loadstring(combatSrc, "@lib/mya_combat_helpers")
+	if typeof(combatFn) ~= "function" then
+		error("MyaUniversal: lib/mya_combat_helpers compile failed: " .. tostring(cErr))
+	end
+	_G.MYA_COMBAT_HELPERS = combatFn()
+
 	local order = {
 		"runtime/guard_services.lua",
 		"runtime/state_config.lua",
@@ -12,13 +27,16 @@ return function(env)
 		"runtime/health_bars.lua",
 		"runtime/fov_rings.lua",
 		"runtime/aim_assist.lua",
+		"runtime/silent_aim.lua",
 		"runtime/triggerbot.lua",
 		"runtime/weapon_mods.lua",
 		"runtime/movement.lua",
 		"runtime/render_hooks.lua",
 		"runtime/exports.lua",
 	}
-	local buf = {}
+	local buf = {
+		"local Combat = _G.MYA_COMBAT_HELPERS\n",
+	}
 	for i = 1, #order do
 		local rel = order[i]
 		local src = env.fetch(env.base .. rel)
@@ -32,4 +50,5 @@ return function(env)
 		error("MyaUniversal: runtime bundle compile failed: " .. tostring(cerr))
 	end
 	fn()
+	_G.MYA_COMBAT_HELPERS = nil
 end

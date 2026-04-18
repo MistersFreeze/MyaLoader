@@ -73,7 +73,7 @@ function M.mount(ctx)
 	if typeof(runBundle) ~= "function" then
 		error("MyaUniversal: runtime.lua must return function(env)")
 	end
-	runBundle({ base = base, fetch = fetch })
+	runBundle({ base = base, fetch = fetch, repoBase = repoBase })
 	if typeof(_G.MYA_UNIVERSAL) ~= "table" then
 		error("MyaUniversal: runtime did not initialize MYA_UNIVERSAL (runtime error or bad load order)")
 	end

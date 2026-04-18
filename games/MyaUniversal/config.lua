@@ -6,11 +6,20 @@ return {
 	-- Aim assist (team check only affects aim FOV target + triggerbot pick)
 	-- aim_team_check_on = false,
 	aim_assist_fov = 140,
+	aim_assist_part = "Head",
 	aim_speed = 0.35,
 	aim_fov_follow_cursor = false,
-	-- keep_on_target_on = false, -- aim: do not switch target while previous is still in FOV
-	-- Triggerbot
-	trigger_fov = 30,
+	-- keep_on_target_on = false, -- aim + silent aim: keep lock until target leaves FOV
+	-- Silent aim (workspace Raycast redirect; same idea as silent aim 2)
+	-- silent_aim_fov = 100,
+	-- silent_aim_fov_follow_cursor = false,
+	-- silent_aim_require_bind = false,
+	-- silent_aim_part = "HumanoidRootPart",
+	-- silent_aim_vis_check_on = true,
+	-- silent_aim_team_check_on = true,
+	-- silent_aim_bind = "UserInputType.MouseButton2",
+	-- fov_ring_silent = { r = 160, g = 120, b = 220 },
+	-- Triggerbot (FOV for target pick is fixed at 5)
 	trigger_delay = 0.1,
 	-- Movement (optional keybinds: KeyCode.F etc.; omit or Unknown = no bind)
 	-- fly_bind = "KeyCode.F",

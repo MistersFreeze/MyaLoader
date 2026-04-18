@@ -10,7 +10,8 @@ Executor-oriented Roblox script base: a small **loader**, a **hub** GUI, and **p
 | `config.lua` | Branding, theme, `SUPPORTED_GAMES` map (PlaceId → path under your host root). |
 | `hub.lua` | Builds the window, loads `lib/*`, mounts the game module for the current place. |
 | `lib/util.lua` | `HttpGet`, safe `loadstring`, `loadModuleFromUrl`. |
-| `lib/ui.lua` | Themed frames, buttons, scroll areas. |
+| `lib/ui.lua` | Themed frames, buttons, scroll areas (hub + `ctx.uiFactory`). |
+| `lib/mya_game_ui.lua` | Shared in-game window: sidebar tabs, notify stack, Discord/min/close — used by Mya Universal / Operation One / Neighbors `gui.lua` (requires `MYA_FETCH` + `MYA_REPO_BASE` from game `init.lua`). |
 | `games/<GameName>_<PlaceId>/` | Per-game folder: at minimum `init.lua` (`mount` / `unmount`). Multi-file games add `runtime.lua`, `gui.lua`, etc. and load them via `ctx.baseUrl` (see Operation One). |
 | `games/example.lua` | Tiny sample module (single file). |
 | `games/_MultiFileGameTemplate_0/` | **Copy for new games:** `init.lua` + `runtime.lua` + `gui.lua` (tabs, toggles, unload). Rename folder to `YourGame_<PlaceId>/` and register in `config.lua`. |

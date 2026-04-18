@@ -35,6 +35,8 @@ Populated in `hub.lua` (see implementation for the exact table):
 
 Multi-file games derive a **directory URL** from `baseUrl` + dirname(`gameScriptPath`) and HttpGet additional files themselves (see Operation One / Neighbors).
 
+**Repo-root `lib/` from games:** Some **`init.lua`** files also set **`_G.MYA_REPO_BASE`** to the **hosted repo root** (`normalizeBase(ctx.baseUrl)`) and **`_G.MYA_FETCH`** to the same **`fetch`** used for game files. **`gui.lua`** then loads **`lib/mya_game_ui.lua`** from that root (see **`03_wrappers.md`**). This is required for the shared in-game hub shell, not for hub-only modules.
+
 **Runtime bundles:** Some **`runtime.lua`** files **return** `function(env)` where **`env.fetch`** and **`env.base`** load ordered fragments under **`runtime/`**, then **`loadstring` once** on the concatenation so **one** shared lexical scope is preserved (equivalent to a monolith).
 
 ## Lifecycle

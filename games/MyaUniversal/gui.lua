@@ -86,7 +86,7 @@ local shell = MyaUI.createHubShell({
 	titleText = "Mya  ·  Universal",
 	tabNames = { "Combat", "Visuals", "Movement", "Configs", "Settings" },
 	subPages = {
-		Combat = { "Aim assist", "Triggerbot" },
+		Combat = { "Aim assist", "Silent aim", "Triggerbot" },
 		Visuals = { "ESP" },
 		Movement = { "Flight", "Walk & jump", "Noclip" },
 	},
@@ -105,6 +105,7 @@ local all_sub_pages = shell.all_sub_pages
 local make_page = shell.make_page
 
 local combat_aim = all_sub_pages["Combat"]["Aim assist"]
+local combat_silent = all_sub_pages["Combat"]["Silent aim"]
 local combat_trigger = all_sub_pages["Combat"]["Triggerbot"]
 local visuals_esp = all_sub_pages["Visuals"]["ESP"]
 local movement_fly = all_sub_pages["Movement"]["Flight"]
@@ -373,6 +374,90 @@ local function make_keybind_row(parent, label, order, get_fn, set_fn)
 	return refresh
 end
 
+local HITPART_OPTIONS = { "HumanoidRootPart", "Head", "UpperTorso", "LowerTorso", "Torso" }
+
+local function make_hitpart_dropdown(parent, order, get_fn, set_fn)
+	local wrap = Instance.new("Frame")
+	wrap.LayoutOrder = order
+	wrap.BackgroundTransparency = 1
+	wrap.Size = UDim2.new(1, 0, 0, 0)
+	wrap.AutomaticSize = Enum.AutomaticSize.Y
+	wrap.Parent = parent
+	local wrap_layout = Instance.new("UIListLayout", wrap)
+	wrap_layout.SortOrder = Enum.SortOrder.LayoutOrder
+	wrap_layout.Padding = UDim.new(0, 4)
+
+	local row = make_row(wrap, 1, 34)
+	local lbl = Instance.new("TextLabel")
+	lbl.Font = Enum.Font.Gotham
+	lbl.Text = "Hit part"
+	lbl.TextColor3 = C.text
+	lbl.TextSize = 12
+	lbl.BackgroundTransparency = 1
+	lbl.Position = UDim2.fromOffset(14, 8)
+	lbl.Size = UDim2.new(0.45, 0, 0, 18)
+	lbl.TextXAlignment = Enum.TextXAlignment.Left
+	lbl.Parent = row
+
+	local mainBtn = Instance.new("TextButton")
+	mainBtn.AutoButtonColor = false
+	mainBtn.BackgroundColor3 = C.tab_off
+	mainBtn.Font = Enum.Font.GothamSemibold
+	mainBtn.TextSize = 11
+	mainBtn.TextColor3 = C.accent
+	mainBtn.Size = UDim2.new(0.5, -20, 0, 24)
+	mainBtn.Position = UDim2.new(0.48, 0, 0.5, -12)
+	mainBtn.Parent = row
+	Instance.new("UICorner", mainBtn).CornerRadius = UDim.new(0, THEME.cornerSm)
+
+	local listWrap = Instance.new("Frame")
+	listWrap.LayoutOrder = 2
+	listWrap.BackgroundColor3 = C.panel
+	listWrap.BorderSizePixel = 0
+	listWrap.Size = UDim2.new(1, -24, 0, 0)
+	listWrap.Visible = false
+	listWrap.AutomaticSize = Enum.AutomaticSize.Y
+	listWrap.ZIndex = 5
+	listWrap.Parent = wrap
+	Instance.new("UICorner", listWrap).CornerRadius = UDim.new(0, THEME.cornerSm)
+	Instance.new("UIListLayout", listWrap).Padding = UDim.new(0, 2)
+	local pad = Instance.new("UIPadding", listWrap)
+	pad.PaddingLeft = UDim.new(0, 6)
+	pad.PaddingRight = UDim.new(0, 6)
+	pad.PaddingTop = UDim.new(0, 6)
+	pad.PaddingBottom = UDim.new(0, 6)
+
+	local function refresh()
+		mainBtn.Text = get_fn() .. "  ▼"
+	end
+
+	for i, name in ipairs(HITPART_OPTIONS) do
+		local opt = Instance.new("TextButton")
+		opt.LayoutOrder = i
+		opt.Size = UDim2.new(1, 0, 0, 26)
+		opt.BackgroundColor3 = C.tab_off
+		opt.Text = name
+		opt.Font = Enum.Font.Gotham
+		opt.TextSize = 11
+		opt.TextColor3 = C.text
+		opt.AutoButtonColor = false
+		opt.ZIndex = 6
+		Instance.new("UICorner", opt).CornerRadius = UDim.new(0, THEME.cornerSm)
+		opt.Parent = listWrap
+		opt.MouseButton1Click:Connect(function()
+			set_fn(name)
+			refresh()
+			listWrap.Visible = false
+		end)
+	end
+
+	mainBtn.MouseButton1Click:Connect(function()
+		listWrap.Visible = not listWrap.Visible
+	end)
+	refresh()
+	return refresh
+end
+
 local lo = 0
 local function next_order()
 	lo = lo + 1
@@ -393,16 +478,58 @@ local ref_show_aim_fov = make_toggle_row(combat_aim, "Show aim FOV ring", next_o
 local ref_aim_fov_follow = make_toggle_row(combat_aim, "FOV follows cursor", next_order(), P.get_aim_fov_follow_cursor, P.set_aim_fov_follow_cursor)
 local ref_keep_on_target = make_toggle_row(combat_aim, "Keep on target", next_order(), P.get_keep_on_target, P.set_keep_on_target)
 section_label(combat_aim, "Targeting", next_order())
+local refresh_aim_hitpart = make_hitpart_dropdown(combat_aim, next_order(), P.get_aim_assist_part, P.set_aim_assist_part)
 local ref_vis = make_toggle_row(combat_aim, "Visibility check", next_order(), P.get_vis_check, P.set_vis_check)
 local ref_team = make_toggle_row(combat_aim, "Team check", next_order(), P.get_aim_team_check, P.set_aim_team_check)
+
+lo = 0
+section_label(combat_silent, "Silent aim", next_order())
+local ref_silent_toggle = make_toggle_row(combat_silent, "Silent aim", next_order(), P.get_silent_aim, P.set_silent_aim)
+local ref_silent_bind = make_keybind_row(combat_silent, "Silent aim bind", next_order(), P.get_silent_aim_bind, P.set_silent_aim_bind)
+local ref_silent_require_bind = make_toggle_row(
+	combat_silent,
+	"Only while bind held",
+	next_order(),
+	P.get_silent_aim_require_bind,
+	P.set_silent_aim_require_bind
+)
+local set_silent_fov_slider = make_slider(combat_silent, "Silent aim FOV", next_order(), 20, 400, P.get_silent_aim_fov(), "%.0f", function(v)
+	P.set_silent_aim_fov(v)
+end)
+local ref_silent_fov_follow = make_toggle_row(
+	combat_silent,
+	"FOV follows cursor",
+	next_order(),
+	P.get_silent_aim_fov_follow_cursor,
+	P.set_silent_aim_fov_follow_cursor
+)
+local ref_show_silent_fov = make_toggle_row(
+	combat_silent,
+	"Show silent FOV ring",
+	next_order(),
+	P.get_show_silent_aim_fov_circle,
+	P.set_show_silent_aim_fov_circle
+)
+local ref_silent_vis = make_toggle_row(
+	combat_silent,
+	"Visibility check",
+	next_order(),
+	P.get_silent_aim_vis_check,
+	P.set_silent_aim_vis_check
+)
+local ref_silent_team = make_toggle_row(
+	combat_silent,
+	"Team check",
+	next_order(),
+	P.get_silent_aim_team_check,
+	P.set_silent_aim_team_check
+)
+local refresh_silent_hitpart = make_hitpart_dropdown(combat_silent, next_order(), P.get_silent_aim_part, P.set_silent_aim_part)
 
 lo = 0
 section_label(combat_trigger, "Triggerbot", next_order())
 local ref_trigger_toggle = make_toggle_row(combat_trigger, "Triggerbot", next_order(), P.get_triggerbot, P.set_triggerbot)
 local ref_trigger_bind = make_keybind_row(combat_trigger, "Triggerbot bind", next_order(), P.get_trigger_bind, P.set_trigger_bind)
-local set_trigger_fov_slider = make_slider(combat_trigger, "Trigger FOV", next_order(), 5, 120, P.get_trigger_fov(), "%.0f", function(v)
-	P.set_trigger_fov(v)
-end)
 local set_trigger_delay_slider = make_slider(combat_trigger, "Trigger delay", next_order(), 0.03, 0.5, P.get_trigger_delay(), "%.2f", function(v)
 	P.set_trigger_delay(v)
 end)
@@ -594,7 +721,7 @@ refresh_configs()
 lo = 0
 section_label(movement_fly, "Flight", next_order())
 local ref_fly = make_toggle_row(movement_fly, "Fly", next_order(), P.get_fly, P.set_fly)
-local set_fly_speed_slider = make_slider(movement_fly, "Fly speed", next_order(), 5, 200, P.get_fly_speed(), "%.0f", function(v)
+local set_fly_speed_slider = make_slider(movement_fly, "Fly speed", next_order(), 5, 500, P.get_fly_speed(), "%.0f", function(v)
 	P.set_fly_speed(v)
 end)
 local ref_fly_bind = make_keybind_row(movement_fly, "Fly bind", next_order(), P.get_fly_bind, P.set_fly_bind)
@@ -715,7 +842,7 @@ switch_tab("Combat")
 task.defer(function()
 	set_aim_fov_slider(P.get_aim_fov())
 	set_aim_speed_slider(P.get_aim_speed())
-	set_trigger_fov_slider(P.get_trigger_fov())
+	set_silent_fov_slider(P.get_silent_aim_fov())
 	set_trigger_delay_slider(P.get_trigger_delay())
 	set_fly_speed_slider(P.get_fly_speed())
 	set_walk_slider(P.get_walk())
@@ -736,6 +863,15 @@ function _G.MYA_UNIVERSAL_SYNC_UI()
 	ref_show_aim_fov()
 	ref_aim_fov_follow()
 	ref_keep_on_target()
+	refresh_aim_hitpart()
+	ref_silent_toggle()
+	ref_silent_bind()
+	ref_silent_require_bind()
+	ref_silent_fov_follow()
+	ref_show_silent_fov()
+	ref_silent_vis()
+	ref_silent_team()
+	refresh_silent_hitpart()
 	ref_fly()
 	ref_fly_bind()
 	ref_walk_mod()
@@ -747,7 +883,7 @@ function _G.MYA_UNIVERSAL_SYNC_UI()
 	ref_trigger_bind()
 	set_aim_fov_slider(P.get_aim_fov())
 	set_aim_speed_slider(P.get_aim_speed())
-	set_trigger_fov_slider(P.get_trigger_fov())
+	set_silent_fov_slider(P.get_silent_aim_fov())
 	set_trigger_delay_slider(P.get_trigger_delay())
 	set_fly_speed_slider(P.get_fly_speed())
 	set_walk_slider(P.get_walk())

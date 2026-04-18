@@ -5,8 +5,9 @@
 1. **`config.lua`** — compiled and executed; must return a table of default numeric/color keys.
 2. **`getgenv().MYA_UNIVERSAL_CONFIG`** — shallow-merged on top of defaults; result stored as **`_G.MYA_UNIVERSAL_CONFIG`** before the runtime bundle runs.
 3. **`runtime.lua`** — must return **`function(env)`** with `env.base` (folder URL) and `env.fetch` (HTTP or `readfile`). It concatenates fragments under `runtime/` and `loadstring`s a single bundle (shared scope, order matters).
-4. **`gui.lua`** — expects **`_G.MYA_UNIVERSAL`** (getter/setter API) to exist; builds the UI and **`_G.MYA_UNIVERSAL_SYNC_UI`**.
-5. **Configs** — **`_G.get_config`** returns a JSON-serializable settings table; **`_G.apply_config(cfg)`** applies it and refreshes the UI. Files live under workspace folder **`mya_universal_configs`** (`*.json`) when the executor supports `writefile` / `readfile` / `listfiles`.
+4. **`init.lua`** sets **`_G.MYA_REPO_BASE`** (normalized repo root from `ctx.baseUrl`) and **`_G.MYA_FETCH`** = `fetch` so **`gui.lua`** can HttpGet **`lib/mya_game_ui.lua`** from the same host as the hub.
+5. **`gui.lua`** — loads **`lib/mya_game_ui.lua`** (`defaultTheme`, `createHubShell`, `createNotifyStack`), expects **`_G.MYA_UNIVERSAL`** (getter/setter API) after runtime; builds the UI and **`_G.MYA_UNIVERSAL_SYNC_UI`**.
+6. **Configs** — **`_G.get_config`** returns a JSON-serializable settings table; **`_G.apply_config(cfg)`** applies it and refreshes the UI. Files live under workspace folder **`mya_universal_configs`** (`*.json`) when the executor supports `writefile` / `readfile` / `listfiles`.
 
 ## Runtime bundle (`runtime.lua` + `runtime/*.lua`)
 

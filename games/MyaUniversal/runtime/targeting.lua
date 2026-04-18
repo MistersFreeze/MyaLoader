@@ -1,23 +1,9 @@
 local function is_aim_teammate(plr)
-	if not aim_team_check_on then
-		return false
-	end
-	local t0, t1 = lp.Team, plr.Team
-	if not t0 or not t1 then
-		return false
-	end
-	return t0 == t1
+	return Combat.same_team(lp, plr, aim_team_check_on)
 end
 
 local function is_esp_teammate(plr)
-	if not esp_team_check_on then
-		return false
-	end
-	local t0, t1 = lp.Team, plr.Team
-	if not t0 or not t1 then
-		return false
-	end
-	return t0 == t1
+	return Combat.same_team(lp, plr, esp_team_check_on)
 end
 
 -- Unconditional LOS check (used by ESP body visibility colors).
@@ -26,18 +12,7 @@ local function ray_visible_to_character(fromPos, targetChar, targetPoint)
 		return false
 	end
 	update_vis_filter()
-	local dir = targetPoint - fromPos
-	local dist = dir.Magnitude
-	if dist < 0.05 then
-		return true
-	end
-	local ok, result = pcall(function()
-		return Workspace:Raycast(fromPos, dir.Unit * (dist - 0.02), vis_params)
-	end)
-	if not ok or not result then
-		return true
-	end
-	return result.Instance:IsDescendantOf(targetChar)
+	return Combat.los_visible_blacklist(Workspace, fromPos, targetChar, targetPoint, vis_params)
 end
 
 local function is_visible_to_camera(fromPos, targetChar, targetPoint)
@@ -58,15 +33,15 @@ local function get_best_target(fov_px, for_aim_lock)
 	if use_lock and aim_lock_plr then
 		local plr = aim_lock_plr
 		if plr.Parent and plr.Character and not is_aim_teammate(plr) then
-			local head = plr.Character:FindFirstChild("Head")
-			if head and head:IsA("BasePart") then
-				local pos, on_screen = camera:WorldToViewportPoint(head.Position)
+			local part = plr.Character:FindFirstChild(aim_assist_part)
+			if part and part:IsA("BasePart") then
+				local pos, on_screen = camera:WorldToViewportPoint(part.Position)
 				if on_screen and pos.Z > 0 then
 					local sp = Vector2.new(pos.X, pos.Y)
 					local d = (sp - anchor).Magnitude
 					if d <= fov_px then
-						if not vis_check_on or ray_visible_to_character(camPos, plr.Character, head.Position) then
-							return sp, head.Position, plr.Character
+						if not vis_check_on or ray_visible_to_character(camPos, plr.Character, part.Position) then
+							return sp, part.Position, plr.Character
 						end
 					end
 				end
@@ -80,19 +55,19 @@ local function get_best_target(fov_px, for_aim_lock)
 
 	for _, plr in ipairs(Players:GetPlayers()) do
 		if plr ~= lp and plr.Character and not is_aim_teammate(plr) then
-			local head = plr.Character:FindFirstChild("Head")
-			if head and head:IsA("BasePart") then
-				local pos, on_screen = camera:WorldToViewportPoint(head.Position)
+			local part = plr.Character:FindFirstChild(aim_assist_part)
+			if part and part:IsA("BasePart") then
+				local pos, on_screen = camera:WorldToViewportPoint(part.Position)
 				if on_screen and pos.Z > 0 then
 					local sp = Vector2.new(pos.X, pos.Y)
 					local d = (sp - anchor).Magnitude
 					if d <= fov_px and d < best_dist then
-						if vis_check_on and not ray_visible_to_character(camPos, plr.Character, head.Position) then
+						if vis_check_on and not ray_visible_to_character(camPos, plr.Character, part.Position) then
 							-- skip occluded
 						else
 							best_dist = d
 							best_screen = sp
-							best_world = head.Position
+							best_world = part.Position
 							best_char = plr.Character
 							best_plr = plr
 						end

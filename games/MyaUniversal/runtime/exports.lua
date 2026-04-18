@@ -47,6 +47,12 @@ local function unload_mya_universal()
 		end)
 		fov_circle_aim = nil
 	end
+	if fov_circle_silent then
+		pcall(function()
+			fov_circle_silent:Remove()
+		end)
+		fov_circle_silent = nil
+	end
 	pcall(function()
 		local ui = _G.mya_universal_ui
 		if ui and ui.Parent then
@@ -59,6 +65,7 @@ local function unload_mya_universal()
 	_G.apply_config = nil
 	_G.unload_mya_universal = nil
 	_G.MYA_UNIVERSAL = nil
+	_G.MYA_SILENT_AIM_HOOK_OK = nil
 end
 
 _G.MYA_UNIVERSAL = {
@@ -107,6 +114,14 @@ _G.MYA_UNIVERSAL = {
 		keep_on_target_on = not not v
 		if not keep_on_target_on then
 			aim_lock_plr = nil
+		end
+	end,
+	get_aim_assist_part = function()
+		return aim_assist_part
+	end,
+	set_aim_assist_part = function(v)
+		if type(v) == "string" and Combat.HIT_PART_NAMES[v] then
+			aim_assist_part = v
 		end
 	end,
 	get_aim_team_check = function()
@@ -162,13 +177,10 @@ _G.MYA_UNIVERSAL = {
 		end
 	end,
 	get_trigger_fov = function()
-		return trigger_fov
+		return 5
 	end,
-	set_trigger_fov = function(v)
-		local n = tonumber(v)
-		if n then
-			trigger_fov = math.clamp(n, 5, 120)
-		end
+	set_trigger_fov = function(_v)
+		trigger_fov = 5
 	end,
 	get_trigger_delay = function()
 		return trigger_delay
@@ -184,6 +196,67 @@ _G.MYA_UNIVERSAL = {
 	end,
 	set_show_aim_fov_circle = function(v)
 		show_aim_fov_circle = not not v
+	end,
+	get_silent_aim = function()
+		return silent_aim_on
+	end,
+	set_silent_aim = function(v)
+		silent_aim_on = not not v
+	end,
+	get_silent_aim_bind = function()
+		return silent_aim_bind
+	end,
+	set_silent_aim_bind = function(v)
+		if typeof(v) == "EnumItem" then
+			silent_aim_bind = v
+		end
+	end,
+	get_silent_aim_fov = function()
+		return silent_aim_fov
+	end,
+	set_silent_aim_fov = function(v)
+		local n = tonumber(v)
+		if n then
+			silent_aim_fov = math.clamp(n, 20, 400)
+		end
+	end,
+	get_silent_aim_fov_follow_cursor = function()
+		return silent_aim_fov_follow_cursor
+	end,
+	set_silent_aim_fov_follow_cursor = function(v)
+		silent_aim_fov_follow_cursor = not not v
+	end,
+	get_silent_aim_require_bind = function()
+		return silent_aim_require_bind
+	end,
+	set_silent_aim_require_bind = function(v)
+		silent_aim_require_bind = not not v
+	end,
+	get_silent_aim_part = function()
+		return silent_aim_part
+	end,
+	set_silent_aim_part = function(v)
+		if type(v) == "string" and Combat.HIT_PART_NAMES[v] then
+			silent_aim_part = v
+		end
+	end,
+	get_show_silent_aim_fov_circle = function()
+		return show_silent_aim_fov_circle
+	end,
+	set_show_silent_aim_fov_circle = function(v)
+		show_silent_aim_fov_circle = not not v
+	end,
+	get_silent_aim_vis_check = function()
+		return silent_aim_vis_check_on
+	end,
+	set_silent_aim_vis_check = function(v)
+		silent_aim_vis_check_on = not not v
+	end,
+	get_silent_aim_team_check = function()
+		return silent_aim_team_check_on
+	end,
+	set_silent_aim_team_check = function(v)
+		silent_aim_team_check_on = not not v
 	end,
 	get_esp = function()
 		return esp_on
@@ -268,7 +341,7 @@ _G.MYA_UNIVERSAL = {
 	set_fly_speed = function(v)
 		local n = tonumber(v)
 		if n then
-			fly_speed = math.clamp(n, 5, 200)
+			fly_speed = math.clamp(n, 5, 500)
 		end
 	end,
 	get_noclip = function()
@@ -349,6 +422,7 @@ _G.get_config = function()
 		aim_speed = aim_speed,
 		aim_fov_follow_cursor = aim_fov_follow_cursor,
 		keep_on_target_on = keep_on_target_on,
+		aim_assist_part = aim_assist_part,
 		aim_team_check_on = aim_team_check_on,
 		esp_team_check_on = esp_team_check_on,
 		vis_check_on = vis_check_on,
@@ -356,9 +430,18 @@ _G.get_config = function()
 		no_spread_on = no_spread_on,
 		triggerbot_on = triggerbot_on,
 		trigger_bind = enum_to_str(trigger_bind),
-		trigger_fov = trigger_fov,
+		trigger_fov = 5,
 		trigger_delay = trigger_delay,
 		show_aim_fov_circle = show_aim_fov_circle,
+		silent_aim_on = silent_aim_on,
+		silent_aim_bind = enum_to_str(silent_aim_bind),
+		silent_aim_fov = silent_aim_fov,
+		silent_aim_fov_follow_cursor = silent_aim_fov_follow_cursor,
+		silent_aim_require_bind = silent_aim_require_bind,
+		silent_aim_part = silent_aim_part,
+		silent_aim_vis_check_on = silent_aim_vis_check_on,
+		silent_aim_team_check_on = silent_aim_team_check_on,
+		show_silent_aim_fov_circle = show_silent_aim_fov_circle,
 		esp_on = esp_on,
 		esp_visibility_colors_on = esp_visibility_colors_on,
 		healthbars_on = healthbars_on,
@@ -402,6 +485,9 @@ _G.apply_config = function(cfg)
 	if cfg.keep_on_target_on ~= nil then
 		U.set_keep_on_target(cfg.keep_on_target_on)
 	end
+	if cfg.aim_assist_part ~= nil then
+		U.set_aim_assist_part(cfg.aim_assist_part)
+	end
 	if cfg.aim_team_check_on ~= nil then
 		U.set_aim_team_check(cfg.aim_team_check_on)
 	elseif cfg.team_check_on ~= nil then
@@ -430,14 +516,41 @@ _G.apply_config = function(cfg)
 			U.set_trigger_bind(b)
 		end
 	end
-	if cfg.trigger_fov ~= nil then
-		U.set_trigger_fov(cfg.trigger_fov)
-	end
 	if cfg.trigger_delay ~= nil then
 		U.set_trigger_delay(cfg.trigger_delay)
 	end
 	if cfg.show_aim_fov_circle ~= nil then
 		U.set_show_aim_fov_circle(cfg.show_aim_fov_circle)
+	end
+	if cfg.silent_aim_on ~= nil then
+		U.set_silent_aim(cfg.silent_aim_on)
+	end
+	if cfg.silent_aim_bind ~= nil then
+		local b = str_to_enum(cfg.silent_aim_bind)
+		if b then
+			U.set_silent_aim_bind(b)
+		end
+	end
+	if cfg.silent_aim_fov ~= nil then
+		U.set_silent_aim_fov(cfg.silent_aim_fov)
+	end
+	if cfg.silent_aim_fov_follow_cursor ~= nil then
+		U.set_silent_aim_fov_follow_cursor(cfg.silent_aim_fov_follow_cursor)
+	end
+	if cfg.silent_aim_require_bind ~= nil then
+		U.set_silent_aim_require_bind(cfg.silent_aim_require_bind)
+	end
+	if cfg.silent_aim_part ~= nil then
+		U.set_silent_aim_part(cfg.silent_aim_part)
+	end
+	if cfg.silent_aim_vis_check_on ~= nil then
+		U.set_silent_aim_vis_check(cfg.silent_aim_vis_check_on)
+	end
+	if cfg.silent_aim_team_check_on ~= nil then
+		U.set_silent_aim_team_check(cfg.silent_aim_team_check_on)
+	end
+	if cfg.show_silent_aim_fov_circle ~= nil then
+		U.set_show_silent_aim_fov_circle(cfg.show_silent_aim_fov_circle)
 	end
 	if cfg.esp_on ~= nil then
 		U.set_esp(cfg.esp_on)

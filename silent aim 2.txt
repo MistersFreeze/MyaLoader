@@ -1,0 +1,96 @@
+--[[
+	WARNING: Heads up! This script has not been verified by ScriptBlox. Use at your own risk!
+]]
+local camera = workspace.CurrentCamera
+local players = game:GetService("Players")
+local runservice = game:GetService("RunService")
+local userinputservice = game:GetService("UserInputService")
+local localplayer = players.LocalPlayer
+local closesthitpart = nil
+
+local function getdirection(origin, position)
+    return (position - origin).Unit
+end
+
+local function isvisible(targetpart)
+    local character = localplayer.Character
+    if not character then return false end
+    
+    local origin = camera.CFrame.Position
+    local direction = (targetpart.Position - origin)
+    
+    local raycastparams = RaycastParams.new()
+    raycastparams.FilterType = Enum.RaycastFilterType.Exclude
+    raycastparams.FilterDescendantsInstances = {character, camera}
+    raycastparams.IgnoreWater = true
+    
+    local result = workspace:Raycast(origin, direction, raycastparams)
+    
+    if result then
+        return result.Instance:IsDescendantOf(targetpart.Parent)
+    end
+    
+    return true
+end
+
+local function issameteam(player)
+    if localplayer.Team == nil or player.Team == nil then
+        return false
+    end
+    return localplayer.Team == player.Team
+end
+
+local function getclosestplayer()
+    local closestpart = nil
+    local closestdistance = math.huge
+    
+    for _, player in pairs(players:GetPlayers()) do
+        if player ~= localplayer and player.Character then
+            if issameteam(player) then
+                continue
+            end
+            
+            local humanoidrootpart = player.Character:FindFirstChild("HumanoidRootPart")
+            local humanoid = player.Character:FindFirstChild("Humanoid")
+            
+            if humanoidrootpart and humanoid and humanoid.Health > 0 then
+                local screenpos, onscreen = camera:WorldToViewportPoint(humanoidrootpart.Position)
+                
+                if onscreen and isvisible(humanoidrootpart) then
+                    local mousepos = userinputservice:GetMouseLocation()
+                    local distance = (Vector2.new(screenpos.X, screenpos.Y) - mousepos).Magnitude
+                    
+                    if distance < closestdistance then
+                        closestdistance = distance
+                        closestpart = humanoidrootpart
+                    end
+                end
+            end
+        end
+    end
+    
+    return closestpart
+end
+
+runservice.Heartbeat:Connect(function()
+    closesthitpart = getclosestplayer()
+end)
+
+local oldnamecall
+oldnamecall = hookmetamethod(game, "__namecall", newcclosure(function(...)
+    local method, arguments = getnamecallmethod(), {...}
+    local self = arguments[1]
+
+    if self == workspace and not checkcaller() and method == "Raycast" then
+        local hitpart = closesthitpart
+        
+        if hitpart then
+            local origin = arguments[2]
+            local direction = getdirection(origin, hitpart.Position) * 1000
+            arguments[2], arguments[3] = origin, direction
+            return oldnamecall(unpack(arguments))
+        end
+    end
+
+    return oldnamecall(...)
+end))

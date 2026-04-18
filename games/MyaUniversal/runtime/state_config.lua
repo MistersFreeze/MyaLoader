@@ -63,7 +63,7 @@ local no_spread_on = D.no_spread_on == true
 
 local triggerbot_on = false
 local trigger_bind = Enum.KeyCode.E
-local trigger_fov = num("trigger_fov", 30, 5, 120)
+local trigger_fov = 5
 local trigger_delay = num("trigger_delay", 0.1, 0.03, 0.5)
 local trigger_next = 0
 
@@ -72,8 +72,22 @@ local esp_distance_on = false
 local esp_names_on = D.esp_names_on == true
 local show_aim_fov_circle = false
 
+-- Silent aim (workspace.Raycast redirect; executor hook APIs required).
+local silent_aim_on = false
+local silent_aim_fov = num("silent_aim_fov", 100, 20, 400)
+local silent_aim_fov_follow_cursor = D.silent_aim_fov_follow_cursor == true
+local silent_aim_require_bind = D.silent_aim_require_bind == true
+local silent_aim_bind = cfg_bind_enum("silent_aim_bind", Enum.UserInputType.MouseButton2)
+local show_silent_aim_fov_circle = false
+
+local silent_aim_part = Combat.parse_hit_part(D, "silent_aim_part", "HumanoidRootPart")
+local aim_assist_part = Combat.parse_hit_part(D, "aim_assist_part", "Head")
+-- Silent aim-only targeting (default on)
+local silent_aim_vis_check_on = D.silent_aim_vis_check_on ~= false
+local silent_aim_team_check_on = D.silent_aim_team_check_on ~= false
+
 local fly_on = false
-local fly_speed = num("fly_speed", 50, 5, 200)
+local fly_speed = num("fly_speed", 50, 5, 500)
 local fly_bind = cfg_bind_enum("fly_bind", Enum.KeyCode.Unknown)
 local noclip_on = false
 local noclip_saved = {}
@@ -109,8 +123,10 @@ local render_conn = nil
 local drawing_ok = typeof(Drawing) == "table" and typeof(Drawing.new) == "function"
 local health_draw = {}
 local fov_circle_aim = nil
+local fov_circle_silent = nil
 
 local color_fov_aim = col("fov_ring_aim", 230, 120, 175)
+local color_fov_silent = col("fov_ring_silent", 160, 120, 220)
 
 local vis_params = RaycastParams.new()
 vis_params.FilterType = Enum.RaycastFilterType.Blacklist
