@@ -4,7 +4,6 @@
 ]]
 
 local RunService = game:GetService("RunService")
-local TweenService = game:GetService("TweenService")
 
 local function applyCorner(inst: Instance, radius: number)
 	local c = Instance.new("UICorner")
@@ -101,13 +100,6 @@ local function mountHubLoadingOverlay(body: Frame, theme: { [string]: any }?, ui
 	overlay.Parent = body
 	applyCorner(overlay, cornerR)
 
-	local stroke = Instance.new("UIStroke")
-	stroke.Color = theme.border
-	stroke.Thickness = 1
-	stroke.Transparency = 0.3
-	stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
-	stroke.Parent = overlay
-
 	local createSpectrum = uiAnim and uiAnim.createSpectrumLoader or inlineSpectrumLoader
 	local _, cancelSpectrum = createSpectrum(overlay, theme.accent)
 
@@ -141,17 +133,9 @@ local function mountHubLoadingOverlay(body: Frame, theme: { [string]: any }?, ui
 	status.Text = "Loading"
 	status.Parent = overlay
 
-	local pulseGoal = 0.42
-	local twStroke = TweenService:Create(stroke, TweenInfo.new(2.8, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true), {
-		Transparency = pulseGoal,
-	})
-	twStroke:Play()
-
 	local t0 = os.clock()
 	local conn = RunService.RenderStepped:Connect(function()
 		local t = os.clock() - t0
-		local phase = (math.sin(t * 0.9) * 0.5 + 0.5)
-		stroke.Color = theme.border:Lerp(theme.accent, phase)
 		local dots = 1 + (math.floor(t * 0.7) % 4)
 		status.Text = "Loading" .. string.rep(".", dots)
 	end)
@@ -161,7 +145,6 @@ local function mountHubLoadingOverlay(body: Frame, theme: { [string]: any }?, ui
 			conn:Disconnect()
 			conn = nil
 		end
-		twStroke:Cancel()
 		cancelSpectrum()
 		if overlay and overlay.Parent then
 			overlay:Destroy()

@@ -92,12 +92,6 @@ return function(BASE_URL: string, config: { [string]: any })
 		overlay.ZIndex = 100
 		overlay.Parent = bodyFrame
 		corner(overlay, cornerR)
-		local stroke = Instance.new("UIStroke")
-		stroke.Color = th.border
-		stroke.Thickness = 1
-		stroke.Transparency = 0.3
-		stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
-		stroke.Parent = overlay
 
 		local function inlineSpectrumLoader(parent: Instance, accent: Color3): (Frame, () -> ())
 			local lighter = accent:Lerp(Color3.new(1, 1, 1), 0.38)
@@ -182,22 +176,15 @@ return function(BASE_URL: string, config: { [string]: any })
 		status.ZIndex = 101
 		status.Text = "Loading"
 		status.Parent = overlay
-		local tw = TweenService:Create(stroke, TweenInfo.new(2.8, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true), {
-			Transparency = 0.42,
-		})
-		tw:Play()
 		local t0 = os.clock()
 		local conn = RunService.RenderStepped:Connect(function()
 			local t = os.clock() - t0
-			local phase = (math.sin(t * 0.9) * 0.5 + 0.5)
-			stroke.Color = th.border:Lerp(th.accent, phase)
 			status.Text = "Loading" .. string.rep(".", 1 + (math.floor(t * 0.7) % 4))
 		end)
 		return function()
 			if conn then
 				conn:Disconnect()
 			end
-			tw:Cancel()
 			cancelSpectrum()
 			if overlay and overlay.Parent then
 				overlay:Destroy()
@@ -600,7 +587,7 @@ return function(BASE_URL: string, config: { [string]: any })
 	UI.label(homeCard, "Welcome to " .. config.BRAND, 18, false)
 	UI.label(
 		homeCard,
-		"This hub loads game-specific features when your PlaceId is listed in config. Use the Games tab to see support status for the current experience.",
+		"Use the Games tab to see support status for the current experience.",
 		14,
 		true
 	)
@@ -740,17 +727,13 @@ return function(BASE_URL: string, config: { [string]: any })
 	UI.label(creditsCard, "Credits", 18, false)
 	UI.label(
 		creditsCard,
-		"Mya is maintained by the people below. Spots marked “placeholder” are for future contributors.",
+		"Mya is maintained by the people below",
 		14,
 		true
 	)
 
 	UI.label(creditsCard, "@ilovehewho · Roblox", 16, false)
 	UI.label(creditsCard, "Discord: @fubelt", 14, false)
-
-	UI.label(creditsCard, "— Additional contributors (placeholder) —", 12, true)
-	UI.label(creditsCard, "• Name / role / link — add when you have more people to credit.", 13, true)
-	UI.label(creditsCard, "• …", 13, true)
 
 	local mountedModule: any = nil
 	local placeId = game.PlaceId
