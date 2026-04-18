@@ -28,8 +28,11 @@ Fix **`BASE_URL`** inside the hosted `loader.lua` first.
 
 1. Create **`games/MyGame_<PlaceId>.lua`** or **`games/MyGame_<PlaceId>/init.lua`** implementing **`mount`/`unmount`**.
 2. Add **`[PLACE_ID] = "games/..."`** to **`config.lua` → `SUPPORTED_GAMES`**.
-3. Push to host; verify **`BASE_URL .. path`** returns 200 in a browser.
-4. Join that experience in Roblox, run loader, confirm Games tab / auto-close behavior.
+3. Add a **display name** for the Games tab list in **`hub.lua`** → **`GAME_DISPLAY_NAMES`** (same PlaceId key as in config). Without it, the hub falls back to showing the script path string.
+4. **`loader.lua`** / **`loader_local.lua`** wait for **`game.Loaded`** (and up to ~15s for a non‑zero **`PlaceId`**) before fetching **`config.lua`** / **`hub.lua`**, so the hub mounts the right module **in-experience**. **`hub.lua`** also defers the first **`tryMountGame()`** until the place is ready — keep this pattern when editing bootstrap.
+5. Update **`PROJECT CONTEXT/06_module_catalogue.md`** (and this workflow if routing changes).
+6. Push to host; verify **`BASE_URL .. path`** returns 200 in a browser.
+7. Join that experience in Roblox, run loader, confirm Games tab / auto-close behavior.
 
 ## Use the dumper
 
@@ -37,4 +40,4 @@ From hub **Dumper** tab: downloads **`universal/dumper.lua`** and executes it. R
 
 ## Documentation maintenance
 
-When you change routing or add games, update **`PROJECT CONTEXT/06_module_catalogue.md`** and **`config.lua`** comments if they drift.
+When you change routing or add games, update **`PROJECT CONTEXT/06_module_catalogue.md`**, **`hub.lua` → `GAME_DISPLAY_NAMES`**, and **`config.lua`** comments if they drift.

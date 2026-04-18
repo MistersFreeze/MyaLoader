@@ -1,6 +1,9 @@
 --[[
   Paste this entire file into your executor, OR fetch it with loadstring(game:HttpGet(url)).
 
+  After LocalPlayer exists, the loader waits for game.Loaded (and up to ~15s for a non-zero PlaceId)
+  before fetching config/hub so the hub mounts the correct game module in-experience.
+
   Base URL (where config.lua, hub.lua, games/… live):
   - Edit BASE_URL below, OR
   - Set before running: getgenv().MYA_BASE_URL = "https://…/" or "http://127.0.0.1:8080/"
@@ -24,6 +27,18 @@ end
 
 local Players = game:GetService("Players")
 local localPlayer = Players.LocalPlayer or Players.PlayerAdded:Wait()
+
+--- Wait until Roblox has finished loading the place so PlaceId / HttpGet behave reliably before the hub runs.
+local function waitForGameReady()
+	if not game:IsLoaded() then
+		game.Loaded:Wait()
+	end
+	-- Joining can briefly report PlaceId 0; wait (Studio may keep 0 — cap wait).
+	local deadline = os.clock() + 15
+	while game.PlaceId == 0 and os.clock() < deadline do
+		task.wait(0.05)
+	end
+end
 
 local function loaderUiParent()
 	if typeof(gethui) == "function" then
@@ -90,6 +105,8 @@ local function boot()
 	if typeof(loadstring) ~= "function" then
 		error("loadstring is not available in this environment.")
 	end
+
+	waitForGameReady()
 
 	local function get(url)
 		return game:HttpGet(url, true)

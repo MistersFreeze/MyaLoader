@@ -434,6 +434,7 @@ return function(BASE_URL: string, config: { [string]: any })
 		[72920620366355] = "Operation One",
 		[110400717151509] = "Neighbors",
 		[12699642568] = "Neighbors",
+		[18667984660] = "Flex Your FPS",
 	}
 	local gamesCatalog = Instance.new("Frame")
 	gamesCatalog.BackgroundTransparency = 1
@@ -748,6 +749,20 @@ return function(BASE_URL: string, config: { [string]: any })
 		gui.Enabled = not gui.Enabled
 	end)
 
-	-- After all connections exist (so closeHub can disconnect drag), load game and auto-close hub.
-	tryMountGame()
+	-- After all connections exist (so closeHub can disconnect drag), mount when the experience is ready.
+	-- Matches loader.lua wait: game.Loaded + PlaceId (avoids "unsupported" flash when PlaceId was still 0).
+	task.defer(function()
+		if not game:IsLoaded() then
+			game.Loaded:Wait()
+		end
+		local deadline = os.clock() + 15
+		while game.PlaceId == 0 and os.clock() < deadline do
+			task.wait(0.05)
+		end
+		placeId = game.PlaceId
+		supported = config.SUPPORTED_GAMES or {}
+		gamePath = supported[placeId]
+		placeLabel.Text = "PlaceId: " .. tostring(placeId)
+		tryMountGame()
+	end)
 end

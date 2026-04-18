@@ -6,7 +6,7 @@ Repository root layout (files that matter for understanding Mya):
 Mya/
 ├── PROJECT CONTEXT/          # This documentation set (not loaded at runtime)
 ├── config.lua                # Hosted: branding, theme, SUPPORTED_GAMES
-├── loader.lua                # Hosted: entry for raw URL / paste; fetches config + hub
+├── loader.lua                # Hosted: entry for raw URL / paste; waits for game.Loaded / PlaceId then fetches config + hub
 ├── loader_jnkie.lua          # Optional Junkie dashboard script; sets MYA_BASE_URL, keys
 ├── loader_local.lua          # Local dev: readfile + MYA_LOCAL_ROOT
 ├── hub.lua                   # Hosted: hub UI + game module mount + Universal tab
@@ -37,6 +37,11 @@ Mya/
 │       ├── runtime.lua       # Bundle loader; concatenates runtime/*.lua (named fragments)
 │       ├── runtime_monolith.lua
 │       ├── runtime/          # e.g. piano_engine.lua, visuals.lua, movement.lua, …
+│       └── gui.lua
+│   └── FlexYourFPS_18667984660/
+│       ├── init.lua
+│       ├── runtime.lua
+│       ├── runtime/          # state.lua, flex.lua
 │       └── gui.lua
 ├── universal/
 │   └── dumper.lua            # “Pro Script Dumper” (heavy; executor APIs required)

@@ -1,6 +1,8 @@
 --[[
   LOCAL DEV LOADER — no GitHub push. Uses readfile() + MYA_LOCAL_ROOT.
 
+  Waits for game.Loaded (and briefly for a non-zero PlaceId) before loading config/hub, same idea as loader.lua.
+
   HOW TO RUN (pick one)
   ─────────────────────
   A) One-liner — repo path in a text file (good for teams; path not in script):
@@ -143,7 +145,19 @@ local function showError(message)
 	t.Parent = frame
 end
 
+local function waitForGameReady()
+	if not game:IsLoaded() then
+		game.Loaded:Wait()
+	end
+	local deadline = os.clock() + 15
+	while game.PlaceId == 0 and os.clock() < deadline do
+		task.wait(0.05)
+	end
+end
+
 local function boot()
+	waitForGameReady()
+
 	local configSrc = readFromRoot("config.lua")
 	local configChunk = loadstring(configSrc, "@config.lua")
 	if typeof(configChunk) ~= "function" then

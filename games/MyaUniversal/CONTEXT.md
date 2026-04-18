@@ -26,7 +26,7 @@ Fragments run in one chunk; **locals** are shared across files — do not redecl
 | 7 | `fov_rings.lua` | Aim FOV ring Drawing + `update_fov_circles` |
 | 8 | `aim_assist.lua` | `aim_step` |
 | 9 | `triggerbot.lua` | `triggerbot_step` |
-| 10 | `movement.lua` | Fly / noclip / walk & jump overrides; `hook_players` |
+| 10 | `movement.lua` | Fly; **noclip** (per-part cache, `CanCollide`/`CanQuery`/`CanTouch`, `PostSimulation` step); walk & jump; `hook_players` |
 | 11 | `render_hooks.lua` | `RenderStepped`, character respawn hooks |
 | 12 | `exports.lua` | `_G.MYA_UNIVERSAL`, `get_config` / `apply_config`, unload |
 

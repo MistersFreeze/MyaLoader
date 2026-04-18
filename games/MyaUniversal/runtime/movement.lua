@@ -1,5 +1,8 @@
 local noclip_char_added_conn = nil
-local noclip_descendant_conn = nil
+local noclip_desc_added_conn = nil
+local noclip_desc_removing_conn = nil
+-- [BasePart] = { CanCollide, CanQuery, CanTouch } — no GetDescendants() every frame
+local noclip_parts = {}
 
 local function refresh_movement()
 	local h = get_hum()
@@ -113,6 +116,126 @@ local function start_fly()
 	table.insert(connections, fly_conn)
 end
 
+local function noclip_disconnect_descendant_hooks()
+	if noclip_desc_added_conn then
+		pcall(function()
+			noclip_desc_added_conn:Disconnect()
+		end)
+		noclip_desc_added_conn = nil
+	end
+	if noclip_desc_removing_conn then
+		pcall(function()
+			noclip_desc_removing_conn:Disconnect()
+		end)
+		noclip_desc_removing_conn = nil
+	end
+end
+
+local function noclip_restore_all_parts()
+	local keys = {}
+	for p in pairs(noclip_parts) do
+		keys[#keys + 1] = p
+	end
+	for i = 1, #keys do
+		local part = keys[i]
+		local saved = noclip_parts[part]
+		noclip_parts[part] = nil
+		if typeof(saved) == "table" and part:IsA("BasePart") then
+			pcall(function()
+				if part.Parent then
+					part.CanCollide = saved.CanCollide
+					part.CanQuery = saved.CanQuery
+					part.CanTouch = saved.CanTouch
+				end
+			end)
+		end
+	end
+end
+
+local function noclip_register_part(p)
+	if not p:IsA("BasePart") then
+		return
+	end
+	if noclip_parts[p] ~= nil then
+		return
+	end
+	noclip_parts[p] = {
+		CanCollide = p.CanCollide,
+		CanQuery = p.CanQuery,
+		CanTouch = p.CanTouch,
+	}
+	p.CanCollide = false
+	p.CanQuery = false
+	p.CanTouch = false
+end
+
+local function noclip_unregister_part(p)
+	local saved = noclip_parts[p]
+	if saved == nil then
+		return
+	end
+	noclip_parts[p] = nil
+	if typeof(saved) == "table" and p.Parent then
+		pcall(function()
+			p.CanCollide = saved.CanCollide
+			p.CanQuery = saved.CanQuery
+			p.CanTouch = saved.CanTouch
+		end)
+	end
+end
+
+local function noclip_hook_character_descendants(c)
+	noclip_disconnect_descendant_hooks()
+	if not c then
+		return
+	end
+	noclip_desc_added_conn = c.DescendantAdded:Connect(function(o)
+		if not noclip_on or not _G.MYA_UNIVERSAL_LOADED then
+			return
+		end
+		if o:IsA("BasePart") then
+			noclip_register_part(o)
+		end
+	end)
+	noclip_desc_removing_conn = c.DescendantRemoving:Connect(function(o)
+		if o:IsA("BasePart") then
+			noclip_unregister_part(o)
+		end
+	end)
+end
+
+local function noclip_seed_character(c)
+	if not c then
+		return
+	end
+	for _, d in ipairs(c:GetDescendants()) do
+		noclip_register_part(d)
+	end
+end
+
+local function noclip_step_force()
+	if not noclip_on or not _G.MYA_UNIVERSAL_LOADED then
+		return
+	end
+	if not lp.Character then
+		return
+	end
+	-- Replication often resets collision; re-apply every step (no GetDescendants — O(parts) only).
+	local stale = {}
+	for part in pairs(noclip_parts) do
+		if part.Parent and part:IsA("BasePart") then
+			part.CanCollide = false
+			part.CanQuery = false
+			part.CanTouch = false
+		else
+			stale[#stale + 1] = part
+		end
+	end
+	for i = 1, #stale do
+		noclip_parts[stale[i]] = nil
+	end
+end
+
 local function stop_noclip()
 	if noclip_conn then
 		pcall(function()
@@ -126,14 +249,11 @@ local function stop_noclip()
 		end)
 		noclip_char_added_conn = nil
 	end
-	if noclip_descendant_conn then
-		pcall(function()
-			noclip_descendant_conn:Disconnect()
-		end)
-		noclip_descendant_conn = nil
-	end
+	noclip_disconnect_descendant_hooks()
+	noclip_restore_all_parts()
+	-- legacy table from older builds (safe if unused)
 	for part, was in pairs(noclip_saved) do
-		if part.Parent and part:IsA("BasePart") then
+		if typeof(was) == "boolean" and part.Parent and part:IsA("BasePart") then
 			pcall(function()
 				part.CanCollide = was
 			end)
@@ -142,71 +262,36 @@ local function stop_noclip()
 	noclip_saved = {}
 end
 
-local function apply_noclip_character(c)
-	if not c then
-		return
-	end
-	for _, p in ipairs(c:GetDescendants()) do
-		if p:IsA("BasePart") then
-			if noclip_saved[p] == nil then
-				noclip_saved[p] = p.CanCollide
-			end
-			p.CanCollide = false
-		end
-	end
-end
-
 local function start_noclip()
 	stop_noclip()
-	local function step()
-		if not noclip_on or not _G.MYA_UNIVERSAL_LOADED then
-			return
-		end
-		apply_noclip_character(lp.Character)
-	end
-	local postSim = RunService.PostSimulation
-	if postSim then
-		noclip_conn = postSim:Connect(step)
+	local okPost, postConn = pcall(function()
+		return RunService.PostSimulation:Connect(noclip_step_force)
+	end)
+	if okPost and postConn then
+		noclip_conn = postConn
 	else
-		noclip_conn = RunService.Heartbeat:Connect(step)
+		noclip_conn = RunService.Heartbeat:Connect(noclip_step_force)
 	end
 	table.insert(connections, noclip_conn)
 
-	local function hook_descendants(c)
-		if noclip_descendant_conn then
-			pcall(function()
-				noclip_descendant_conn:Disconnect()
-			end)
-			noclip_descendant_conn = nil
-		end
-		if not c then
-			return
-		end
-		noclip_descendant_conn = c.DescendantAdded:Connect(function(o)
-			if noclip_on and o:IsA("BasePart") then
-				if noclip_saved[o] == nil then
-					noclip_saved[o] = o.CanCollide
-				end
-				o.CanCollide = false
+	local function on_new_character(c)
+		task.defer(function()
+			if not noclip_on or not _G.MYA_UNIVERSAL_LOADED then
+				return
 			end
+			noclip_restore_all_parts()
+			noclip_seed_character(c)
+			noclip_hook_character_descendants(c)
 		end)
 	end
 
-	hook_descendants(lp.Character)
-	noclip_char_added_conn = lp.CharacterAdded:Connect(function(c)
-		task.defer(function()
-			if not noclip_on then
-				return
-			end
-			noclip_saved = {}
-			hook_descendants(c)
-			apply_noclip_character(c)
-		end)
-	end)
+	noclip_char_added_conn = lp.CharacterAdded:Connect(on_new_character)
 	table.insert(connections, noclip_char_added_conn)
 
-	if lp.Character then
-		apply_noclip_character(lp.Character)
+	local c0 = lp.Character
+	if c0 then
+		noclip_seed_character(c0)
+		noclip_hook_character_descendants(c0)
 	end
 end
 

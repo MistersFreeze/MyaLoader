@@ -33,6 +33,14 @@ Games live under **`games/`**. **Place-specific** modules are listed in **`confi
 - **Runtime fragments:** Under **`runtime/`** — **`piano_engine.lua`**, **`visuals.lua`**, **`movement.lua`**, **`targeting.lua`**, **`exports.lua`** (order defined in **`runtime.lua`**).
 - **Teardown:** **`_G.unload_mya`**.
 
+## `games/FlexYourFPS_18667984660/`
+
+- **PlaceId:** `18667984660` (Flex Your FPS And Ping).
+- **Entry:** `init.lua` (registered in `config.lua`).
+- **Pattern:** **`MYA_REPO_BASE`** + **`MYA_FETCH`**, **`runtime.lua`** bundles **`runtime/state.lua`** + **`runtime/flex.lua`**, then **`gui.lua`** (`lib/mya_game_ui.lua`).
+- **Features:** Sliders — **FPS × 1–15**, **Ping × 0.1–10**, **Resolution × 0.1–10** (billboard `WxH` text when a matching label exists + **`settings().Rendering.QualityLevel`**); local FPS from **PreRender** counter; ping from **`Player:GetNetworkPing()`** (seconds → ms). Toggle to pause flex; **Insert** menu; **Unload** → **`_G.unload_mya`**.
+- **Teardown:** **`_G.unload_mya`**.
+
 ## `games/_template.lua`
 
 - **Purpose:** Copy starter for new modules (not loaded unless you register it in config).
@@ -41,3 +49,5 @@ Games live under **`games/`**. **Place-specific** modules are listed in **`confi
 ## Config snapshot
 
 Update **`06_module_catalogue.md`** when you add or remove supported games so readers stay aligned with **`config.lua`**.
+
+When you add a PlaceId, also add **`hub.lua` → `GAME_DISPLAY_NAMES`** (Games tab labels) and ensure **`loader.lua`** / **`hub.lua`** bootstrap notes in **`PROJECT CONTEXT`** stay accurate (see **`09_workflows.md`**).

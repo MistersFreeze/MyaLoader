@@ -41,11 +41,12 @@ Multi-file games derive a **directory URL** from `baseUrl` + dirname(`gameScript
 
 ## Lifecycle
 
-1. Hub builds UI, then calls **`tryMountGame()`**.
-2. If the place is unsupported, the Games tab shows a message and the hub **stays open**.
-3. If supported, hub HttpGets the module, calls **`mount(ctx)`**, sets **`mountedModule`**, then **destroys the hub GUI** (`closeHubAfterGameLoad`) on success so the game UI can take over.
-4. On **`PlaceId`** change (teleport), hub reconnects and remounts.
-5. **`unmount`** runs when clearing the mount (e.g. close button) or before remount.
+1. **`loader.lua`** (and **`loader_local.lua`**) wait for **`game.Loaded`** and briefly for **`game.PlaceId ~= 0`** before HttpGetting **`config.lua`** / **`hub.lua`**. The hub defers its first **`tryMountGame()`** the same way so **`PlaceId`** and **`SUPPORTED_GAMES`** match the live experience.
+2. Hub builds UI, then calls **`tryMountGame()`** (after defer).
+3. If the place is unsupported, the Games tab shows a message and the hub **stays open**.
+4. If supported, hub HttpGets the module, calls **`mount(ctx)`**, sets **`mountedModule`**, then **destroys the hub GUI** (`closeHubAfterGameLoad`) on success so the game UI can take over.
+5. On **`PlaceId`** change (teleport), hub reconnects and remounts.
+6. **`unmount`** runs when clearing the mount (e.g. close button) or before remount.
 
 ## File organization conventions
 

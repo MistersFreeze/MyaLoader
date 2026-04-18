@@ -33,6 +33,10 @@ Bottom **“Status”** strip shows short messages; **`notify`** from the hub an
 
 If the current experience is **supported** and **`mount`** succeeds, the hub **closes automatically** (ScreenGui destroyed, drag connections disconnected) so the game module’s UI is not obscured. If **unsupported** or **load fails**, the hub remains for debugging.
 
+**Bootstrap order:** **`loader.lua`** / **`loader_local.lua`** wait for **`game.Loaded`** (and up to ~15 seconds for a non-zero **`PlaceId`**) before HttpGetting **`config.lua`** and **`hub.lua`**. The hub finishes building its UI, then **`tryMountGame()`** runs inside **`task.defer`** after the same readiness checks so **`game.PlaceId`** matches the joined experience before resolving **`SUPPORTED_GAMES`**.
+
+The **Games** tab lists **`config.SUPPORTED_GAMES`** PlaceIds; human-readable names come from **`hub.lua` → `GAME_DISPLAY_NAMES`** (update when you add a game).
+
 ## Error GUI (`loader.lua`)
 
 If bootstrap fails before the hub runs, **`loader.lua`** shows **`MyaLoaderError`** with a red error string (separate from the hub).

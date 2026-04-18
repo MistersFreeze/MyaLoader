@@ -30,7 +30,7 @@ Role: **shared in-game window shell** for games that render their own `ScreenGui
   - **`defaultTheme()`** — rose/plum palette + control colors (`C`).
   - **`createNotifyStack({ C, THEME, ts, notifParent?, gethui_support? })`** — right-side toasts.
   - **`createHubShell({ ui, THEME, C, ts, uis, titleText, tabNames, subPages, statusDefault, discordInvite?, winW?, winH?, onClose? })`** — sidebar tabs, optional sub-tab row, content host, title-bar drag, Discord / minimize / close, status line.
-- **Consumers in-repo:** `games/MyaUniversal/gui.lua`, `games/Operation-One_72920620366355/gui.lua`, `games/Neighbors_110400717151509/gui.lua`.
+- **Consumers in-repo:** `games/MyaUniversal/gui.lua`, `games/Operation-One_72920620366355/gui.lua`, `games/Neighbors_110400717151509/gui.lua`, `games/FlexYourFPS_18667984660/gui.lua`.
 
 This is **orthogonal** to **`lib/ui.lua`**: the hub uses `ui.lua`; per-game menus use `mya_game_ui.lua` when you want one consistent “Mya” window chrome across titles.
 
