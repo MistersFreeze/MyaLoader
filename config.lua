@@ -5,7 +5,7 @@
 
 return {
 	BRAND = "Mya",
-	VERSION = "1.0.0",
+	VERSION = "Loader",
 
 	-- PlaceId -> script path relative to your hosted repo root (same folder as config.lua).
 	-- Replace keys with real PlaceIds from the experience you support.

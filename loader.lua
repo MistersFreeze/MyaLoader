@@ -122,18 +122,24 @@ local function boot()
 		error("config.lua must return a table.")
 	end
 
-	local hubSrc = get(BASE_URL .. "hub.lua")
-	local hubChunk = loadstring(hubSrc, "@hub.lua")
-	if typeof(hubChunk) ~= "function" then
-		error("hub.lua failed to compile.")
-	end
-	-- hub.lua returns function(BASE_URL, config); first call runs the chunk.
-	local hubMain = hubChunk()
-	if typeof(hubMain) ~= "function" then
-		error("hub.lua must return a function (return function(BASE_URL, config) ... end).")
-	end
+	local okBoot, errBoot = pcall(function()
+		local hubSrc = get(BASE_URL .. "hub.lua")
+		local hubChunk = loadstring(hubSrc, "@hub.lua")
+		if typeof(hubChunk) ~= "function" then
+			error("hub.lua failed to compile.")
+		end
+		-- hub.lua returns function(BASE_URL, config); first call runs the chunk.
+		local hubMain = hubChunk()
+		if typeof(hubMain) ~= "function" then
+			error("hub.lua must return a function (return function(BASE_URL, config) ... end).")
+		end
 
-	hubMain(BASE_URL, config)
+		hubMain(BASE_URL, config)
+	end)
+
+	if not okBoot then
+		error(errBoot, 0)
+	end
 end
 
 local ok, err = pcall(boot)
