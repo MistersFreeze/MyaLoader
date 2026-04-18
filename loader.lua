@@ -107,12 +107,15 @@ local function boot()
 	end
 
 	waitForGameReady()
+	-- Let the engine render a frame after long waits (reduces injection hitches).
+	task.wait()
 
 	local function get(url)
 		return game:HttpGet(url, true)
 	end
 
 	local configSrc = get(BASE_URL .. "config.lua")
+	task.wait()
 	local configChunk = loadstring(configSrc, "@config.lua")
 	if typeof(configChunk) ~= "function" then
 		error("config.lua failed to compile.")
@@ -121,19 +124,23 @@ local function boot()
 	if typeof(config) ~= "table" then
 		error("config.lua must return a table.")
 	end
+	task.wait()
 
 	local okBoot, errBoot = pcall(function()
 		local hubSrc = get(BASE_URL .. "hub.lua")
+		task.wait()
 		local hubChunk = loadstring(hubSrc, "@hub.lua")
 		if typeof(hubChunk) ~= "function" then
 			error("hub.lua failed to compile.")
 		end
 		-- hub.lua returns function(BASE_URL, config); first call runs the chunk.
 		local hubMain = hubChunk()
+		task.wait()
 		if typeof(hubMain) ~= "function" then
 			error("hub.lua must return a function (return function(BASE_URL, config) ... end).")
 		end
 
+		task.wait()
 		hubMain(BASE_URL, config)
 	end)
 

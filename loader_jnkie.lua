@@ -112,10 +112,12 @@ local function runMyaLoader()
 	getgenv().MYA_BASE_URL = MYA_BASE_URL
 
 	local src = get(MYA_BASE_URL .. "loader.lua")
+	task.wait()
 	local chunk = loadstring(src, "@loader.lua")
 	if typeof(chunk) ~= "function" then
 		error("loader.lua failed to compile.")
 	end
+	task.wait()
 	chunk()
 end
 

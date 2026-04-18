@@ -59,6 +59,7 @@ return function(BASE_URL: string, config: { [string]: any })
 		error("[Mya] lib/util.lua did not compile")
 	end
 	local Util = loadUtilFn()
+	task.wait()
 
 	local uiSrc, uiErr = Util.httpGet(BASE_URL .. "lib/ui.lua")
 	if not uiSrc then
@@ -74,8 +75,9 @@ return function(BASE_URL: string, config: { [string]: any })
 	end
 	local theme = config.THEME
 	local UI = makeUi(theme)
+	task.wait()
 
-	-- If lib/loader_splash.lua cannot be fetched: same spinner as loader_splash (Roblox asset + TweenService).
+	-- If lib/loader_splash.lua cannot be fetched: same spectrum as loader_splash (inline).
 	local function mountHubLoadingOverlayFallback(bodyFrame: Frame, th: { [string]: any }, uiAnim: { [string]: any }?): () -> ()
 		local cornerR = typeof(th.corner) == "number" and th.corner or 10
 		local function corner(inst: Instance, r: number)
@@ -203,6 +205,7 @@ return function(BASE_URL: string, config: { [string]: any })
 	gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 	gui.Parent = Util.loaderScreenGuiParent()
 	Util.configureLoaderScreenGui(gui)
+	task.wait()
 
 	-- First-person games lock the mouse to the camera; unlock so the hub can be clicked.
 	task.defer(function()
@@ -373,6 +376,59 @@ return function(BASE_URL: string, config: { [string]: any })
 		statusLabel.Text = tostring(msg)
 	end
 
+	-- Loading overlay before tabs/toast: yields during HttpGet so injection hitches less.
+	local hubOverlayStarted = os.clock()
+	local hubLoadingCleanup: (() -> ())? = nil
+	local uiAnimMod: { [string]: any }? = nil
+	do
+		local uaSrc = Util.httpGet(BASE_URL .. "lib/ui_anim.lua")
+		if uaSrc then
+			local okUa, m = pcall(function()
+				return loadstring(uaSrc, "@lib/ui_anim.lua")()
+			end)
+			if okUa and typeof(m) == "table" then
+				uiAnimMod = m
+			end
+		end
+	end
+	task.wait()
+	do
+		local src = Util.httpGet(BASE_URL .. "lib/loader_splash.lua")
+		if src then
+			local ok, mod = pcall(function()
+				return loadstring(src, "@lib/loader_splash.lua")()
+			end)
+			if ok and typeof(mod) == "table" and typeof(mod.mountHubLoadingOverlay) == "function" then
+				local okMount, fn = pcall(function()
+					return mod.mountHubLoadingOverlay(body, theme, uiAnimMod)
+				end)
+				if okMount and typeof(fn) == "function" then
+					hubLoadingCleanup = fn
+				end
+			end
+		end
+		if not hubLoadingCleanup then
+			hubLoadingCleanup = mountHubLoadingOverlayFallback(body, theme, uiAnimMod)
+		end
+		local savedBodyVis = {
+			sidebar = sidebar.Visible,
+			content = content.Visible,
+			statusBar = statusBar.Visible,
+		}
+		sidebar.Visible = false
+		content.Visible = false
+		statusBar.Visible = false
+		local innerHubCleanup = hubLoadingCleanup
+		hubLoadingCleanup = function()
+			if innerHubCleanup then
+				innerHubCleanup()
+			end
+			sidebar.Visible = savedBodyVis.sidebar
+			content.Visible = savedBodyVis.content
+			statusBar.Visible = savedBodyVis.statusBar
+		end
+	end
+
 	-- In-window toast when invite is copied (clipboard fallback).
 	local toastToken = 0
 	local toastPendingHide: thread? = nil
@@ -447,59 +503,6 @@ return function(BASE_URL: string, config: { [string]: any })
 				toastFrame.Visible = false
 			end)
 		end)
-	end
-
-	-- Loading animation lives inside this hub only (no second ScreenGui from the injector).
-	local hubOverlayStarted = os.clock()
-	local hubLoadingCleanup: (() -> ())? = nil
-	local uiAnimMod: { [string]: any }? = nil
-	do
-		local uaSrc = Util.httpGet(BASE_URL .. "lib/ui_anim.lua")
-		if uaSrc then
-			local okUa, m = pcall(function()
-				return loadstring(uaSrc, "@lib/ui_anim.lua")()
-			end)
-			if okUa and typeof(m) == "table" then
-				uiAnimMod = m
-			end
-		end
-	end
-	do
-		local src = Util.httpGet(BASE_URL .. "lib/loader_splash.lua")
-		if src then
-			local ok, mod = pcall(function()
-				return loadstring(src, "@lib/loader_splash.lua")()
-			end)
-			if ok and typeof(mod) == "table" and typeof(mod.mountHubLoadingOverlay) == "function" then
-				local okMount, fn = pcall(function()
-					return mod.mountHubLoadingOverlay(body, theme, uiAnimMod)
-				end)
-				if okMount and typeof(fn) == "function" then
-					hubLoadingCleanup = fn
-				end
-			end
-		end
-		if not hubLoadingCleanup then
-			hubLoadingCleanup = mountHubLoadingOverlayFallback(body, theme, uiAnimMod)
-		end
-		-- Solid overlay still lets sibling UI render underneath; hide body chrome until load finishes.
-		local savedBodyVis = {
-			sidebar = sidebar.Visible,
-			content = content.Visible,
-			statusBar = statusBar.Visible,
-		}
-		sidebar.Visible = false
-		content.Visible = false
-		statusBar.Visible = false
-		local innerHubCleanup = hubLoadingCleanup
-		hubLoadingCleanup = function()
-			if innerHubCleanup then
-				innerHubCleanup()
-			end
-			sidebar.Visible = savedBodyVis.sidebar
-			content.Visible = savedBodyVis.content
-			statusBar.Visible = savedBodyVis.statusBar
-		end
 	end
 
 	discordBtn.MouseButton1Click:Connect(function()
@@ -783,6 +786,7 @@ return function(BASE_URL: string, config: { [string]: any })
 	end
 
 	local function tryMountGame()
+		task.wait()
 		clearGameMount()
 		if not gamePath then
 			supportTitle.Text = "Unsupported experience"
