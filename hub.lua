@@ -75,8 +75,8 @@ return function(BASE_URL: string, config: { [string]: any })
 	local theme = config.THEME
 	local UI = makeUi(theme)
 
-	-- If lib/loader_splash.lua cannot be fetched, still show the in-hub loading overlay.
-	local function mountHubLoadingOverlayFallback(bodyFrame: Frame, th: { [string]: any }): () -> ()
+	-- If lib/loader_splash.lua cannot be fetched: same spinner as loader_splash (Roblox asset + TweenService).
+	local function mountHubLoadingOverlayFallback(bodyFrame: Frame, th: { [string]: any }, uiAnim: { [string]: any }?): () -> ()
 		local cornerR = typeof(th.corner) == "number" and th.corner or 10
 		local function corner(inst: Instance, r: number)
 			local c = Instance.new("UICorner")
@@ -98,73 +98,64 @@ return function(BASE_URL: string, config: { [string]: any })
 		stroke.Transparency = 0.3
 		stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
 		stroke.Parent = overlay
-		local PATH_SAMPLES = 140
-		local TRAIL_LEN = 42
-		local LINE_THICK = 6
-		local SEG_COUNT = TRAIL_LEN - 1
-		local pathPoints = {}
-		for i = 1, PATH_SAMPLES do
-			local tt = (i - 1) / PATH_SAMPLES * (2 * math.pi)
-			pathPoints[i] = { math.sin(tt), math.sin(2 * tt) * 0.5 }
+
+		local function inlineSpectrumLoader(parent: Instance, accent: Color3): (Frame, () -> ())
+			local lighter = accent:Lerp(Color3.new(1, 1, 1), 0.38)
+			local holder = Instance.new("Frame")
+			holder.Name = "LoadingSpectrum"
+			holder.BackgroundTransparency = 1
+			holder.AnchorPoint = Vector2.new(0.5, 0.5)
+			holder.Position = UDim2.new(0.5, 0, 0.42, 0)
+			holder.Size = UDim2.fromOffset(220, 80)
+			holder.ZIndex = 102
+			holder.Parent = parent
+			local layout = Instance.new("UIListLayout")
+			layout.FillDirection = Enum.FillDirection.Horizontal
+			layout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+			layout.VerticalAlignment = Enum.VerticalAlignment.Bottom
+			layout.Padding = UDim.new(0, 7)
+			layout.Parent = holder
+			local n = 7
+			local bars = {}
+			for i = 1, n do
+				local bar = Instance.new("Frame")
+				bar.Name = "Bar" .. i
+				bar.BorderSizePixel = 0
+				bar.BackgroundColor3 = accent
+				bar.Size = UDim2.fromOffset(11, 22)
+				bar.ZIndex = 103
+				local cr = Instance.new("UICorner")
+				cr.CornerRadius = UDim.new(0, 5)
+				cr.Parent = bar
+				local grad = Instance.new("UIGradient")
+				grad.Rotation = 90
+				grad.Color = ColorSequence.new({
+					ColorSequenceKeypoint.new(0, lighter),
+					ColorSequenceKeypoint.new(1, accent),
+				})
+				grad.Parent = bar
+				bar.Parent = holder
+				bars[i] = bar
+			end
+			local t0 = os.clock()
+			local conn = RunService.RenderStepped:Connect(function()
+				local t = os.clock() - t0
+				for i = 1, n do
+					local phase = t * 2.65 + (i - 1) * 0.62
+					local wave = (math.sin(phase) * 0.5 + 0.5)
+					local h = 12 + wave * 54
+					bars[i].Size = UDim2.fromOffset(11, h)
+					bars[i].BackgroundTransparency = 0.08 + (1 - wave) * 0.22
+				end
+			end)
+			local function cancel()
+				conn:Disconnect()
+			end
+			return holder, cancel
 		end
-		local logoW, logoH = 380, 190
-		local cx, cy = logoW * 0.5, logoH * 0.5
-		local scaleX, scaleY = 168, 82
-		local logoHolder = Instance.new("Frame")
-		logoHolder.AnchorPoint = Vector2.new(0.5, 0.5)
-		logoHolder.Position = UDim2.new(0.5, 0, 0.42, 0)
-		logoHolder.Size = UDim2.fromOffset(logoW, logoH)
-		logoHolder.BackgroundTransparency = 1
-		logoHolder.ZIndex = 101
-		logoHolder.Parent = overlay
-		local tearGradT = NumberSequence.new({
-			NumberSequenceKeypoint.new(0, 1),
-			NumberSequenceKeypoint.new(0.2, 0.12),
-			NumberSequenceKeypoint.new(0.5, 0),
-			NumberSequenceKeypoint.new(0.8, 0.12),
-			NumberSequenceKeypoint.new(1, 1),
-		})
-		local lineSegs = {}
-		local lineCorners = {}
-		for i = 1, SEG_COUNT do
-			local seg = Instance.new("Frame")
-			seg.AnchorPoint = Vector2.new(0.5, 0.5)
-			seg.BorderSizePixel = 0
-			seg.BackgroundColor3 = th.accent
-			seg.ZIndex = 102
-			local cr = Instance.new("UICorner")
-			cr.CornerRadius = UDim.new(0, LINE_THICK * 0.5)
-			cr.Parent = seg
-			lineCorners[i] = cr
-			local g = Instance.new("UIGradient")
-			g.Rotation = 90
-			g.Transparency = tearGradT
-			g.Parent = seg
-			seg.Parent = logoHolder
-			lineSegs[i] = seg
-		end
-		local headTear = Instance.new("Frame")
-		headTear.AnchorPoint = Vector2.new(0.5, 0.5)
-		headTear.BorderSizePixel = 0
-		headTear.BackgroundColor3 = th.accent
-		headTear.Size = UDim2.fromOffset(10, 13)
-		headTear.ZIndex = 103
-		local headCr = Instance.new("UICorner")
-		headCr.CornerRadius = UDim.new(0, 6)
-		headCr.Parent = headTear
-		local headG = Instance.new("UIGradient")
-		headG.Rotation = 90
-		headG.Transparency = NumberSequence.new({
-			NumberSequenceKeypoint.new(0, 0.92),
-			NumberSequenceKeypoint.new(0.35, 0.08),
-			NumberSequenceKeypoint.new(0.72, 0),
-			NumberSequenceKeypoint.new(1, 0.45),
-		})
-		headG.Parent = headTear
-		headTear.Parent = logoHolder
-		local arcS = 0.0
-		local ARC_SPEED = 54
-		local SAMPLE_SPACING = 0.52
+		local createSpectrum = uiAnim and uiAnim.createSpectrumLoader or inlineSpectrumLoader
+		local _, cancelSpectrum = createSpectrum(overlay, th.accent)
+
 		local tip = Instance.new("TextLabel")
 		tip.BackgroundTransparency = 1
 		tip.AnchorPoint = Vector2.new(0.5, 1)
@@ -196,63 +187,10 @@ return function(BASE_URL: string, config: { [string]: any })
 		})
 		tw:Play()
 		local t0 = os.clock()
-		local conn = RunService.RenderStepped:Connect(function(dt)
+		local conn = RunService.RenderStepped:Connect(function()
 			local t = os.clock() - t0
-			arcS = (arcS + ARC_SPEED * dt) % PATH_SAMPLES
 			local phase = (math.sin(t * 0.9) * 0.5 + 0.5)
 			stroke.Color = th.border:Lerp(th.accent, phase)
-			local px = {}
-			local py = {}
-			for k = 1, TRAIL_LEN do
-				local idxFloat = (arcS - (k - 1) * SAMPLE_SPACING) % PATH_SAMPLES
-				if idxFloat < 0 then
-					idxFloat = idxFloat + PATH_SAMPLES
-				end
-				local base = math.floor(idxFloat)
-				local frac = idxFloat - base
-				local i0 = base + 1
-				local p0 = pathPoints[i0]
-				local p1 = pathPoints[(i0 % PATH_SAMPLES) + 1]
-				local nx = p0[1] + (p1[1] - p0[1]) * frac
-				local ny = p0[2] + (p1[2] - p0[2]) * frac
-				px[k] = cx + nx * scaleX
-				py[k] = cy + ny * scaleY
-			end
-			for i = 1, SEG_COUNT do
-				local seg = lineSegs[i]
-				local x1, y1 = px[i], py[i]
-				local x2, y2 = px[i + 1], py[i + 1]
-				local dx = x2 - x1
-				local dy = y2 - y1
-				local len = math.sqrt(dx * dx + dy * dy)
-				if len < 0.25 then
-					seg.Visible = false
-				else
-					seg.Visible = true
-					local mx = (x1 + x2) * 0.5
-					local my = (y1 + y2) * 0.5
-					seg.Position = UDim2.new(0, mx, 0, my)
-					seg.Size = UDim2.new(0, len + 0.5, 0, LINE_THICK)
-					seg.Rotation = math.deg(math.atan2(dy, dx))
-					local capR = math.clamp(math.min(len * 0.5, LINE_THICK * 0.5), 1, LINE_THICK * 0.5)
-					lineCorners[i].CornerRadius = UDim.new(0, capR)
-					local fade = (i - 1) / math.max(1, SEG_COUNT - 1)
-					seg.BackgroundTransparency = 0.03 + 0.86 * fade
-					if i <= 3 then
-						seg.BackgroundTransparency = math.clamp(seg.BackgroundTransparency - 0.12, 0, 1)
-					end
-				end
-			end
-			local hdx = px[2] - px[1]
-			local hdy = py[2] - py[1]
-			local hlen = math.sqrt(hdx * hdx + hdy * hdy)
-			if hlen < 0.2 then
-				headTear.Visible = false
-			else
-				headTear.Visible = true
-				headTear.Position = UDim2.new(0, px[1], 0, py[1])
-				headTear.Rotation = math.deg(math.atan2(hdy, hdx)) + 90
-			end
 			status.Text = "Loading" .. string.rep(".", 1 + (math.floor(t * 0.7) % 4))
 		end)
 		return function()
@@ -260,6 +198,7 @@ return function(BASE_URL: string, config: { [string]: any })
 				conn:Disconnect()
 			end
 			tw:Cancel()
+			cancelSpectrum()
 			if overlay and overlay.Parent then
 				overlay:Destroy()
 			end
@@ -526,6 +465,18 @@ return function(BASE_URL: string, config: { [string]: any })
 	-- Loading animation lives inside this hub only (no second ScreenGui from the injector).
 	local hubOverlayStarted = os.clock()
 	local hubLoadingCleanup: (() -> ())? = nil
+	local uiAnimMod: { [string]: any }? = nil
+	do
+		local uaSrc = Util.httpGet(BASE_URL .. "lib/ui_anim.lua")
+		if uaSrc then
+			local okUa, m = pcall(function()
+				return loadstring(uaSrc, "@lib/ui_anim.lua")()
+			end)
+			if okUa and typeof(m) == "table" then
+				uiAnimMod = m
+			end
+		end
+	end
 	do
 		local src = Util.httpGet(BASE_URL .. "lib/loader_splash.lua")
 		if src then
@@ -534,7 +485,7 @@ return function(BASE_URL: string, config: { [string]: any })
 			end)
 			if ok and typeof(mod) == "table" and typeof(mod.mountHubLoadingOverlay) == "function" then
 				local okMount, fn = pcall(function()
-					return mod.mountHubLoadingOverlay(body, theme)
+					return mod.mountHubLoadingOverlay(body, theme, uiAnimMod)
 				end)
 				if okMount and typeof(fn) == "function" then
 					hubLoadingCleanup = fn
@@ -542,7 +493,7 @@ return function(BASE_URL: string, config: { [string]: any })
 			end
 		end
 		if not hubLoadingCleanup then
-			hubLoadingCleanup = mountHubLoadingOverlayFallback(body, theme)
+			hubLoadingCleanup = mountHubLoadingOverlayFallback(body, theme, uiAnimMod)
 		end
 		-- Solid overlay still lets sibling UI render underneath; hide body chrome until load finishes.
 		local savedBodyVis = {
