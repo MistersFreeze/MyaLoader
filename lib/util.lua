@@ -78,10 +78,12 @@ function Util.loadModuleFromUrl(url: string, chunkName: string?): (any?, string?
 	if not body then
 		return nil, err or "HttpGet failed"
 	end
+	task.wait()
 	local fn, cerr = Util.loadstringCompile(body, chunkName)
 	if not fn then
 		return nil, cerr
 	end
+	task.wait()
 	local ok, result = pcall(fn)
 	if not ok then
 		return nil, tostring(result)

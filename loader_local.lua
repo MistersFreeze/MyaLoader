@@ -157,8 +157,10 @@ end
 
 local function boot()
 	waitForGameReady()
+	task.wait()
 
 	local configSrc = readFromRoot("config.lua")
+	task.wait()
 	local configChunk = loadstring(configSrc, "@config.lua")
 	if typeof(configChunk) ~= "function" then
 		error("config.lua failed to compile.")
@@ -167,24 +169,26 @@ local function boot()
 	if typeof(config) ~= "table" then
 		error("config.lua must return a table.")
 	end
+	task.wait()
 
-	local okBoot, errBoot = pcall(function()
-		local hubSrc = readFromRoot("hub.lua")
-		local hubChunk = loadstring(hubSrc, "@hub.lua")
-		if typeof(hubChunk) ~= "function" then
-			error("hub.lua failed to compile.")
-		end
-		local hubMain = hubChunk()
-		if typeof(hubMain) ~= "function" then
-			error("hub.lua must return a function.")
-		end
-
-		hubMain(ROOT, config)
-	end)
-
-	if not okBoot then
-		error(errBoot, 0)
+	local hubSrc = readFromRoot("hub.lua")
+	task.wait()
+	local hubChunk = loadstring(hubSrc, "@hub.lua")
+	if typeof(hubChunk) ~= "function" then
+		error("hub.lua failed to compile.")
 	end
+	local hubMain = hubChunk()
+	task.wait()
+	if typeof(hubMain) ~= "function" then
+		error("hub.lua must return a function.")
+	end
+
+	task.spawn(function()
+		local ok, err = pcall(hubMain, ROOT, config)
+		if not ok then
+			showError(tostring(err))
+		end
+	end)
 end
 
 local ok, err = pcall(boot)

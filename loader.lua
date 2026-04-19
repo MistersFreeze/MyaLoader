@@ -126,27 +126,27 @@ local function boot()
 	end
 	task.wait()
 
-	local okBoot, errBoot = pcall(function()
-		local hubSrc = get(BASE_URL .. "hub.lua")
-		task.wait()
-		local hubChunk = loadstring(hubSrc, "@hub.lua")
-		if typeof(hubChunk) ~= "function" then
-			error("hub.lua failed to compile.")
-		end
-		-- hub.lua returns function(BASE_URL, config); first call runs the chunk.
-		local hubMain = hubChunk()
-		task.wait()
-		if typeof(hubMain) ~= "function" then
-			error("hub.lua must return a function (return function(BASE_URL, config) ... end).")
-		end
-
-		task.wait()
-		hubMain(BASE_URL, config)
-	end)
-
-	if not okBoot then
-		error(errBoot, 0)
+	local hubSrc = get(BASE_URL .. "hub.lua")
+	task.wait()
+	local hubChunk = loadstring(hubSrc, "@hub.lua")
+	if typeof(hubChunk) ~= "function" then
+		error("hub.lua failed to compile.")
 	end
+	-- hub.lua returns function(BASE_URL, config); first call runs the chunk.
+	local hubMain = hubChunk()
+	task.wait()
+	if typeof(hubMain) ~= "function" then
+		error("hub.lua must return a function (return function(BASE_URL, config) ... end).")
+	end
+
+	-- Run hub on the next scheduler steps so the injector / Junkie script can finish and the client can render
+	-- instead of one long stall (compile + HttpGet above still block; hub UI is the rest).
+	task.spawn(function()
+		local ok, err = pcall(hubMain, BASE_URL, config)
+		if not ok then
+			showError(tostring(err))
+		end
+	end)
 end
 
 local ok, err = pcall(boot)

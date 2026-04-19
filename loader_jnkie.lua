@@ -118,7 +118,13 @@ local function runMyaLoader()
 		error("loader.lua failed to compile.")
 	end
 	task.wait()
-	chunk()
+	-- Defer so Junkie’s wrapper returns and the game can frame before config/hub/network work.
+	task.spawn(function()
+		local ok, err = pcall(chunk)
+		if not ok then
+			warn("[Mya] " .. tostring(err))
+		end
+	end)
 end
 
 local function tryValidateKey(key: string): (boolean, string)

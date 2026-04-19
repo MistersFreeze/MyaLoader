@@ -9,6 +9,12 @@ return function(BASE_URL: string, config: { [string]: any })
 	local UserInputService = game:GetService("UserInputService")
 	local RunService = game:GetService("RunService")
 	local TweenService = game:GetService("TweenService")
+	-- Spread heavy work across frames so injection doesn’t hitch as one long stall.
+	local function yieldFrames(n: number)
+		for _ = 1, n do
+			task.wait()
+		end
+	end
 	local localPlayer = Players.LocalPlayer
 	if not localPlayer then
 		localPlayer = Players.PlayerAdded:Wait()
@@ -59,7 +65,7 @@ return function(BASE_URL: string, config: { [string]: any })
 		error("[Mya] lib/util.lua did not compile")
 	end
 	local Util = loadUtilFn()
-	task.wait()
+	yieldFrames(2)
 
 	local uiSrc, uiErr = Util.httpGet(BASE_URL .. "lib/ui.lua")
 	if not uiSrc then
@@ -75,7 +81,7 @@ return function(BASE_URL: string, config: { [string]: any })
 	end
 	local theme = config.THEME
 	local UI = makeUi(theme)
-	task.wait()
+	yieldFrames(2)
 
 	-- If lib/loader_splash.lua cannot be fetched: same spectrum as loader_splash (inline).
 	local function mountHubLoadingOverlayFallback(bodyFrame: Frame, th: { [string]: any }, uiAnim: { [string]: any }?): () -> ()
@@ -205,7 +211,7 @@ return function(BASE_URL: string, config: { [string]: any })
 	gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 	gui.Parent = Util.loaderScreenGuiParent()
 	Util.configureLoaderScreenGui(gui)
-	task.wait()
+	yieldFrames(2)
 
 	-- First-person games lock the mouse to the camera; unlock so the hub can be clicked.
 	task.defer(function()
@@ -225,6 +231,7 @@ return function(BASE_URL: string, config: { [string]: any })
 	root.Selectable = false
 	root.Parent = gui
 	UI.corner(root)
+	task.wait()
 
 	local titleBar = Instance.new("Frame")
 	titleBar.Name = "TitleBar"
@@ -324,6 +331,7 @@ return function(BASE_URL: string, config: { [string]: any })
 	closeBtn.AutoButtonColor = false
 	closeBtn.Parent = btnRow
 	UI.corner(closeBtn)
+	task.wait()
 
 	local body = Instance.new("Frame")
 	body.Name = "Body"
@@ -391,7 +399,7 @@ return function(BASE_URL: string, config: { [string]: any })
 			end
 		end
 	end
-	task.wait()
+	yieldFrames(2)
 	do
 		local src = Util.httpGet(BASE_URL .. "lib/loader_splash.lua")
 		if src then
@@ -428,6 +436,7 @@ return function(BASE_URL: string, config: { [string]: any })
 			statusBar.Visible = savedBodyVis.statusBar
 		end
 	end
+	yieldFrames(2)
 
 	-- In-window toast when invite is copied (clipboard fallback).
 	local toastToken = 0
@@ -516,6 +525,7 @@ return function(BASE_URL: string, config: { [string]: any })
 			notify("Discord: " .. DISCORD_INVITE)
 		end
 	end)
+	task.wait()
 
 	local tabs: { [string]: Frame } = {}
 	local tabButtons: { [string]: TextButton } = {}
@@ -581,6 +591,7 @@ return function(BASE_URL: string, config: { [string]: any })
 	makeCategoryLabel("UNIVERSAL")
 	local universalPage = makeTab("myauniversal", "Mya Universal")
 	local dumperPage = makeTab("dumper", "Dumper")
+	yieldFrames(2)
 
 	local homeScroll = UI.scroll(homePage)
 	homeScroll.Size = UDim2.new(1, 0, 1, 0)
@@ -596,6 +607,7 @@ return function(BASE_URL: string, config: { [string]: any })
 	)
 
 	local placeLabel = UI.label(homeCard, "PlaceId: " .. tostring(game.PlaceId), 14, false)
+	task.wait()
 
 	local gamesScroll = UI.scroll(gamesPage)
 	gamesScroll.Size = UDim2.new(1, 0, 1, 0)
@@ -605,6 +617,8 @@ return function(BASE_URL: string, config: { [string]: any })
 
 	-- Catalog of PlaceIds from config (display names; keep in sync with config.SUPPORTED_GAMES).
 	local GAME_DISPLAY_NAMES: { [number]: string } = {
+		[7353845952] = "Project Delta",
+		[7336302630] = "Project Delta",
 		[72920620366355] = "Operation One",
 		[110400717151509] = "Neighbors",
 		[12699642568] = "Neighbors",
@@ -637,6 +651,7 @@ return function(BASE_URL: string, config: { [string]: any })
 	if #supportedIds == 0 then
 		UI.label(gamesCatalog, "No games listed in hub config yet.", 14, true)
 	end
+	yieldFrames(2)
 
 	local gamePanel = Instance.new("Frame")
 	gamePanel.Name = "GamePanel"
@@ -688,6 +703,7 @@ return function(BASE_URL: string, config: { [string]: any })
 		end
 		notify("Mya Universal active · Insert for menu")
 	end)
+	task.wait()
 
 	local dumperScroll = UI.scroll(dumperPage)
 	dumperScroll.Size = UDim2.new(1, 0, 1, 0)
@@ -722,6 +738,7 @@ return function(BASE_URL: string, config: { [string]: any })
 			end
 		end)
 	end)
+	task.wait()
 
 	local creditsScroll = UI.scroll(creditsPage)
 	creditsScroll.Size = UDim2.new(1, 0, 1, 0)
@@ -737,6 +754,7 @@ return function(BASE_URL: string, config: { [string]: any })
 
 	UI.label(creditsCard, "@ilovehewho · Roblox", 16, false)
 	UI.label(creditsCard, "Discord: @fubelt", 14, false)
+	yieldFrames(2)
 
 	local mountedModule: any = nil
 	local placeId = game.PlaceId
@@ -786,7 +804,7 @@ return function(BASE_URL: string, config: { [string]: any })
 	end
 
 	local function tryMountGame()
-		task.wait()
+		yieldFrames(2)
 		clearGameMount()
 		if not gamePath then
 			supportTitle.Text = "Unsupported experience"
