@@ -1,6 +1,7 @@
 --[[
-  Operation One (PlaceId 72920620366355)
-  Loads runtime.lua (concatenates runtime/*.lua fragments) then gui.lua from the same folder.
+  Corner (MicUp module) — MIDI piano for in-game keyboard.
+  Supported PlaceIds: 112399855119586, 15546218972 (same module).
+  Loads runtime.lua (bundles runtime/*.lua) then gui.lua.
 ]]
 
 local M = {}
@@ -39,7 +40,7 @@ function M.mount(ctx)
 						return body
 					end
 				end
-				error("Operation One: readfile failed: " .. u)
+				error("Corner: readfile failed: " .. u)
 			end
 		end
 		return game:HttpGet(u, true)
@@ -50,28 +51,28 @@ function M.mount(ctx)
 	_G.MYA_FETCH = fetch
 
 	local runSrc = fetch(base .. "runtime.lua")
-	local runChunk = loadstring(runSrc, "@Operation-One/runtime")
+	local runChunk = loadstring(runSrc, "@Corner/runtime")
 	if typeof(runChunk) ~= "function" then
-		error("Operation One: runtime.lua failed to compile")
+		error("Corner: runtime.lua failed to compile")
 	end
-	local runLoader = runChunk()
-	if typeof(runLoader) ~= "function" then
-		error("Operation One: runtime.lua must return the bundle loader")
+	local loader = runChunk()
+	if typeof(loader) ~= "function" then
+		error("Corner: runtime.lua must return the bundle loader")
 	end
-	runLoader({ base = base, fetch = fetch, repoBase = repoBase })
+	loader({ base = base, fetch = fetch })
 
 	local guiSrc = fetch(base .. "gui.lua")
-	local guiChunk = loadstring(guiSrc, "@Operation-One/gui")
+	local guiChunk = loadstring(guiSrc, "@Corner/gui")
 	if typeof(guiChunk) ~= "function" then
-		error("Operation One: gui.lua failed to compile")
+		error("Corner: gui.lua failed to compile")
 	end
 	guiChunk()
 
-	if typeof(_G.MYA_OP1_RUN_UI_SYNC) == "function" then
-		_G.MYA_OP1_RUN_UI_SYNC()
+	if typeof(_G.MYA_NEIGHBORS_RUN_UI_SYNC) == "function" then
+		_G.MYA_NEIGHBORS_RUN_UI_SYNC()
 	end
 
-	ctx.notify("Operation One loaded")
+	ctx.notify("Corner · MIDI loaded")
 end
 
 function M.unmount()

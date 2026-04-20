@@ -1,5 +1,5 @@
 --[[
-    Mya · Neighbors — MIDI player UI (`lib/mya_game_ui.lua`)
+    Mya · Corner — MIDI player UI (`lib/mya_game_ui.lua`)
 ]]
 local gethui_support = gethui ~= nil
 local cloneref_fn = type(cloneref) == "function" and cloneref or function(x)
@@ -21,22 +21,22 @@ end
 local fetch = _G.MYA_FETCH
 local repoBase = _G.MYA_REPO_BASE
 if typeof(fetch) ~= "function" or typeof(repoBase) ~= "string" or #repoBase == 0 then
-	error("[Neighbors] MYA_FETCH / MYA_REPO_BASE missing — mount via hub with ctx.baseUrl.")
+	error("[Corner] MYA_FETCH / MYA_REPO_BASE missing — mount via hub with ctx.baseUrl.")
 end
 local libSrc = fetch(repoBase .. "lib/mya_game_ui.lua")
 if typeof(libSrc) ~= "string" or #libSrc == 0 then
-	error("[Neighbors] Could not load lib/mya_game_ui.lua from repo base: " .. repoBase)
+	error("[Corner] Could not load lib/mya_game_ui.lua from repo base: " .. repoBase)
 end
 local libFn = loadstring(libSrc, "@lib/mya_game_ui")
 if typeof(libFn) ~= "function" then
-	error("[Neighbors] lib/mya_game_ui.lua failed to compile")
+	error("[Corner] lib/mya_game_ui.lua failed to compile")
 end
 local MyaUI = libFn()
 local THEME, C = MyaUI.defaultTheme()
 
 local P = _G.MYA_NEIGHBORS_PIANO
 if not P then
-	error("[Mya] Neighbors gui: MYA_NEIGHBORS_PIANO missing (load runtime.lua first)")
+	error("[Mya] Corner: MYA_NEIGHBORS_PIANO missing (load runtime.lua first)")
 end
 
 local Players = game:GetService("Players")
@@ -65,13 +65,15 @@ local shell = MyaUI.createHubShell({
 	C = C,
 	ts = ts,
 	uis = uis,
-	titleText = "Mya  ·  Neighbors",
+	titleText = "Mya  ·  Corner",
 	tabNames = { "Piano", "Visuals", "Piano Settings", "Misc", "Settings" },
 	subPages = {},
 	statusDefault = "Ready · Insert toggles menu",
 	discordInvite = "https://discord.gg/YeyepQG6K9",
 	winW = 540,
 	winH = 400,
+	winPlacement = "topRight",
+	winEdgeGap = 14,
 })
 
 local switch_tab = shell.switch_tab
@@ -467,9 +469,21 @@ local function rebuildMidiDropdown()
 	local q = midi_search_box.Text:lower():gsub("^%s+", ""):gsub("%s+$", "")
 	local filtered = {}
 	for _, rel in ipairs(files) do
-		if q == "" or string.find(rel:lower(), q, 1, true) then
+		local base = string.match(rel, "[^/\\]+$") or rel
+		local hay = rel:lower()
+		local hayBase = base:lower()
+		if q == "" or string.find(hay, q, 1, true) or string.find(hayBase, q, 1, true) then
 			table.insert(filtered, rel)
 		end
+	end
+	-- Search used to filter a hidden ScrollingFrame — open it while typing so results are visible.
+	if q ~= "" then
+		dd_list.Visible = true
+		dd_toggle.Text = (#filtered == 0) and "▲ No matches" or ("▲ " .. #filtered .. " match(es)")
+	elseif not dd_list.Visible then
+		dd_toggle.Text = "▼ Select a .mid file…"
+	else
+		dd_toggle.Text = (#filtered == 0) and "▲ No .mid in MIDIow/MIDI" or ("▲ " .. #filtered .. " file(s) · tap to hide")
 	end
 	for i, rel in ipairs(filtered) do
 		local b = Instance.new("TextButton")
@@ -495,7 +509,11 @@ end
 
 dd_toggle.MouseButton1Click:Connect(function()
 	dd_list.Visible = not dd_list.Visible
-	dd_toggle.Text = dd_list.Visible and "▲ Hide MIDI list" or "▼ Select a .mid file…"
+	if dd_list.Visible then
+		rebuildMidiDropdown()
+	else
+		dd_toggle.Text = "▼ Select a .mid file…"
+	end
 end)
 
 midi_search_box:GetPropertyChangedSignal("Text"):Connect(function()
@@ -666,7 +684,7 @@ local function resolve_visual_target()
 	return P.resolve_target_query(target_name_box.Text)
 end
 
-row_button(visuals_page, 6, "Spy camera", function()
+row_button(visuals_page, 6, "Spy camera (orbit)", function()
 	local t = resolve_visual_target()
 	if not t then
 		notify("Mya", "Player not found", 2)
@@ -753,4 +771,4 @@ _G.user_interface = ui
 _G.mya_neighbors_notif_ui = notif_ui
 
 switch_tab("Piano")
-notify("Mya", "Neighbors · Insert to hide menu", 4)
+notify("Mya", "Corner · Insert to hide menu", 4)

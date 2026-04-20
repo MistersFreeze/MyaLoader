@@ -13,11 +13,6 @@ local gadgets         = false
 local fullbright      = false
 local aim_assist      = false
 local chams           = false
-local fly_enabled     = false
-local jump_boost      = false
-
-local fly_speed       = 50         -- studs/sec
-local jump_power      = 80         -- upward velocity
 
 local aim_fov         = 120        -- pixels radius
 local aim_speed       = 0.25       -- 0.0 (slow) -> 0.99 (fast) -> 1.0 (instant snap)
@@ -435,15 +430,10 @@ _G.toggle_chams = function()
 end
 
 
-_G.toggle_fly         = function() fly_enabled = not fly_enabled; if _G.set_fly then _G.set_fly(fly_enabled) end end
-_G.toggle_jump_boost  = function() jump_boost = not jump_boost; if _G.set_jump_boost then _G.set_jump_boost(jump_boost) end end
-
 -- Value setters (called by sliders)
 _G.set_aim_fov_value        = function(v) aim_fov        = v end
 _G.set_aim_speed_value      = function(v) aim_speed      = v end
 _G.set_aim_key_value        = function(v) aim_key        = v end
-_G.set_fly_speed_value      = function(v) fly_speed      = v end
-_G.set_jump_power_value     = function(v) jump_power     = v end
 
 -- Color setters (called by color pickers & config loader)
 local function refresh_esp_colors()
@@ -500,10 +490,8 @@ _G.get_config = function()
         fullbright = fullbright, aim_assist = aim_assist, show_fov_circle = show_fov_circle,
         vis_check = vis_check,
         chams = chams,
-        fly_enabled = fly_enabled, jump_boost = jump_boost,
         -- values
         aim_fov = aim_fov, aim_speed = aim_speed,
-        fly_speed = fly_speed, jump_power = jump_power,
         -- keybinds (serialised as strings)
         aim_key        = enum_to_str(aim_key),
         menu_key       = enum_to_str(menu_key),
@@ -537,14 +525,10 @@ _G.apply_config = function(cfg)
     if cfg.show_fov_circle ~= nil and cfg.show_fov_circle ~= show_fov_circle then _G.toggle_show_fov()    end
     if cfg.vis_check      ~= nil and cfg.vis_check      ~= vis_check      then _G.toggle_vis_check()       end
     if cfg.chams          ~= nil and cfg.chams          ~= chams          then _G.toggle_chams()           end
-    if cfg.fly_enabled    ~= nil and cfg.fly_enabled    ~= fly_enabled    then _G.toggle_fly()             end
-    if cfg.jump_boost     ~= nil and cfg.jump_boost     ~= jump_boost     then _G.toggle_jump_boost()      end
 
     -- Sliders
     if cfg.aim_fov       ~= nil then aim_fov       = cfg.aim_fov;       if _G.set_aim_fov       then _G.set_aim_fov(aim_fov)             end end
     if cfg.aim_speed     ~= nil then aim_speed     = cfg.aim_speed;     if _G.set_aim_speed     then _G.set_aim_speed(aim_speed)         end end
-    if cfg.fly_speed     ~= nil then fly_speed     = cfg.fly_speed;     if _G.set_fly_speed     then _G.set_fly_speed(fly_speed)         end end
-    if cfg.jump_power    ~= nil then jump_power    = cfg.jump_power;    if _G.set_jump_power    then _G.set_jump_power(jump_power)       end end
 
     -- Keybinds
     local ak = str_to_enum(cfg.aim_key)
@@ -603,100 +587,6 @@ local function check_visibility(cam_pos, target_pos, target_char)
     return false
 end
 
--- ==================== MOVEMENT SYSTEMS ====================
-
-local _fly_bv       = nil
-local _fly_conn     = nil
-local _jb_cooldown  = false
-local _jb_conn      = nil
-
-local function get_root()
-    local char = local_player.Character
-    return char and char:FindFirstChild("HumanoidRootPart")
-end
-
-local function get_humanoid()
-    local char = local_player.Character
-    return char and char:FindFirstChildWhichIsA("Humanoid")
-end
-
--- ---- Fly ----
-local function start_fly()
-    local root = get_root()
-    if not root then return end
-    local hum = get_humanoid()
-    if hum then hum.PlatformStand = true end
-
-    if _fly_bv then pcall(function() _fly_bv:Destroy() end) end
-    local bv = Instance.new("BodyVelocity")
-    bv.MaxForce = Vector3.new(math.huge, math.huge, math.huge)
-    bv.Velocity = Vector3.zero
-    bv.Parent   = root
-    _fly_bv = bv
-
-    if _fly_conn then _fly_conn:Disconnect() end
-    _fly_conn = runservice.RenderStepped:Connect(function()
-        if not fly_enabled or unloaded then return end
-        local r = get_root()
-        if not r or not _fly_bv or not _fly_bv.Parent then return end
-
-        local cam = camera.CFrame
-        local dir = Vector3.zero
-        if uis:IsKeyDown(Enum.KeyCode.W) then dir = dir + cam.LookVector end
-        if uis:IsKeyDown(Enum.KeyCode.S) then dir = dir - cam.LookVector end
-        if uis:IsKeyDown(Enum.KeyCode.D) then dir = dir + cam.RightVector end
-        if uis:IsKeyDown(Enum.KeyCode.A) then dir = dir - cam.RightVector end
-        if uis:IsKeyDown(Enum.KeyCode.Space)        then dir = dir + Vector3.new(0,1,0) end
-        if uis:IsKeyDown(Enum.KeyCode.LeftControl)  then dir = dir - Vector3.new(0,1,0) end
-
-        if dir.Magnitude > 0 then
-            _fly_bv.Velocity = dir.Unit * fly_speed
-        else
-            _fly_bv.Velocity = Vector3.zero
-        end
-    end)
-    connections[#connections+1] = _fly_conn
-end
-
-local function stop_fly()
-    if _fly_conn then _fly_conn:Disconnect(); _fly_conn = nil end
-    if _fly_bv then pcall(function() _fly_bv:Destroy() end); _fly_bv = nil end
-    local hum = get_humanoid()
-    if hum then hum.PlatformStand = false end
-end
-
-local old_toggle_fly = _G.toggle_fly
-_G.toggle_fly = function()
-    fly_enabled = not fly_enabled
-    if fly_enabled then start_fly() else stop_fly() end
-    if _G.set_fly then _G.set_fly(fly_enabled) end
-end
-
--- ---- Jump Boost ----
-if _jb_conn then _jb_conn:Disconnect() end
-_jb_conn = uis.InputBegan:Connect(function(input, gpe)
-    if gpe then return end
-    if input.KeyCode ~= Enum.KeyCode.Space then return end
-    if not jump_boost or unloaded or _jb_cooldown then return end
-
-    local root = get_root()
-    local hum  = get_humanoid()
-    if not root or not hum then return end
-    if fly_enabled then return end
-
-    local floor = hum.FloorMaterial
-    if floor == Enum.Material.Air then return end
-
-    _jb_cooldown = true
-    root.AssemblyLinearVelocity = Vector3.new(
-        root.AssemblyLinearVelocity.X,
-        jump_power,
-        root.AssemblyLinearVelocity.Z
-    )
-    task.delay(0.5, function() _jb_cooldown = false end)
-end)
-connections[#connections+1] = _jb_conn
-
 -- UI loads from gui.lua (Mya hub init); sync runs after GUI builds _G.set_* hooks.
 _G.MYA_OP1_RUN_UI_SYNC = function()
 	task.defer(function()
@@ -714,10 +604,6 @@ _G.MYA_OP1_RUN_UI_SYNC = function()
 		if _G.set_aim_speed then _G.set_aim_speed(aim_speed) end
 		if _G.set_vis_check then _G.set_vis_check(vis_check) end
 		if _G.set_chams then _G.set_chams(chams) end
-		if _G.set_fly then _G.set_fly(fly_enabled) end
-		if _G.set_jump_boost then _G.set_jump_boost(jump_boost) end
-		if _G.set_fly_speed then _G.set_fly_speed(fly_speed) end
-		if _G.set_jump_power then _G.set_jump_power(jump_power) end
 	end)
 end
 
@@ -1074,9 +960,6 @@ end)
 -- -------------------- Unload --------------------
 _G.unload_mya = function()
     unloaded = true
-    stop_fly()
-    fly_enabled = false
-    jump_boost = false
     for _, conn in ipairs(connections) do if conn and conn.Connected then conn:Disconnect() end end
     connections = {}
     fov_circle:Remove()
@@ -1094,13 +977,10 @@ _G.unload_mya = function()
         "toggle_boxes","toggle_skeletons","toggle_tracers","toggle_healthbars","toggle_names",
         "toggle_gadgets","toggle_fullbright","toggle_aim_assist","toggle_show_fov",
         "toggle_vis_check","toggle_chams","toggle_team_check",
-        "toggle_fly","toggle_jump_boost",
         "set_boxes","set_skeletons","set_tracers","set_healthbars","set_names","set_gadgets","set_team_check",
         "set_fullbright","set_aim_assist","set_show_fov","set_vis_check",
         "set_chams",
-        "set_fly","set_jump_boost",
         "set_aim_fov","set_aim_speed","set_aim_fov_value","set_aim_speed_value","set_aim_key_value",
-        "set_fly_speed","set_fly_speed_value","set_jump_power","set_jump_power_value",
         "set_color_tracer","set_color_box","set_color_skel_vis","set_color_skel_hid",
         "set_color_fov","set_color_chams","set_color_throwable","set_color_placeable",
         "get_config","apply_config","new_menu_key","user_interface","unload_mya",

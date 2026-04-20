@@ -1,5 +1,5 @@
 --[[
-    Mya · Operation One — shared hub shell (`lib/mya_game_ui.lua`)
+    Mya · Operation One — hub shell from `lib/mya_game_ui.lua` (same defaults as Universal / Project Delta: 540×400, rose/plum theme).
 ]]
 local gethui_support = gethui ~= nil
 local cloneref_fn = type(cloneref) == "function" and cloneref or function(x)
@@ -87,7 +87,6 @@ blocker.Text = ""
 blocker.Visible = false
 blocker.Parent = ui
 
-local old_mouse_icon = uis.MouseIconEnabled
 local old_mouse_behavior = uis.MouseBehavior
 
 local current_picker_close = nil
@@ -95,48 +94,13 @@ local current_picker_close = nil
 ui:GetPropertyChangedSignal("Enabled"):Connect(function()
 	blocker.Visible = ui.Enabled
 	if ui.Enabled then
-		old_mouse_icon = uis.MouseIconEnabled
 		old_mouse_behavior = uis.MouseBehavior
-		uis.MouseIconEnabled = false
 		uis.MouseBehavior = Enum.MouseBehavior.Default
 	else
-		uis.MouseIconEnabled = old_mouse_icon
 		uis.MouseBehavior = old_mouse_behavior
 		if current_picker_close then
 			current_picker_close()
 		end
-	end
-end)
-
-local cursor = Instance.new("Frame")
-cursor.Name = "cursor"
-cursor.Size = UDim2.fromOffset(18, 18)
-cursor.AnchorPoint = Vector2.new(0.5, 0.5)
-cursor.BackgroundTransparency = 1
-cursor.ZIndex = 5000
-cursor.Visible = false
-cursor.Parent = ui
-
-local function make_cursor_segment(size, pos)
-	local f = Instance.new("Frame")
-	f.BackgroundColor3 = Color3.new(1, 1, 1)
-	f.BorderSizePixel = 0
-	f.Size = size
-	f.Position = pos
-	f.Parent = cursor
-	return f
-end
-make_cursor_segment(UDim2.new(1, 0, 0, 1), UDim2.fromScale(0, 0.5))
-make_cursor_segment(UDim2.new(0, 1, 1, 0), UDim2.fromScale(0.5, 0))
-
-game:GetService("RunService").RenderStepped:Connect(function()
-	if ui.Enabled then
-		local m = uis:GetMouseLocation()
-		cursor.Position = UDim2.fromOffset(m.X, m.Y)
-		cursor.Visible = true
-		uis.MouseIconEnabled = false
-	else
-		cursor.Visible = false
 	end
 end)
 
@@ -147,20 +111,16 @@ local shell = MyaUI.createHubShell({
 	ts = ts,
 	uis = uis,
 	titleText = "Mya  ·  Operation One",
-	tabNames = { "Combat", "Movement", "Visuals", "Misc", "Configs" },
+	tabNames = { "Combat", "Visuals", "Misc", "Configs" },
 	subPages = {
-		Combat = { "Aim Assist" },
-		Movement = { "Fly", "Jump Boost" },
+		Combat = { "Aim Assist", "Silent aim" },
 		Visuals = { "Player ESP", "Gadgets", "World" },
 	},
-	statusDefault = "Ready · Insert toggles menu",
+	statusDefault = "Ready · Insert toggles this menu",
 	discordInvite = "https://discord.gg/YeyepQG6K9",
-	winW = 360,
-	winH = 560,
 })
 
 local main = shell.main
-main.Position = UDim2.new(0.5, 80, 0.5, 0)
 
 local switch_tab = shell.switch_tab
 local tab_containers = shell.tab_containers
@@ -169,26 +129,40 @@ local make_page = shell.make_page
 
 -- -------------------- Row builders --------------------
 local function section_label(parent, text, order)
-    local lbl = Instance.new("TextLabel")
-    lbl.LayoutOrder=order; lbl.Font=Enum.Font.GothamBold
-    lbl.Text="  "..text:upper(); lbl.TextColor3=C.accent; lbl.TextSize=10
-    lbl.BackgroundTransparency=1; lbl.BorderSizePixel=0
-    lbl.Size=UDim2.new(1,0,0,22); lbl.TextXAlignment=Enum.TextXAlignment.Left
-    lbl.Parent=parent
+	local lbl = Instance.new("TextLabel")
+	lbl.LayoutOrder = order
+	lbl.Font = Enum.Font.GothamBold
+	lbl.Text = "  " .. text:upper()
+	lbl.TextColor3 = C.accent
+	lbl.TextSize = 10
+	lbl.BackgroundTransparency = 1
+	lbl.BorderSizePixel = 0
+	lbl.Size = UDim2.new(1, 0, 0, 22)
+	lbl.TextXAlignment = Enum.TextXAlignment.Left
+	lbl.Parent = parent
 end
 
 local function make_row(parent, order, h)
-    h = h or 34
-    local row = Instance.new("Frame")
-    row.LayoutOrder=order; row.BackgroundColor3=Color3.fromRGB(20,20,26)
-    row.BackgroundTransparency=0; row.BorderSizePixel=0
-    row.Size=UDim2.new(1,0,0,h); row.Parent=parent
-    local sep=Instance.new("Frame")
-    sep.BackgroundColor3=Color3.fromRGB(35,35,45); sep.BorderSizePixel=0
-    sep.Position=UDim2.new(0,0,1,-1); sep.Size=UDim2.new(1,0,0,1); sep.Parent=row
-    row.MouseEnter:Connect(function() row.BackgroundColor3=C.row_hover end)
-    row.MouseLeave:Connect(function() row.BackgroundColor3=Color3.fromRGB(20,20,26) end)
-    return row
+	h = h or 34
+	local row = Instance.new("Frame")
+	row.LayoutOrder = order
+	row.BackgroundColor3 = C.panel
+	row.BorderSizePixel = 0
+	row.Size = UDim2.new(1, 0, 0, h)
+	row.Parent = parent
+	local sep = Instance.new("Frame")
+	sep.BackgroundColor3 = THEME.border
+	sep.BorderSizePixel = 0
+	sep.Position = UDim2.new(0, 0, 1, -1)
+	sep.Size = UDim2.new(1, 0, 0, 1)
+	sep.Parent = row
+	row.MouseEnter:Connect(function()
+		row.BackgroundColor3 = C.row_hover
+	end)
+	row.MouseLeave:Connect(function()
+		row.BackgroundColor3 = C.panel
+	end)
+	return row
 end
 
 -- -------------------- Color Picker (must be defined before make_toggle_with_color) --------------------
@@ -201,9 +175,9 @@ local function bind_colorpicker_popup(display, default_color, on_change)
     drop.BackgroundColor3 = C.bg; drop.BorderSizePixel = 0
     drop.Size = UDim2.fromOffset(picker_w, picker_h); drop.Visible = false
     drop.ZIndex = 200; drop.Active = true; drop.Parent = main
-    Instance.new("UICorner", drop).CornerRadius = UDim.new(0,6)
+    Instance.new("UICorner", drop).CornerRadius = UDim.new(0, THEME.corner)
     local d_stroke = Instance.new("UIStroke", drop)
-    d_stroke.Color = Color3.fromRGB(80, 80, 100); d_stroke.Thickness = 1.5
+    d_stroke.Color = THEME.border; d_stroke.Thickness = 1.5
 
     local sv_map = Instance.new("TextButton")
     sv_map.AutoButtonColor = false; sv_map.Text = ""
@@ -251,7 +225,7 @@ local function bind_colorpicker_popup(display, default_color, on_change)
     hex_box.Size = UDim2.new(1, -20, 0, 20); hex_box.Position = UDim2.fromOffset(10, 155)
     hex_box.BackgroundColor3 = C.input_bg; hex_box.TextColor3 = C.text; hex_box.Font = Enum.Font.Gotham
     hex_box.TextSize = 11; hex_box.ClearTextOnFocus = false; hex_box.ZIndex = 10; hex_box.Parent = drop
-    Instance.new("UICorner", hex_box).CornerRadius = UDim.new(0,4)
+    Instance.new("UICorner", hex_box).CornerRadius = UDim.new(0, THEME.cornerSm)
 
     local function update_all()
         local color = Color3.fromHSV(h, s, v)
@@ -331,8 +305,8 @@ local function make_colorpicker(parent, label, order, default_color, on_change)
     display.Text = ""; display.BackgroundColor3 = default_color
     display.Position = UDim2.new(1, -40, 0.5, -9); display.Size = UDim2.fromOffset(26, 18)
     display.AutoButtonColor = false; display.ZIndex = 5
-    Instance.new("UICorner", display).CornerRadius = UDim.new(0, 4); display.Parent = row
-    Instance.new("UIStroke", display).Color = Color3.fromRGB(50, 50, 60)
+    Instance.new("UICorner", display).CornerRadius = UDim.new(0, THEME.cornerSm); display.Parent = row
+    Instance.new("UIStroke", display).Color = THEME.border
 
     return bind_colorpicker_popup(display, default_color, on_change)
 end
@@ -389,8 +363,8 @@ local function make_toggle_with_color(parent, label, order, toggle_key, default_
     display.Text = ""; display.BackgroundColor3 = default_color
     display.Position = UDim2.new(1, -80, 0.5, -9); display.Size = UDim2.fromOffset(26, 18)
     display.AutoButtonColor = false; display.ZIndex = 5
-    Instance.new("UICorner", display).CornerRadius = UDim.new(0, 4); display.Parent = row
-    Instance.new("UIStroke", display).Color = Color3.fromRGB(50, 50, 60)
+    Instance.new("UICorner", display).CornerRadius = UDim.new(0, THEME.cornerSm); display.Parent = row
+    Instance.new("UIStroke", display).Color = THEME.border
 
     local pill = Instance.new("Frame")
     pill.BackgroundColor3 = C.tog_off; pill.BorderSizePixel = 0; pill.Active = false
@@ -434,15 +408,15 @@ local function make_toggle_with_two_colors(parent, label, order, toggle_key, def
     d1.Text = ""; d1.BackgroundColor3 = def_a
     d1.Position = UDim2.new(1, -114, 0.5, -9); d1.Size = UDim2.fromOffset(26, 18)
     d1.AutoButtonColor = false; d1.ZIndex = 5
-    Instance.new("UICorner", d1).CornerRadius = UDim.new(0, 4); d1.Parent = row
-    Instance.new("UIStroke", d1).Color = Color3.fromRGB(50, 50, 60)
+    Instance.new("UICorner", d1).CornerRadius = UDim.new(0, THEME.cornerSm); d1.Parent = row
+    Instance.new("UIStroke", d1).Color = THEME.border
 
     local d2 = Instance.new("TextButton")
     d2.Text = ""; d2.BackgroundColor3 = def_b
     d2.Position = UDim2.new(1, -80, 0.5, -9); d2.Size = UDim2.fromOffset(26, 18)
     d2.AutoButtonColor = false; d2.ZIndex = 5
-    Instance.new("UICorner", d2).CornerRadius = UDim.new(0, 4); d2.Parent = row
-    Instance.new("UIStroke", d2).Color = Color3.fromRGB(50, 50, 60)
+    Instance.new("UICorner", d2).CornerRadius = UDim.new(0, THEME.cornerSm); d2.Parent = row
+    Instance.new("UIStroke", d2).Color = THEME.border
 
     local pill = Instance.new("Frame")
     pill.BackgroundColor3 = C.tog_off; pill.BorderSizePixel = 0; pill.Active = false
@@ -542,7 +516,7 @@ local function make_keybind(parent, label, order, def_key, on_bind)
     bb.Font=Enum.Font.GothamSemibold; bb.TextSize=11; bb.TextColor3=C.text
     bb.BackgroundColor3=C.input_bg; bb.BorderSizePixel=0
     bb.Position=UDim2.new(0.5,0,0.5,-10); bb.Size=UDim2.new(0.44,0,0,20)
-    Instance.new("UICorner",bb).CornerRadius=UDim.new(0,4); bb.Parent=row
+    Instance.new("UICorner",bb).CornerRadius=UDim.new(0, THEME.cornerSm); bb.Parent=row
 
     local cur=def_key; local listening=false
     local function key_label(k)
@@ -580,6 +554,90 @@ local function make_keybind(parent, label, order, def_key, on_bind)
     return bb, function(k) cur=k; bb.Text=key_label(k) end
 end
 
+local HITPART_OPTIONS = { "HumanoidRootPart", "Head", "UpperTorso", "LowerTorso", "Torso" }
+
+local function make_hitpart_dropdown(parent, order, get_fn, set_fn)
+	local wrap = Instance.new("Frame")
+	wrap.LayoutOrder = order
+	wrap.BackgroundTransparency = 1
+	wrap.Size = UDim2.new(1, 0, 0, 0)
+	wrap.AutomaticSize = Enum.AutomaticSize.Y
+	wrap.Parent = parent
+	local wrap_layout = Instance.new("UIListLayout", wrap)
+	wrap_layout.SortOrder = Enum.SortOrder.LayoutOrder
+	wrap_layout.Padding = UDim.new(0, 4)
+
+	local row = make_row(wrap, 1, 34)
+	local lbl = Instance.new("TextLabel")
+	lbl.Font = Enum.Font.Gotham
+	lbl.Text = "Hit part"
+	lbl.TextColor3 = C.text
+	lbl.TextSize = 12
+	lbl.BackgroundTransparency = 1
+	lbl.Position = UDim2.fromOffset(14, 8)
+	lbl.Size = UDim2.new(0.45, 0, 0, 18)
+	lbl.TextXAlignment = Enum.TextXAlignment.Left
+	lbl.Parent = row
+
+	local mainBtn = Instance.new("TextButton")
+	mainBtn.AutoButtonColor = false
+	mainBtn.BackgroundColor3 = C.tab_off
+	mainBtn.Font = Enum.Font.GothamSemibold
+	mainBtn.TextSize = 11
+	mainBtn.TextColor3 = C.accent
+	mainBtn.Size = UDim2.new(0.5, -20, 0, 24)
+	mainBtn.Position = UDim2.new(0.48, 0, 0.5, -12)
+	mainBtn.Parent = row
+	Instance.new("UICorner", mainBtn).CornerRadius = UDim.new(0, THEME.cornerSm)
+
+	local listWrap = Instance.new("Frame")
+	listWrap.LayoutOrder = 2
+	listWrap.BackgroundColor3 = C.panel
+	listWrap.BorderSizePixel = 0
+	listWrap.Size = UDim2.new(1, -24, 0, 0)
+	listWrap.Visible = false
+	listWrap.AutomaticSize = Enum.AutomaticSize.Y
+	listWrap.ZIndex = 5
+	listWrap.Parent = wrap
+	Instance.new("UICorner", listWrap).CornerRadius = UDim.new(0, THEME.cornerSm)
+	Instance.new("UIListLayout", listWrap).Padding = UDim.new(0, 2)
+	local pad = Instance.new("UIPadding", listWrap)
+	pad.PaddingLeft = UDim.new(0, 6)
+	pad.PaddingRight = UDim.new(0, 6)
+	pad.PaddingTop = UDim.new(0, 6)
+	pad.PaddingBottom = UDim.new(0, 6)
+
+	local function refresh()
+		mainBtn.Text = get_fn() .. "  ▼"
+	end
+
+	for i, name in ipairs(HITPART_OPTIONS) do
+		local opt = Instance.new("TextButton")
+		opt.LayoutOrder = i
+		opt.Size = UDim2.new(1, 0, 0, 26)
+		opt.BackgroundColor3 = C.tab_off
+		opt.Text = name
+		opt.Font = Enum.Font.Gotham
+		opt.TextSize = 11
+		opt.TextColor3 = C.text
+		opt.AutoButtonColor = false
+		opt.ZIndex = 6
+		Instance.new("UICorner", opt).CornerRadius = UDim.new(0, THEME.cornerSm)
+		opt.Parent = listWrap
+		opt.MouseButton1Click:Connect(function()
+			set_fn(name)
+			refresh()
+			listWrap.Visible = false
+		end)
+	end
+
+	mainBtn.MouseButton1Click:Connect(function()
+		listWrap.Visible = not listWrap.Visible
+	end)
+	refresh()
+	return refresh
+end
+
 
 -- ================================================================
 --                     COMBAT TAB
@@ -608,29 +666,41 @@ _G.set_aim_speed = function(v) aim_speed_set(v*100)   end
 -- Keybind updaters for config load
 _G.ui_set_aim_key = function(k) aim_key_update(k) end
 
+-- ---- Combat > Silent aim (Mya Universal–aligned controls)
+pg = all_sub_pages["Combat"]["Silent aim"]
+section_label(pg, "Silent aim", 1)
+make_toggle(pg, "Silent aim", 2, "toggle_silent_aim")
+local _, silent_key_update = make_keybind(pg, "Silent aim bind", 3, Enum.UserInputType.MouseButton2,
+	function(k)
+		if _G.set_silent_aim_bind_value then
+			_G.set_silent_aim_bind_value(k)
+		end
+	end)
+make_toggle(pg, "Only while bind held", 4, "toggle_silent_require_bind")
+local silent_fov_set = make_slider(pg, "Silent aim FOV", 5, 20, 400, 100, "%d px",
+	function(v)
+		if _G.set_silent_aim_fov_value then
+			_G.set_silent_aim_fov_value(v)
+		end
+	end)
+make_toggle(pg, "FOV follows cursor", 6, "toggle_silent_fov_follow")
+local upd_col_silent_fov = make_toggle_with_color(pg, "Show silent FOV ring", 7, "toggle_show_silent_fov", Color3.fromRGB(160, 120, 220),
+	function(c)
+		if _G.set_color_fov_silent then
+			_G.set_color_fov_silent(c)
+		end
+	end)
+make_toggle(pg, "Visibility check", 8, "toggle_silent_vis_check")
+make_toggle(pg, "Team check", 9, "toggle_silent_team_check")
+local refresh_silent_hitpart = make_hitpart_dropdown(pg, 10, _G.get_silent_aim_part, _G.set_silent_aim_part)
+_G.ui_refresh_silent_hitpart = refresh_silent_hitpart
 
--- ================================================================
---                     MOVEMENT TAB
--- ================================================================
-
--- ---- Movement > Fly ----
-pg = all_sub_pages["Movement"]["Fly"]
-section_label(pg, "Fly", 1)
-make_toggle(pg, "Fly",  2,  "toggle_fly")
-
-local fly_speed_set = make_slider(pg, "Fly Speed", 3, 10, 200, 50, "%d studs/s",
-    function(v) if _G.set_fly_speed_value then _G.set_fly_speed_value(v) end end)
-
--- ---- Movement > Jump Boost ----
-pg = all_sub_pages["Movement"]["Jump Boost"]
-section_label(pg, "Jump Boost", 1)
-make_toggle(pg, "Jump Boost",  2,  "toggle_jump_boost")
-
-local jump_power_set = make_slider(pg, "Jump Power", 3, 20, 200, 80, "%d",
-    function(v) if _G.set_jump_power_value then _G.set_jump_power_value(v) end end)
-
-_G.set_fly_speed  = function(v) fly_speed_set(v)  end
-_G.set_jump_power = function(v) jump_power_set(v)  end
+_G.set_silent_aim_fov = function(v)
+	silent_fov_set(v)
+end
+_G.ui_set_silent_bind = function(k)
+	silent_key_update(k)
+end
 
 
 -- ================================================================
@@ -694,14 +764,18 @@ cfg_page.Visible=true; cfg_page.Parent=tab_containers["Configs"]
 local function sync_ui_from_config(cfg)
     if cfg.aim_fov ~= nil        and _G.set_aim_fov        then _G.set_aim_fov(cfg.aim_fov)               end
     if cfg.aim_speed ~= nil      and _G.set_aim_speed      then _G.set_aim_speed(cfg.aim_speed)           end
-    if cfg.fly_speed      ~= nil and _G.set_fly_speed      then _G.set_fly_speed(cfg.fly_speed)           end
-    if cfg.jump_power     ~= nil and _G.set_jump_power     then _G.set_jump_power(cfg.jump_power)         end
+    if cfg.silent_aim_fov ~= nil and _G.set_silent_aim_fov then _G.set_silent_aim_fov(cfg.silent_aim_fov) end
     local function str_to_enum_local(s)
         if not s then return nil end
         local et,en=s:match("^(.+)%.(.+)$"); if not et then return nil end
         local ok,r=pcall(function() return Enum[et][en] end); return ok and r or nil
     end
     local ak=str_to_enum_local(cfg.aim_key);  if ak then aim_key_update(ak)  end
+    local sb=str_to_enum_local(cfg.silent_aim_bind); if sb and _G.ui_set_silent_bind then _G.ui_set_silent_bind(sb) end
+    if type(cfg.silent_aim_part) == "string" and _G.set_silent_aim_part then
+        _G.set_silent_aim_part(cfg.silent_aim_part)
+        if _G.ui_refresh_silent_hitpart then _G.ui_refresh_silent_hitpart() end
+    end
     local mk=str_to_enum_local(cfg.menu_key); if mk then menu_key_update(mk) end
     local function tc(t) if not t then return nil end return Color3.new(t.r or 1,t.g or 1,t.b or 1) end
     local c_box   =tc(cfg.color_box);        if c_box      then upd_col_box(c_box)           end
@@ -710,6 +784,7 @@ local function sync_ui_from_config(cfg)
     local c_sh    =tc(cfg.color_skel_hid);   if c_sh       then upd_col_skel_hid(c_sh)        end
     local c_ch    =tc(cfg.color_chams);      if c_ch       then upd_col_chams(c_ch)           end
     local c_fov   =tc(cfg.color_fov);        if c_fov      then upd_col_fov(c_fov)            end
+    local c_sfov  =tc(cfg.color_fov_silent); if c_sfov     then upd_col_silent_fov(c_sfov)     end
     local c_th    =tc(cfg.color_throwable);  if c_th       then upd_col_throw(c_th)           end
     local c_pl    =tc(cfg.color_placeable);  if c_pl       then upd_col_place(c_pl)           end
 end
@@ -728,7 +803,7 @@ cfg_title.TextXAlignment = Enum.TextXAlignment.Left
 local list_scroller = Instance.new("ScrollingFrame")
 list_scroller.Size = UDim2.new(1, 0, 1, -95); list_scroller.Position = UDim2.fromOffset(0, 38)
 list_scroller.BackgroundTransparency = 1; list_scroller.BorderSizePixel = 0; list_scroller.Parent = cfg_page
-list_scroller.ScrollBarThickness = 2; list_scroller.ScrollBarImageColor3 = C.accent
+list_scroller.ScrollBarThickness = 3; list_scroller.ScrollBarImageColor3 = THEME.border
 local lay = Instance.new("UIListLayout", list_scroller)
 lay.Padding = UDim.new(0, 6)
 lay.HorizontalAlignment = Enum.HorizontalAlignment.Center
@@ -746,15 +821,15 @@ local function refresh_configs()
     local function make_card(name)
         local card = Instance.new("Frame")
         card.BackgroundColor3 = C.panel
-        card.Size = UDim2.new(1, -12, 0, 60); card.Parent = list_scroller
+        card.Size = UDim2.new(1, -12, 0, 52); card.Parent = list_scroller
         card.LayoutOrder = 0
-        Instance.new("UICorner", card).CornerRadius = UDim.new(0, 6)
+        Instance.new("UICorner", card).CornerRadius = UDim.new(0, THEME.corner)
         local stroke = Instance.new("UIStroke", card)
-        stroke.Color = Color3.fromRGB(40, 40, 55)
+        stroke.Color = THEME.border
         stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
 
         card.MouseEnter:Connect(function() stroke.Color = C.accent end)
-        card.MouseLeave:Connect(function() stroke.Color = Color3.fromRGB(40, 40, 55) end)
+        card.MouseLeave:Connect(function() stroke.Color = THEME.border end)
 
         local lbl = Instance.new("TextLabel")
         lbl.Font = Enum.Font.GothamMedium
@@ -769,7 +844,7 @@ local function refresh_configs()
         local function b(txt, col, cb)
             local btn = Instance.new("TextButton")
             btn.BackgroundColor3 = C.bg; btn.Text = txt; btn.Font = Enum.Font.GothamBold; btn.TextSize = 10; btn.TextColor3 = col; btn.Size = UDim2.fromOffset(45, 28); btn.Parent = btn_row
-            Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 4)
+            Instance.new("UICorner", btn).CornerRadius = UDim.new(0, THEME.cornerSm)
             local s = Instance.new("UIStroke", btn); s.Color = col; s.Transparency = 0.3
             btn.MouseEnter:Connect(function() btn.BackgroundColor3 = col; btn.TextColor3 = Color3.new(1,1,1); s.Transparency = 0 end)
             btn.MouseLeave:Connect(function() btn.BackgroundColor3 = C.bg; btn.TextColor3 = col; s.Transparency = 0.3 end)
@@ -818,8 +893,8 @@ end
 local footer = Instance.new("Frame")
 footer.BackgroundColor3 = C.panel; footer.BorderSizePixel = 0
 footer.Size = UDim2.new(1, -12, 0, 44); footer.Position = UDim2.new(0, 6, 1, -50); footer.Parent = cfg_page
-Instance.new("UICorner", footer).CornerRadius = UDim.new(0, 6)
-local f_stroke = Instance.new("UIStroke", footer); f_stroke.Color = C.accent; f_stroke.Transparency = 0.5
+Instance.new("UICorner", footer).CornerRadius = UDim.new(0, THEME.corner)
+local f_stroke = Instance.new("UIStroke", footer); f_stroke.Color = THEME.border; f_stroke.Transparency = 0.35
 
 local cin = Instance.new("TextBox")
 cin.Font = Enum.Font.Gotham; cin.PlaceholderText = "Type new config name..."
@@ -831,7 +906,7 @@ local sbtn = Instance.new("TextButton")
 sbtn.BackgroundColor3 = C.accent; sbtn.Text = "CREATE"; sbtn.Font = Enum.Font.GothamBold
 sbtn.TextSize = 11; sbtn.TextColor3 = Color3.new(1,1,1)
 sbtn.Size = UDim2.fromOffset(75, 30); sbtn.Position = UDim2.new(1, -82, 0.5, -15); sbtn.Parent = footer
-Instance.new("UICorner", sbtn).CornerRadius = UDim.new(0, 4)
+Instance.new("UICorner", sbtn).CornerRadius = UDim.new(0, THEME.cornerSm)
 
 sbtn.MouseButton1Click:Connect(function()
     local n = cin.Text:gsub("^%s+", ""):gsub("%s+$", "")

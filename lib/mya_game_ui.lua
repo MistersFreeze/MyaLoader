@@ -178,8 +178,24 @@ function M.createHubShell(opts: { [string]: any })
 	main.Name = "main"
 	main.BackgroundColor3 = C.bg
 	main.BorderSizePixel = 0
-	main.Position = UDim2.fromScale(0.5, 0.5)
-	main.AnchorPoint = Vector2.new(0.5, 0.5)
+	local gap = typeof(opts.winEdgeGap) == "number" and opts.winEdgeGap or 12
+	local place = opts.winPlacement
+	if place == "topRight" then
+		main.AnchorPoint = Vector2.new(1, 0)
+		main.Position = UDim2.new(1, -gap, 0, gap)
+	elseif place == "topLeft" then
+		main.AnchorPoint = Vector2.new(0, 0)
+		main.Position = UDim2.new(0, gap, 0, gap)
+	elseif place == "bottomRight" then
+		main.AnchorPoint = Vector2.new(1, 1)
+		main.Position = UDim2.new(1, -gap, 1, -gap)
+	elseif place == "bottomLeft" then
+		main.AnchorPoint = Vector2.new(0, 1)
+		main.Position = UDim2.new(0, gap, 1, -gap)
+	else
+		main.AnchorPoint = Vector2.new(0.5, 0.5)
+		main.Position = UDim2.fromScale(0.5, 0.5)
+	end
 	main.Size = UDim2.fromOffset(WIN_W, WIN_H)
 	main.Parent = ui
 	Instance.new("UICorner", main).CornerRadius = UDim.new(0, THEME.corner)

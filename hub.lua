@@ -591,7 +591,12 @@ return function(BASE_URL: string, config: { [string]: any })
 	makeCategoryLabel("UNIVERSAL")
 	local universalPage = makeTab("myauniversal", "Mya Universal")
 	local dumperPage = makeTab("dumper", "Dumper")
+	local antivcPage = makeTab("antivcban", "Anti VC Ban")
 	yieldFrames(2)
+
+	-- External script (not hosted in this repo); credit: discord.gg/bxUtg5QkPF
+	local ANTIVC_BAN_SCRIPT_URL = "https://raw.githubusercontent.com/FizzyVR1234/ScriptsByFizzy/refs/heads/main/antivcban.lua"
+	local ANTIVC_BAN_CREDIT_URL = "https://discord.gg/bxUtg5QkPF"
 
 	local homeScroll = UI.scroll(homePage)
 	homeScroll.Size = UDim2.new(1, 0, 1, 0)
@@ -623,6 +628,8 @@ return function(BASE_URL: string, config: { [string]: any })
 		[110400717151509] = "Neighbors",
 		[12699642568] = "Neighbors",
 		[18667984660] = "Flex Your FPS",
+		[112399855119586] = "Corner",
+		[15546218972] = "Corner",
 	}
 	local gamesCatalog = Instance.new("Frame")
 	gamesCatalog.BackgroundTransparency = 1
@@ -737,6 +744,55 @@ return function(BASE_URL: string, config: { [string]: any })
 				notify("Dumper started")
 			end
 		end)
+	end)
+	task.wait()
+
+	local antivcScroll = UI.scroll(antivcPage)
+	antivcScroll.Size = UDim2.new(1, 0, 1, 0)
+	local antivcCard = UI.panel(antivcScroll)
+	antivcCard.Size = UDim2.new(1, -4, 0, 0)
+	UI.label(antivcCard, "Anti VC Ban", 18, false)
+	UI.label(
+		antivcCard,
+		"Loads the anti voice-chat ban script from GitHub (FizzyVR). Run once per session if you use it.",
+		14,
+		true
+	)
+	UI.label(antivcCard, "Credits: discord.gg/bxUtg5QkPF", 14, true)
+	UI.primaryButton(antivcCard, "Launch Anti VC Ban", function()
+		notify("Downloading Anti VC Ban…")
+		local src, herr = Util.httpGet(ANTIVC_BAN_SCRIPT_URL)
+		if not src then
+			notify("Anti VC Ban download failed: " .. tostring(herr))
+			return
+		end
+		local fn, cerr = Util.loadstringCompile(src, "antivcban.lua")
+		if not fn then
+			notify("Anti VC Ban compile failed: " .. tostring(cerr))
+			return
+		end
+		task.spawn(function()
+			local ok, err = pcall(fn)
+			if not ok then
+				notify("Anti VC Ban error: " .. tostring(err))
+			else
+				notify("Anti VC Ban started")
+			end
+		end)
+	end)
+	UI.primaryButton(antivcCard, "Copy Discord invite", function()
+		local ok = pcall(function()
+			if typeof(setclipboard) == "function" then
+				setclipboard(ANTIVC_BAN_CREDIT_URL)
+			else
+				error("setclipboard unavailable")
+			end
+		end)
+		if ok then
+			notify("Copied " .. ANTIVC_BAN_CREDIT_URL)
+		else
+			notify("Discord: " .. ANTIVC_BAN_CREDIT_URL)
+		end
 	end)
 	task.wait()
 

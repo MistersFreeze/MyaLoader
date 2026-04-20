@@ -9,12 +9,10 @@ end)
 -- -------------------- Unload --------------------
 _G.unload_mya = function()
     unloaded = true
-    stop_fly()
-    fly_enabled = false
-    jump_boost = false
     for _, conn in ipairs(connections) do if conn and conn.Connected then conn:Disconnect() end end
     connections = {}
     fov_circle:Remove()
+    fov_circle_silent:Remove()
     for character, data in pairs(esp_list) do
         remove_drawings(character); remove_skeleton(character); remove_chams(character)
         if data.folder then data.folder:Destroy() end
@@ -25,19 +23,24 @@ _G.unload_mya = function()
     apply_fullbright(false)
     if screen_gui        then screen_gui:Destroy()        end
     if _G.user_interface then _G.user_interface:Destroy() end
+    _G.MYA_SILENT_AIM_HOOK_OK = nil
     for _, k in ipairs({
         "toggle_boxes","toggle_skeletons","toggle_tracers","toggle_healthbars","toggle_names",
         "toggle_gadgets","toggle_fullbright","toggle_aim_assist","toggle_show_fov",
+        "toggle_silent_aim","toggle_show_silent_fov","toggle_silent_fov_follow",
+        "toggle_silent_require_bind","toggle_silent_vis_check","toggle_silent_team_check",
         "toggle_vis_check","toggle_chams","toggle_team_check",
-        "toggle_fly","toggle_jump_boost",
         "set_boxes","set_skeletons","set_tracers","set_healthbars","set_names","set_gadgets","set_team_check",
-        "set_fullbright","set_aim_assist","set_show_fov","set_vis_check",
+        "set_fullbright","set_aim_assist","set_show_fov",
+        "set_silent_aim","set_show_silent_fov","set_silent_fov_follow",
+        "set_silent_require_bind","set_silent_vis_check","set_silent_team_check","set_vis_check",
         "set_chams",
-        "set_fly","set_jump_boost",
         "set_aim_fov","set_aim_speed","set_aim_fov_value","set_aim_speed_value","set_aim_key_value",
-        "set_fly_speed","set_fly_speed_value","set_jump_power","set_jump_power_value",
+        "set_silent_aim_fov","set_silent_aim_fov_value","set_silent_aim_bind_value",
+        "get_silent_aim_part","set_silent_aim_part",
+        "ui_set_silent_bind","ui_refresh_silent_hitpart",
         "set_color_tracer","set_color_box","set_color_skel_vis","set_color_skel_hid",
-        "set_color_fov","set_color_chams","set_color_throwable","set_color_placeable",
+        "set_color_fov","set_color_fov_silent","set_color_chams","set_color_throwable","set_color_placeable",
         "get_config","apply_config","new_menu_key","user_interface","unload_mya",
         "ui_set_aim_key","ui_set_menu_key",
     }) do _G[k] = nil end

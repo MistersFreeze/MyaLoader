@@ -14,6 +14,42 @@ end
 _G.toggle_aim_assist = function() aim_assist = not aim_assist; if _G.set_aim_assist then _G.set_aim_assist(aim_assist) end end
 _G.toggle_show_fov   = function() show_fov_circle = not show_fov_circle; if _G.set_show_fov then _G.set_show_fov(show_fov_circle) end end
 _G.toggle_vis_check  = function() vis_check = not vis_check; if _G.set_vis_check then _G.set_vis_check(vis_check) end end
+_G.toggle_silent_aim = function()
+	silent_aim_on = not silent_aim_on
+	if _G.set_silent_aim then
+		_G.set_silent_aim(silent_aim_on)
+	end
+end
+_G.toggle_show_silent_fov = function()
+	show_silent_aim_fov_circle = not show_silent_aim_fov_circle
+	if _G.set_show_silent_fov then
+		_G.set_show_silent_fov(show_silent_aim_fov_circle)
+	end
+end
+_G.toggle_silent_fov_follow = function()
+	silent_aim_fov_follow_cursor = not silent_aim_fov_follow_cursor
+	if _G.set_silent_fov_follow then
+		_G.set_silent_fov_follow(silent_aim_fov_follow_cursor)
+	end
+end
+_G.toggle_silent_require_bind = function()
+	silent_aim_require_bind = not silent_aim_require_bind
+	if _G.set_silent_require_bind then
+		_G.set_silent_require_bind(silent_aim_require_bind)
+	end
+end
+_G.toggle_silent_vis_check = function()
+	silent_aim_vis_check_on = not silent_aim_vis_check_on
+	if _G.set_silent_vis_check then
+		_G.set_silent_vis_check(silent_aim_vis_check_on)
+	end
+end
+_G.toggle_silent_team_check = function()
+	silent_aim_team_check_on = not silent_aim_team_check_on
+	if _G.set_silent_team_check then
+		_G.set_silent_team_check(silent_aim_team_check_on)
+	end
+end
 _G.toggle_chams = function()
     chams = not chams
     if not chams then
@@ -23,19 +59,23 @@ _G.toggle_chams = function()
 end
 
 
-_G.toggle_fly         = function() fly_enabled = not fly_enabled; if _G.set_fly then _G.set_fly(fly_enabled) end end
-_G.toggle_jump_boost  = function() jump_boost = not jump_boost; if _G.set_jump_boost then _G.set_jump_boost(jump_boost) end end
-
 -- Value setters (called by sliders)
 _G.set_aim_fov_value        = function(v) aim_fov        = v end
 _G.set_aim_speed_value      = function(v) aim_speed      = v end
 _G.set_aim_key_value        = function(v) aim_key        = v end
-_G.set_fly_speed_value      = function(v) fly_speed      = v end
-_G.set_jump_power_value     = function(v) jump_power     = v end
+_G.set_silent_aim_fov_value = function(v) silent_aim_fov = v end
+_G.set_silent_aim_bind_value = function(v) silent_aim_bind = v end
+_G.get_silent_aim_part = function()
+	return silent_aim_part
+end
+_G.set_silent_aim_part = function(name)
+	silent_aim_part = Combat.parse_hit_part({ silent_aim_part = name }, "silent_aim_part", "HumanoidRootPart")
+end
 
 -- Color setters (called by color pickers & config loader)
 local function refresh_esp_colors()
     fov_circle.Color        = color_fov_circle
+    fov_circle_silent.Color = color_fov_silent
     for _, data in pairs(esp_list) do
         if data.stroke then data.stroke.Color = color_box    end
         if data.tracer then data.tracer.Color  = color_tracer end
@@ -47,6 +87,7 @@ _G.set_color_box        = function(c) color_box        = c; refresh_esp_colors()
 _G.set_color_skel_vis   = function(c) color_skel_vis   = c end
 _G.set_color_skel_hid   = function(c) color_skel_hid   = c end
 _G.set_color_fov        = function(c) color_fov_circle = c; refresh_esp_colors() end
+_G.set_color_fov_silent = function(c) color_fov_silent = c; refresh_esp_colors() end
 _G.set_color_chams      = function(c)
     color_chams = c
     for _, hl in pairs(chams_list) do hl.FillColor = c; hl.OutlineColor = c end
@@ -87,13 +128,20 @@ _G.get_config = function()
         names = names, gadgets = gadgets, team_check = team_check,
         fullbright = fullbright, aim_assist = aim_assist, show_fov_circle = show_fov_circle,
         vis_check = vis_check,
+        silent_aim_on = silent_aim_on,
+        show_silent_aim_fov_circle = show_silent_aim_fov_circle,
+        silent_aim_fov_follow_cursor = silent_aim_fov_follow_cursor,
+        silent_aim_require_bind = silent_aim_require_bind,
+        silent_aim_vis_check_on = silent_aim_vis_check_on,
+        silent_aim_team_check_on = silent_aim_team_check_on,
+        silent_aim_part = silent_aim_part,
         chams = chams,
-        fly_enabled = fly_enabled, jump_boost = jump_boost,
         -- values
         aim_fov = aim_fov, aim_speed = aim_speed,
-        fly_speed = fly_speed, jump_power = jump_power,
+        silent_aim_fov = silent_aim_fov,
         -- keybinds (serialised as strings)
         aim_key        = enum_to_str(aim_key),
+        silent_aim_bind = enum_to_str(silent_aim_bind),
         menu_key       = enum_to_str(menu_key),
         -- colors
         color_tracer     = color_to_t(color_tracer),
@@ -101,6 +149,7 @@ _G.get_config = function()
         color_skel_vis   = color_to_t(color_skel_vis),
         color_skel_hid   = color_to_t(color_skel_hid),
         color_fov        = color_to_t(color_fov_circle),
+        color_fov_silent = color_to_t(color_fov_silent),
         color_chams      = color_to_t(color_chams),
         color_throwable  = color_to_t(color_throwable),
         color_placeable  = color_to_t(color_placeable),
@@ -124,21 +173,42 @@ _G.apply_config = function(cfg)
     if cfg.aim_assist     ~= nil and cfg.aim_assist     ~= aim_assist     then _G.toggle_aim_assist()      end
     if cfg.show_fov_circle ~= nil and cfg.show_fov_circle ~= show_fov_circle then _G.toggle_show_fov()    end
     if cfg.vis_check      ~= nil and cfg.vis_check      ~= vis_check      then _G.toggle_vis_check()       end
+    do
+        local want_on = cfg.silent_aim_on
+        if want_on == nil then want_on = cfg.silent_aim end
+        if want_on ~= nil and want_on ~= silent_aim_on then _G.toggle_silent_aim() end
+    end
+    do
+        local want_ring = cfg.show_silent_aim_fov_circle
+        if want_ring == nil then want_ring = cfg.show_silent_fov_circle end
+        if want_ring ~= nil and want_ring ~= show_silent_aim_fov_circle then _G.toggle_show_silent_fov() end
+    end
+    if cfg.silent_aim_fov_follow_cursor ~= nil and cfg.silent_aim_fov_follow_cursor ~= silent_aim_fov_follow_cursor then _G.toggle_silent_fov_follow() end
+    if cfg.silent_aim_require_bind ~= nil and cfg.silent_aim_require_bind ~= silent_aim_require_bind then _G.toggle_silent_require_bind() end
+    do
+        local want_vis = cfg.silent_aim_vis_check_on
+        if want_vis == nil then want_vis = cfg.silent_aim_vis_check end
+        if want_vis ~= nil and want_vis ~= silent_aim_vis_check_on then _G.toggle_silent_vis_check() end
+    end
+    if cfg.silent_aim_team_check_on ~= nil and cfg.silent_aim_team_check_on ~= silent_aim_team_check_on then _G.toggle_silent_team_check() end
     if cfg.chams          ~= nil and cfg.chams          ~= chams          then _G.toggle_chams()           end
-    if cfg.fly_enabled    ~= nil and cfg.fly_enabled    ~= fly_enabled    then _G.toggle_fly()             end
-    if cfg.jump_boost     ~= nil and cfg.jump_boost     ~= jump_boost     then _G.toggle_jump_boost()      end
 
     -- Sliders
     if cfg.aim_fov       ~= nil then aim_fov       = cfg.aim_fov;       if _G.set_aim_fov       then _G.set_aim_fov(aim_fov)             end end
     if cfg.aim_speed     ~= nil then aim_speed     = cfg.aim_speed;     if _G.set_aim_speed     then _G.set_aim_speed(aim_speed)         end end
-    if cfg.fly_speed     ~= nil then fly_speed     = cfg.fly_speed;     if _G.set_fly_speed     then _G.set_fly_speed(fly_speed)         end end
-    if cfg.jump_power    ~= nil then jump_power    = cfg.jump_power;    if _G.set_jump_power    then _G.set_jump_power(jump_power)       end end
+    if cfg.silent_aim_fov ~= nil then silent_aim_fov = cfg.silent_aim_fov; if _G.set_silent_aim_fov then _G.set_silent_aim_fov(silent_aim_fov) end end
 
     -- Keybinds
     local ak = str_to_enum(cfg.aim_key)
     if ak then aim_key  = ak; if _G.ui_set_aim_key  then _G.ui_set_aim_key(ak)   end end
+    local sb = str_to_enum(cfg.silent_aim_bind)
+    if sb then silent_aim_bind = sb; if _G.ui_set_silent_bind then _G.ui_set_silent_bind(sb) end end
     local mk = str_to_enum(cfg.menu_key)
     if mk then menu_key = mk; if _G.ui_set_menu_key then _G.ui_set_menu_key(mk)  end end
+    if cfg.silent_aim_part ~= nil and type(cfg.silent_aim_part) == "string" and _G.set_silent_aim_part then
+        _G.set_silent_aim_part(cfg.silent_aim_part)
+        if _G.ui_refresh_silent_hitpart then _G.ui_refresh_silent_hitpart() end
+    end
 
     -- Colors
     local function ac(key, setter)
@@ -149,6 +219,7 @@ _G.apply_config = function(cfg)
     ac("color_skel_vis",   _G.set_color_skel_vis)
     ac("color_skel_hid",   _G.set_color_skel_hid)
     ac("color_fov",        _G.set_color_fov)
+    ac("color_fov_silent", _G.set_color_fov_silent)
     ac("color_chams",      _G.set_color_chams)
     ac("color_throwable",  _G.set_color_throwable)
     ac("color_placeable",  _G.set_color_placeable)

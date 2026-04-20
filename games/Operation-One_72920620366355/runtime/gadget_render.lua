@@ -34,8 +34,8 @@ connections[#connections+1] = runservice.RenderStepped:Connect(function()
 
     if _G.new_menu_key then menu_key = _G.new_menu_key; _G.new_menu_key = nil end
 
-    -- FOV circles
-    if show_fov_circle then
+    -- FOV circles (only while the matching feature is on)
+    if aim_assist and show_fov_circle then
         local vp = camera.ViewportSize
         fov_circle.Position = Vector2.new(vp.X/2, vp.Y/2)
         fov_circle.Radius   = aim_fov
@@ -43,6 +43,17 @@ connections[#connections+1] = runservice.RenderStepped:Connect(function()
         fov_circle.Visible  = true
     else
         fov_circle.Visible = false
+    end
+
+    if silent_aim_on and show_silent_aim_fov_circle then
+        local vp = camera.ViewportSize
+        local anchor = silent_aim_fov_follow_cursor and uis:GetMouseLocation() or Vector2.new(vp.X / 2, vp.Y / 2)
+        fov_circle_silent.Position = anchor
+        fov_circle_silent.Radius = silent_aim_fov
+        fov_circle_silent.Color = color_fov_silent
+        fov_circle_silent.Visible = true
+    else
+        fov_circle_silent.Visible = false
     end
 
     -- -- Aim Assist --
@@ -148,7 +159,7 @@ connections[#connections+1] = runservice.RenderStepped:Connect(function()
 
         update_chams(character)
 
-        if not skeleton_list[character] and aim_assist then
+        if not skeleton_list[character] and (aim_assist or silent_aim_on) then
             create_skeleton(character)
         end
 

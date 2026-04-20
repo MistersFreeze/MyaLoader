@@ -17,6 +17,8 @@ return {
 		[110400717151509] = "games/Neighbors_110400717151509/init.lua",
 		[12699642568] = "games/Neighbors_110400717151509/init.lua",
 		[18667984660] = "games/FlexYourFPS_18667984660/init.lua",
+		[112399855119586] = "games/MicUp_15546218972/init.lua",
+		[15546218972] = "games/MicUp_15546218972/init.lua",
 	},
 
 	THEME = {

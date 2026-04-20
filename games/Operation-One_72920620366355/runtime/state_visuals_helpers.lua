@@ -13,11 +13,6 @@ local gadgets         = false
 local fullbright      = false
 local aim_assist      = false
 local chams           = false
-local fly_enabled     = false
-local jump_boost      = false
-
-local fly_speed       = 50         -- studs/sec
-local jump_power      = 80         -- upward velocity
 
 local aim_fov         = 120        -- pixels radius
 local aim_speed       = 0.25       -- 0.0 (slow) -> 0.99 (fast) -> 1.0 (instant snap)
@@ -25,12 +20,24 @@ local aim_key         = Enum.UserInputType.MouseButton2
 local show_fov_circle = false
 local vis_check       = false      -- false = track through walls, true = visible only
 
+-- Silent aim — state names match Mya Universal (silent_aim.lua + exports)
+local silent_aim_on = false
+local silent_aim_fov = 100
+local silent_aim_fov_follow_cursor = false
+local silent_aim_require_bind = false
+local silent_aim_bind = Enum.UserInputType.MouseButton2
+local silent_aim_vis_check_on = true
+local silent_aim_team_check_on = true
+local show_silent_aim_fov_circle = false
+local silent_aim_part = Combat.parse_hit_part(nil, "silent_aim_part", "HumanoidRootPart")
+
 -- Customisable colors (overridable from UI/config)
 local color_tracer     = Color3.new(1, 1, 1)
 local color_box        = Color3.new(1, 1, 1)
 local color_skel_vis   = Color3.fromRGB(0, 255, 0)
 local color_skel_hid   = Color3.new(1, 1, 1)
 local color_fov_circle = Color3.new(1, 1, 1)
+local color_fov_silent = Color3.fromRGB(160, 120, 220)
 local color_chams      = Color3.fromRGB(255, 50, 50)
 local color_throwable  = Color3.fromRGB(255, 60, 60)
 local color_placeable  = Color3.fromRGB(255, 170, 0)
@@ -52,6 +59,12 @@ local collection   = cloneref_support and cloneref(game:GetService("CollectionSe
 local lighting_svc = game:GetService("Lighting")
 
 local local_player = players.LocalPlayer
+
+-- Mya Universal silent aim service aliases (silent_aim.lua)
+local Players = players
+local lp = local_player
+local RunService = runservice
+local UserInputService = uis
 
 local StateObject = nil
 pcall(function()
@@ -262,6 +275,11 @@ local fov_circle = Drawing.new("Circle")
 fov_circle.Visible = false; fov_circle.Color = color_fov_circle
 fov_circle.Thickness = 1; fov_circle.Transparency = 1
 fov_circle.Filled = false; fov_circle.NumSides = 64
+
+local fov_circle_silent = Drawing.new("Circle")
+fov_circle_silent.Visible = false; fov_circle_silent.Color = color_fov_silent
+fov_circle_silent.Thickness = 1; fov_circle_silent.Transparency = 1
+fov_circle_silent.Filled = false; fov_circle_silent.NumSides = 64
 
 -- -------------------- Drawing helpers --------------------
 local function remove_drawings(character)
