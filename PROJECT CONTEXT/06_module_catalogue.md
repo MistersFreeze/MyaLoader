@@ -41,6 +41,14 @@ Games live under **`games/`**. **Place-specific** modules are listed in **`confi
 - **Features:** Sliders — **FPS × 1–15**, **Ping × 0.1–10**, **Resolution × 0.1–10** (billboard `WxH` text when a matching label exists + **`settings().Rendering.QualityLevel`**); local FPS from **PreRender** counter; ping from **`Player:GetNetworkPing()`** (seconds → ms). Toggle to pause flex; **Insert** menu; **Unload** → **`_G.unload_mya`**.
 - **Teardown:** **`_G.unload_mya`**.
 
+## `games/PrisonLife_155615604/`
+
+- **PlaceId:** `155615604` (Prison Life).
+- **Entry:** `init.lua` (registered in `config.lua`). Config merge: **`getgenv().MYA_PRISON_LIFE_CONFIG`** (or **`MYA_UNIVERSAL_CONFIG`**) over **`config.lua`** defaults.
+- **Pattern:** Same bundle style as Mya Universal — **`runtime.lua`** prepends **`lib/mya_combat_helpers.lua`** as **`Combat`**, concatenates **`runtime/*.lua`**, then **`gui.lua`** (`lib/mya_game_ui.lua`).
+- **Game-specific:** Prison Life exposes **`Teams.Inmates`**, **`Teams.Guards`**, **`Teams.Criminals`**. Separate **Prisoner check** toggles (Inmates team) under **Aim assist**, **Silent aim**, and **Visuals → ESP**, independent of team check. Triggerbot follows aim assist targeting. **Movement → Car flight**: bind + speed slider; applies **`BodyVelocity`** to the vehicle model while seated in a **`VehicleSeat`**. Legacy config key **`pl_skip_inmates = true`** still maps all three prisoner checks on when the per-mode keys are omitted.
+- **Teardown:** **`_G.unload_mya_universal`**.
+
 ## `games/_template.lua`
 
 - **Purpose:** Copy starter for new modules (not loaded unless you register it in config).

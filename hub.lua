@@ -1,5 +1,5 @@
 --[[
-  Hub UI: loads lib via HttpGet, builds window, mounts per-game module by PlaceId.
+  Hub UI: loads lib via HttpGet, builds window; per-game modules load from the Games tab or via autoload (config.AUTOLOAD_GAME_MODULE).
   Invoked as: loadstring(src)()(BASE_URL, config)
   Local dev: set getgenv().MYA_LOCAL_ROOT to your repo path before running hub (see loader_local.lua).
 ]]
@@ -375,7 +375,7 @@ return function(BASE_URL: string, config: { [string]: any })
 	statusBar.Size = UDim2.new(1, -20, 0, 26)
 	statusBar.Parent = body
 	UI.corner(statusBar)
-	local statusLabel = UI.label(statusBar, "Ready · Insert hides or shows the hub", 13, true)
+	local statusLabel = UI.label(statusBar, "Ready · press Insert anytime to hide or bring this window back", 13, true)
 	statusLabel.Position = UDim2.new(0, 10, 0, 0)
 	statusLabel.Size = UDim2.new(1, -20, 1, 0)
 	statusLabel.TextYAlignment = Enum.TextYAlignment.Center
@@ -606,7 +606,7 @@ return function(BASE_URL: string, config: { [string]: any })
 	UI.label(homeCard, "Welcome to " .. config.BRAND, 18, false)
 	UI.label(
 		homeCard,
-		"Use the Games tab to see support status for the current experience.",
+		"Peek at the Games tab whenever you want to check if this experience has its own script — from there you can load it once everything looks good.",
 		14,
 		true
 	)
@@ -630,6 +630,7 @@ return function(BASE_URL: string, config: { [string]: any })
 		[18667984660] = "Flex Your FPS",
 		[112399855119586] = "Corner",
 		[15546218972] = "Corner",
+		[155615604] = "Prison Life",
 	}
 	local gamesCatalog = Instance.new("Frame")
 	gamesCatalog.BackgroundTransparency = 1
@@ -641,22 +642,40 @@ return function(BASE_URL: string, config: { [string]: any })
 	catalogLayout.SortOrder = Enum.SortOrder.LayoutOrder
 	catalogLayout.Padding = UDim.new(0, 6)
 	catalogLayout.Parent = gamesCatalog
-	UI.label(gamesCatalog, "Supported games", 16, false)
-	local supportedIds = {}
-	for id in pairs(config.SUPPORTED_GAMES or {}) do
-		table.insert(supportedIds, id)
-	end
-	table.sort(supportedIds)
-	for _, id in ipairs(supportedIds) do
-		local name = GAME_DISPLAY_NAMES[id]
-		if not name then
-			local path = (config.SUPPORTED_GAMES or {})[id]
-			name = if typeof(path) == "string" then path else "Unknown"
+	UI.label(gamesCatalog, "Games we’ve got modules for", 16, false)
+	-- One row per module path; multiple PlaceIds that share the same script are merged.
+	local byPath: { [string]: { number } } = {}
+	for id, scriptPath in pairs(config.SUPPORTED_GAMES or {}) do
+		local key = if typeof(scriptPath) == "string" then scriptPath else "?"
+		if not byPath[key] then
+			byPath[key] = {}
 		end
-		UI.label(gamesCatalog, name .. " — PlaceId " .. tostring(id), 14, true)
+		table.insert(byPath[key], id)
 	end
-	if #supportedIds == 0 then
-		UI.label(gamesCatalog, "No games listed in hub config yet.", 14, true)
+	local pathsList = {}
+	for p in pairs(byPath) do
+		table.insert(pathsList, p)
+	end
+	table.sort(pathsList)
+	for _, pathKey in ipairs(pathsList) do
+		local ids = byPath[pathKey]
+		table.sort(ids)
+		local id0 = ids[1]
+		local name = GAME_DISPLAY_NAMES[id0]
+		if not name then
+			name = pathKey
+		end
+		local idsText = {}
+		for _, pid in ipairs(ids) do
+			table.insert(idsText, tostring(pid))
+		end
+		local placeClause = if #ids == 1
+			then ("PlaceId " .. idsText[1])
+			else ("PlaceIds " .. table.concat(idsText, ", "))
+		UI.label(gamesCatalog, name .. " — " .. placeClause, 14, true)
+	end
+	if #pathsList == 0 then
+		UI.label(gamesCatalog, "Nothing listed here yet — add games in config when you’re ready.", 14, true)
 	end
 	yieldFrames(2)
 
@@ -665,7 +684,7 @@ return function(BASE_URL: string, config: { [string]: any })
 	gamePanel.BackgroundTransparency = 1
 	gamePanel.Size = UDim2.new(1, 0, 0, 0)
 	gamePanel.AutomaticSize = Enum.AutomaticSize.Y
-	gamePanel.LayoutOrder = 2
+	gamePanel.LayoutOrder = 3
 	gamePanel.Parent = gamesCard
 
 	local gameLayout = Instance.new("UIListLayout")
@@ -680,11 +699,11 @@ return function(BASE_URL: string, config: { [string]: any })
 	UI.label(universalCard, "Mya Universal", 18, false)
 	UI.label(
 		universalCard,
-		"Works in any experience: ESP highlights, aim assist (hold RMB), fly, noclip, walk speed, and jump power. Uses a small in-game menu (Insert).",
+		"This one tags along to almost any game: outlines so you see people easier, gentler aim help while you hold right-click, quieter aim tricks on the side, flight, walking through walls, bumping walk speed or jump — that sort of thing. There’s a tiny menu tucked behind Insert whenever you want it out of the way.",
 		14,
 		true
 	)
-	UI.primaryButton(universalCard, "Launch Mya Universal", function()
+	local function tryMountMyaUniversal()
 		notify("Loading Mya Universal…")
 		local url = BASE_URL .. "games/MyaUniversal/init.lua"
 		local mod, err = Util.loadModuleFromUrl(url, "games/MyaUniversal/init.lua")
@@ -709,6 +728,9 @@ return function(BASE_URL: string, config: { [string]: any })
 			return
 		end
 		notify("Mya Universal active · Insert for menu")
+	end
+	UI.primaryButton(universalCard, "Launch Mya Universal", function()
+		tryMountMyaUniversal()
 	end)
 	task.wait()
 
@@ -719,7 +741,7 @@ return function(BASE_URL: string, config: { [string]: any })
 	UI.label(dumperCard, "Pro Script Dumper", 18, false)
 	UI.label(
 		dumperCard,
-		"Decompiles LocalScripts and ModuleScripts to files under workspace/Pro Script Dumper. Requires executor APIs (decompile, writefile, …). Uses an external Material UI library when launched.",
+		"Pulls LocalScripts and ModuleScripts out of whatever you’re playing and drops them into a tidy folder in your executor’s workspace — you’ll want the heavy-duty toys (decompile, write to disk, the works). The window matches the rest of Mya, and there’s an unload when you’re finished. Tip of the hat to zzerexx for the original Pro Script Dumper.",
 		14,
 		true
 	)
@@ -731,13 +753,23 @@ return function(BASE_URL: string, config: { [string]: any })
 			notify("Dumper download failed: " .. tostring(herr))
 			return
 		end
+		do
+			local trimmed = src:match("^%s*(.-)%s*$") or src
+			local head = string.lower(string.sub(trimmed, 1, 24))
+			if string.sub(trimmed, 1, 1) == "<" or string.find(head, "<!doctype", 1, true) or string.find(head, "<html", 1, true) then
+				notify(
+					"Dumper: host returned HTML instead of Lua (often private repo or wrong BASE_URL). Open BASE_URL/universal/dumper.lua in a browser - you should see plain Lua source."
+				)
+				return
+			end
+		end
 		local fn, cerr = Util.loadstringCompile(src, "universal/dumper.lua")
 		if not fn then
 			notify("Dumper compile failed: " .. tostring(cerr))
 			return
 		end
 		task.spawn(function()
-			local ok, err = pcall(fn)
+			local ok, err = pcall(fn, BASE_URL)
 			if not ok then
 				notify("Dumper error: " .. tostring(err))
 			else
@@ -754,7 +786,7 @@ return function(BASE_URL: string, config: { [string]: any })
 	UI.label(antivcCard, "Anti VC Ban", 18, false)
 	UI.label(
 		antivcCard,
-		"Loads the anti voice-chat ban script from GitHub (FizzyVR). Run once per session if you use it.",
+		"If you rely on voice chat, this is a small helper from an outside repo — run it once each session if it helps you out. Keep your mic on so it can actually do its job.",
 		14,
 		true
 	)
@@ -803,7 +835,7 @@ return function(BASE_URL: string, config: { [string]: any })
 	UI.label(creditsCard, "Credits", 18, false)
 	UI.label(
 		creditsCard,
-		"Mya is maintained by the people below",
+		"These folks keep Mya going:",
 		14,
 		true
 	)
@@ -861,6 +893,9 @@ return function(BASE_URL: string, config: { [string]: any })
 
 	local function tryMountGame()
 		yieldFrames(2)
+		if not gui or not gui.Parent then
+			return
+		end
 		clearGameMount()
 		if not gamePath then
 			supportTitle.Text = "Unsupported experience"
@@ -915,12 +950,75 @@ return function(BASE_URL: string, config: { [string]: any })
 		closeHubAfterGameLoad()
 	end
 
-	placeIdConn = game:GetPropertyChangedSignal("PlaceId"):Connect(function()
-		placeId = game.PlaceId
-		placeLabel.Text = "PlaceId: " .. tostring(placeId)
+	local loadGameBtn = UI.primaryButton(gamesCard, "Load game module", function()
+		tryMountGame()
+	end)
+	loadGameBtn.LayoutOrder = 2
+	loadGameBtn.Visible = false
+
+	local function syncGameTabForPlace()
 		supported = config.SUPPORTED_GAMES or {}
 		gamePath = supported[placeId]
-		tryMountGame()
+		if not gamePath then
+			supportTitle.Text = "Unsupported experience"
+			loadGameBtn.Visible = false
+		else
+			supportTitle.Text = "Supported · " .. gamePath
+			loadGameBtn.Visible = true
+		end
+	end
+
+	-- Prevents double autoload when PlaceId fires (e.g. 0 → real) and the deferred initial sync both run.
+	local pendingAutoloadPlaceId: number? = nil
+	local pendingUniversalAutoload = false
+
+	local function maybeAutoloadFromConfig()
+		local g = typeof(getgenv) == "function" and getgenv() or nil
+		local autoGame = config.AUTOLOAD_GAME_MODULE
+		if g and g.MYA_AUTOLOAD_GAME_MODULE ~= nil then
+			autoGame = g.MYA_AUTOLOAD_GAME_MODULE
+		end
+		if autoGame ~= false then
+			local gp = (config.SUPPORTED_GAMES or {})[placeId]
+			if gp then
+				if pendingAutoloadPlaceId == placeId then
+					return
+				end
+				pendingAutoloadPlaceId = placeId
+				task.defer(function()
+					pcall(tryMountGame)
+					pendingAutoloadPlaceId = nil
+				end)
+				return
+			end
+		end
+		local autoUni = config.AUTOLOAD_MYA_UNIVERSAL_WHEN_UNSUPPORTED
+		if g and g.MYA_AUTOLOAD_MYA_UNIVERSAL_WHEN_UNSUPPORTED ~= nil then
+			autoUni = g.MYA_AUTOLOAD_MYA_UNIVERSAL_WHEN_UNSUPPORTED
+		end
+		if autoUni == true then
+			local gp = (config.SUPPORTED_GAMES or {})[placeId]
+			if not gp then
+				if pendingUniversalAutoload then
+					return
+				end
+				pendingUniversalAutoload = true
+				task.defer(function()
+					pcall(tryMountMyaUniversal)
+					pendingUniversalAutoload = false
+				end)
+			end
+		end
+	end
+
+	placeIdConn = game:GetPropertyChangedSignal("PlaceId"):Connect(function()
+		clearGameMount()
+		pendingAutoloadPlaceId = nil
+		pendingUniversalAutoload = false
+		placeId = game.PlaceId
+		placeLabel.Text = "PlaceId: " .. tostring(placeId)
+		syncGameTabForPlace()
+		maybeAutoloadFromConfig()
 	end)
 
 	-- Let the in-window loader stay visible briefly; fast machines otherwise flash it.
@@ -1007,7 +1105,7 @@ return function(BASE_URL: string, config: { [string]: any })
 		gui.Enabled = not gui.Enabled
 	end)
 
-	-- After all connections exist (so closeHub can disconnect drag), mount when the experience is ready.
+	-- After all connections exist (so closeHub can disconnect drag), sync PlaceId when the experience is ready.
 	-- Matches loader.lua wait: game.Loaded + PlaceId (avoids "unsupported" flash when PlaceId was still 0).
 	task.defer(function()
 		if not game:IsLoaded() then
@@ -1018,9 +1116,8 @@ return function(BASE_URL: string, config: { [string]: any })
 			task.wait(0.05)
 		end
 		placeId = game.PlaceId
-		supported = config.SUPPORTED_GAMES or {}
-		gamePath = supported[placeId]
 		placeLabel.Text = "PlaceId: " .. tostring(placeId)
-		tryMountGame()
+		syncGameTabForPlace()
+		maybeAutoloadFromConfig()
 	end)
 end

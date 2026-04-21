@@ -101,9 +101,22 @@ local function showError(message)
 	t.Parent = frame
 end
 
-local function boot()
+	local function boot()
 	if typeof(loadstring) ~= "function" then
 		error("loadstring is not available in this environment.")
+	end
+
+	-- Many third-party executors use Lua 5.1 math without math.clamp; game bundles rely on clamp at runtime.
+	if typeof(math.clamp) ~= "function" then
+		function math.clamp(x, lo, hi)
+			if x < lo then
+				return lo
+			end
+			if x > hi then
+				return hi
+			end
+			return x
+		end
 	end
 
 	waitForGameReady()

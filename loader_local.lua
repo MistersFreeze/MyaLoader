@@ -159,6 +159,18 @@ local function boot()
 	waitForGameReady()
 	task.wait()
 
+	if typeof(math.clamp) ~= "function" then
+		function math.clamp(x, lo, hi)
+			if x < lo then
+				return lo
+			end
+			if x > hi then
+				return hi
+			end
+			return x
+		end
+	end
+
 	local configSrc = readFromRoot("config.lua")
 	task.wait()
 	local configChunk = loadstring(configSrc, "@config.lua")

@@ -8,7 +8,7 @@ Executor-oriented Roblox script base: a small **loader**, a **hub** GUI, and **p
 |------|---------|
 | `loader.lua` | Only file you paste first; set `BASE_URL`, then fetches `config.lua` and `hub.lua`. |
 | `config.lua` | Branding, theme, `SUPPORTED_GAMES` map (PlaceId → path under your host root). |
-| `hub.lua` | Builds the window, loads `lib/*`, mounts the game module for the current place. |
+| `hub.lua` | Builds the window, loads `lib/*`; on the Games tab you load the module for the current place when supported. |
 | `lib/util.lua` | `HttpGet`, safe `loadstring`, `loadModuleFromUrl`. |
 | `lib/ui.lua` | Themed frames, buttons, scroll areas (hub + `ctx.uiFactory`). |
 | `lib/mya_game_ui.lua` | Shared in-game window: sidebar tabs, notify stack, Discord/min/close — used by Mya Universal / Operation One / Neighbors `gui.lua` (requires `MYA_FETCH` + `MYA_REPO_BASE` from game `init.lua`). |

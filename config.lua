@@ -7,9 +7,13 @@ return {
 	BRAND = "Mya",
 	VERSION = "Loader",
 
-	-- PlaceId -> script path relative to your hosted repo root (same folder as config.lua).
-	-- Replace keys with real PlaceIds from the experience you support.
-	-- Example: [game.PlaceId while testing] = "games/example.lua"
+	-- Hub: when true (default), automatically loads the game module for the current PlaceId if registered (no "Load game module" click). Set false to load manually. Override: getgenv().MYA_AUTOLOAD_GAME_MODULE.
+	AUTOLOAD_GAME_MODULE = true,
+	-- Hub: when true, if the current place has no registered module, automatically launches Mya Universal. Default false. Override: getgenv().MYA_AUTOLOAD_MYA_UNIVERSAL_WHEN_UNSUPPORTED.
+	AUTOLOAD_MYA_UNIVERSAL_WHEN_UNSUPPORTED = false,
+
+	-- PlaceId -> path under your host root (must match real files: use games/.../init.lua for folders).
+	-- Example: "games/MyGame_123/init.lua" or "games/example.lua"
 	SUPPORTED_GAMES = {
 		[7353845952] = "games/ProjectDelta_7353845952/init.lua",
 		[7336302630] = "games/ProjectDelta_7353845952/init.lua",
@@ -19,6 +23,7 @@ return {
 		[18667984660] = "games/FlexYourFPS_18667984660/init.lua",
 		[112399855119586] = "games/MicUp_15546218972/init.lua",
 		[15546218972] = "games/MicUp_15546218972/init.lua",
+		[155615604] = "games/PrisonLife_155615604/init.lua",
 	},
 
 	THEME = {

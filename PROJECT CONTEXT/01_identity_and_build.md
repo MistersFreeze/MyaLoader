@@ -8,7 +8,7 @@ Core pieces:
 
 - **`loader.lua`** — Minimal bootstrap: fetches `config.lua` and `hub.lua` from a **static base URL**, compiles with `loadstring`, runs the hub.
 - **`config.lua`** — Returns a Lua table: branding, version, theme colors, and **`SUPPORTED_GAMES`** (maps `game.PlaceId` → path under the host root).
-- **`hub.lua`** — Builds a ScreenGui hub, loads `lib/util.lua` and `lib/ui.lua` over HTTP, then loads and mounts the **per-game module** for the current place.
+- **`hub.lua`** — Builds a ScreenGui hub, loads `lib/util.lua` and `lib/ui.lua` over HTTP; the **per-game module** for the current place loads automatically when **`config.AUTOLOAD_GAME_MODULE`** is true (default), or from the Games tab via **Load game module**.
 - **`games/`** — One module per supported experience (single file or folder with `init.lua` + friends).
 - **`lib/`** — Shared HTTP helpers and themed UI constructors.
 - **`universal/`** — Tools not tied to one game (e.g. script dumper), launched from the hub.

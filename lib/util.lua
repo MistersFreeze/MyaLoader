@@ -56,17 +56,31 @@ end
 
 function Util.loadstringCompile(source: string, chunkName: string?): (any?, string?)
 	local name = chunkName or "MyaChunk"
-	local ok, fnOrErr = pcall(function()
-		return loadstring(source, "@" .. name)
-	end)
-	if not ok then
-		return nil, tostring(fnOrErr)
+	if typeof(source) ~= "string" then
+		return nil, "source is not a string"
 	end
-	local fn = fnOrErr
-	if typeof(fn) ~= "function" then
-		return nil, "loadstring did not return a function"
+	-- Strip UTF-8 BOM if present (some hosts add it; loadstring can fail oddly).
+	if string.sub(source, 1, 3) == "\239\187\191" then
+		source = string.sub(source, 4)
 	end
-	return fn, nil
+	if #source == 0 then
+		return nil, "empty source (check URL / hosting)"
+	end
+	local trimmed = source:match("^%s*(.-)%s*$") or source
+	local headLo = string.lower(string.sub(trimmed, 1, 48))
+	if string.sub(trimmed, 1, 1) == "<" or string.find(headLo, "<!doctype", 1, true) or string.find(headLo, "<html", 1, true) then
+		return nil, "download looks like HTML, not Lua (wrong BASE_URL, private repo, or rate limit — open the script URL in a browser)"
+	end
+	-- Plain loadstring: on syntax error returns nil + message (no throw). Avoid pcall losing the 2nd return.
+	local fn, compileErr = loadstring(source, "@" .. name)
+	if typeof(fn) == "function" then
+		return fn, nil
+	end
+	local detail = typeof(compileErr) == "string" and compileErr or ""
+	if #detail > 0 then
+		return nil, "[" .. name .. "] " .. detail
+	end
+	return nil, "[" .. name .. "] loadstring returned nil (corrupt download or non-Lua body)"
 end
 
 function Util.runChunk(fn: () -> ...any, ...: any): (...any)
@@ -81,7 +95,7 @@ function Util.loadModuleFromUrl(url: string, chunkName: string?): (any?, string?
 	task.wait()
 	local fn, cerr = Util.loadstringCompile(body, chunkName)
 	if not fn then
-		return nil, cerr
+		return nil, tostring(cerr) .. "\n" .. url
 	end
 	task.wait()
 	local ok, result = pcall(fn)

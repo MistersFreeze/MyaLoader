@@ -9,7 +9,7 @@ Mya/
 ├── loader.lua                # Hosted: entry for raw URL / paste; waits for game.Loaded / PlaceId then fetches config + hub
 ├── loader_jnkie.lua          # Optional Junkie dashboard script; sets MYA_BASE_URL, keys
 ├── loader_local.lua          # Local dev: readfile + MYA_LOCAL_ROOT
-├── hub.lua                   # Hosted: hub UI + game module mount + Universal tab
+├── hub.lua                   # Hosted: hub UI; per-game module loads on demand (Games tab) + Universal tab
 ├── README.md                 # User-facing quickstart (duplicate of some context docs)
 ├── .gitignore                # Ignores local key file name
 ├── mya_junkie_key.example.txt# Example line for Junkie UUID (copy to gitignored file locally)

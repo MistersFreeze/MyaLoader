@@ -29,14 +29,14 @@ Fix **`BASE_URL`** inside the hosted `loader.lua` first.
 1. Create **`games/MyGame_<PlaceId>.lua`** or **`games/MyGame_<PlaceId>/init.lua`** implementing **`mount`/`unmount`**.
 2. Add **`[PLACE_ID] = "games/..."`** to **`config.lua` → `SUPPORTED_GAMES`**.
 3. Add a **display name** for the Games tab list in **`hub.lua`** → **`GAME_DISPLAY_NAMES`** (same PlaceId key as in config). Without it, the hub falls back to showing the script path string.
-4. **`loader.lua`** / **`loader_local.lua`** wait for **`game.Loaded`** (and up to ~15s for a non‑zero **`PlaceId`**) before fetching **`config.lua`** / **`hub.lua`**, so the hub mounts the right module **in-experience**. **`hub.lua`** also defers the first **`tryMountGame()`** until the place is ready — keep this pattern when editing bootstrap.
+4. **`loader.lua`** / **`loader_local.lua`** wait for **`game.Loaded`** (and up to ~15s for a non‑zero **`PlaceId`**) before fetching **`config.lua`** / **`hub.lua`**, so the hub’s PlaceId matches the experience. **`hub.lua`** defers **PlaceId sync** the same way, then **autoloads** the game module when **`config.AUTOLOAD_GAME_MODULE`** is **`true`** (default). Set **`AUTOLOAD_GAME_MODULE = false`** to require the **Load game module** button.
 5. Update **`PROJECT CONTEXT/06_module_catalogue.md`** (and this workflow if routing changes).
 6. Push to host; verify **`BASE_URL .. path`** returns 200 in a browser.
-7. Join that experience in Roblox, run loader, confirm Games tab / auto-close behavior.
+7. Join that experience in Roblox, run the loader; with autoload on, the module should mount without tapping **Load game module** (or tap it to retry). Confirm load / hub close behavior.
 
 ## Use the dumper
 
-From hub **Dumper** tab: downloads **`universal/dumper.lua`** and executes it. Requires executor support for filesystem and decompilation APIs; may manipulate **CoreGui** overlay — read the script before use.
+From hub **Dumper** tab: downloads **`universal/dumper.lua`** and runs it with the hub’s **BASE_URL** so it can fetch **`lib/mya_game_ui.lua`** (Mya window). Requires executor support for filesystem and decompilation APIs; may manipulate **CoreGui** overlay — read the script before use.
 
 ## Documentation maintenance
 
