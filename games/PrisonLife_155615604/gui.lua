@@ -84,12 +84,11 @@ local shell = MyaUI.createHubShell({
 	ts = ts,
 	uis = uis,
 	titleText = "Mya  ·  Prison Life",
-	tabNames = { "Combat", "Visuals", "Movement", "Misc", "Configs", "Settings" },
+	tabNames = { "Combat", "Visuals", "Movement", "Configs", "Settings" },
 	subPages = {
 		Combat = { "Aim assist", "Silent aim", "Triggerbot" },
 		Visuals = { "ESP", "World" },
-		Movement = { "Flight", "Walk & jump", "Noclip" },
-		Misc = { "Auto arrest" },
+		Movement = { "Flight", "Car flight", "Walk & jump", "Noclip" },
 	},
 	statusDefault = "Ready · Insert toggles this menu",
 	discordInvite = "https://discord.gg/YeyepQG6K9",
@@ -111,9 +110,9 @@ local combat_trigger = all_sub_pages["Combat"]["Triggerbot"]
 local visuals_esp = all_sub_pages["Visuals"]["ESP"]
 local visuals_world = all_sub_pages["Visuals"]["World"]
 local movement_fly = all_sub_pages["Movement"]["Flight"]
+local movement_car_fly = all_sub_pages["Movement"]["Car flight"]
 local movement_walk = all_sub_pages["Movement"]["Walk & jump"]
 local movement_noclip = all_sub_pages["Movement"]["Noclip"]
-local misc_auto_arrest = all_sub_pages["Misc"]["Auto arrest"]
 
 local settings_page = make_page()
 settings_page.Visible = true
@@ -577,16 +576,6 @@ lo = 0
 section_label(visuals_world, "World", next_order())
 local ref_rainbow_car = make_toggle_row(visuals_world, "Rainbow car", next_order(), P.get_rainbow_car, P.set_rainbow_car)
 
-lo = 0
-section_label(misc_auto_arrest, "Auto arrest", next_order())
-local ref_auto_arrest = make_toggle_row(
-	misc_auto_arrest,
-	"Auto arrest (mouse/ray hooks + click at Criminals in FOV)",
-	next_order(),
-	P.get_auto_arrest,
-	P.set_auto_arrest
-)
-
 local function refresh_configs()
 	for _, c in ipairs(list_scroller:GetChildren()) do
 		if c:IsA("Frame") then
@@ -758,11 +747,37 @@ refresh_configs()
 
 lo = 0
 section_label(movement_fly, "Flight", next_order())
-local ref_fly = make_toggle_row(movement_fly, "Fly", next_order(), P.get_fly, P.set_fly)
+local ref_fly
+local ref_car_fly
+ref_fly = make_toggle_row(movement_fly, "Fly", next_order(), P.get_fly, function(v)
+	P.set_fly(v)
+	if ref_car_fly then
+		ref_car_fly()
+	end
+end)
 local set_fly_speed_slider = make_slider(movement_fly, "Fly speed", next_order(), 5, 500, P.get_fly_speed(), "%.0f", function(v)
 	P.set_fly_speed(v)
 end)
 local ref_fly_bind = make_keybind_row(movement_fly, "Fly bind", next_order(), P.get_fly_bind, P.set_fly_bind)
+
+lo = 0
+section_label(movement_car_fly, "Car flight", next_order())
+ref_car_fly = make_toggle_row(
+	movement_car_fly,
+	"Car flight (vehicle only)",
+	next_order(),
+	P.get_car_fly,
+	function(v)
+		P.set_car_fly(v)
+		if ref_fly then
+			ref_fly()
+		end
+	end
+)
+local set_car_fly_speed_slider = make_slider(movement_car_fly, "Car flight speed", next_order(), 5, 500, P.get_car_fly_speed(), "%.0f", function(v)
+	P.set_car_fly_speed(v)
+end)
+local ref_car_fly_bind = make_keybind_row(movement_car_fly, "Car flight bind", next_order(), P.get_car_fly_bind, P.set_car_fly_bind)
 
 lo = 0
 section_label(movement_walk, "Walk & jump", next_order())
@@ -861,6 +876,13 @@ uis.InputBegan:Connect(function(input, gp)
 	if input_matches_movement_bind(input, P.get_fly_bind()) then
 		P.set_fly(not P.get_fly())
 		ref_fly()
+		ref_car_fly()
+		return
+	end
+	if input_matches_movement_bind(input, P.get_car_fly_bind()) then
+		P.set_car_fly(not P.get_car_fly())
+		ref_car_fly()
+		ref_fly()
 		return
 	end
 	if input_matches_movement_bind(input, P.get_walk_mod_bind()) then
@@ -883,6 +905,7 @@ task.defer(function()
 	set_silent_fov_slider(P.get_silent_aim_fov())
 	set_trigger_delay_slider(P.get_trigger_delay())
 	set_fly_speed_slider(P.get_fly_speed())
+	set_car_fly_speed_slider(P.get_car_fly_speed())
 	set_walk_slider(P.get_walk())
 	set_jump_slider(P.get_jump())
 end)
@@ -896,7 +919,6 @@ function _G.MYA_UNIVERSAL_SYNC_UI()
 	ref_esp_dist()
 	ref_esp_names()
 	ref_rainbow_car()
-	ref_auto_arrest()
 	ref_aim_toggle()
 	ref_aim_bind()
 	ref_vis()
@@ -917,6 +939,8 @@ function _G.MYA_UNIVERSAL_SYNC_UI()
 	refresh_silent_hitpart()
 	ref_fly()
 	ref_fly_bind()
+	ref_car_fly()
+	ref_car_fly_bind()
 	ref_walk_mod()
 	ref_walk_mod_bind()
 	ref_jump_mod()
@@ -929,6 +953,7 @@ function _G.MYA_UNIVERSAL_SYNC_UI()
 	set_silent_fov_slider(P.get_silent_aim_fov())
 	set_trigger_delay_slider(P.get_trigger_delay())
 	set_fly_speed_slider(P.get_fly_speed())
+	set_car_fly_speed_slider(P.get_car_fly_speed())
 	set_walk_slider(P.get_walk())
 	set_jump_slider(P.get_jump())
 end

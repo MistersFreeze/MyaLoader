@@ -30,6 +30,8 @@ return {
 	-- walk_mod_bind = "KeyCode.G",
 	-- noclip_bind = "KeyCode.H",
 	fly_speed = 50,
+	car_fly_speed = 60,
+	-- car_fly_bind = "KeyCode.V", -- Movement → Car flight (omit or Unknown = no bind)
 	walk_speed = 16,
 	jump_power = 50,
 	-- FOV ring Drawing colors (RGB 0–255)
@@ -39,9 +41,6 @@ return {
 	esp_names_on = false,
 	-- Visuals → World
 	-- rainbow_car_on = false,
-	-- Misc → Auto arrest (Police; silent ray at Criminals; uses silent aim FOV/LOS when set)
-	-- auto_arrest_on = false,
-	-- auto_arrest_synthetic_click = true, -- mousemoveabs+click at target if hooks alone do not register (set false to try hook-only)
 	-- esp_visibility_colors_on = false, -- per-part green/pink LOS (optional)
 	-- Misc → weapon mods (generic; effectiveness varies by game).
 	no_recoil_on = false,

@@ -32,7 +32,6 @@ return function(env)
 		"runtime/weapon_mods.lua",
 		"runtime/movement.lua",
 		"runtime/rainbow_car.lua",
-		"runtime/auto_arrest.lua",
 		"runtime/render_hooks.lua",
 		"runtime/exports.lua",
 	}

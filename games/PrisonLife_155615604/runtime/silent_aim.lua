@@ -75,35 +75,7 @@ if raycast_redirect_ok() then
 			newcclosure(function(...)
 				local method, arguments = getnamecallmethod(), { ... }
 				local self = arguments[1]
-				-- Many tools aim with mouse screen pos (GetMouseLocation / ViewportPointToRay), not Workspace:Raycast.
-				if not checkcaller() and method == "GetMouseLocation" and self == UserInputService then
-					local ov = typeof(auto_arrest_get_mouse_screen_override) == "function"
-							and auto_arrest_get_mouse_screen_override()
-						or nil
-					if ov then
-						return ov
-					end
-				end
-				if not checkcaller() and method == "ViewportPointToRay" and self == camera then
-					local ov = typeof(auto_arrest_get_mouse_screen_override) == "function"
-							and auto_arrest_get_mouse_screen_override()
-						or nil
-					if ov and arguments[2] ~= nil then
-						arguments[2] = ov
-						return oldnamecall(unpack(arguments))
-					end
-				end
 				if self == workspace and not checkcaller() and method == "Raycast" then
-					-- Auto arrest: silent ray aim (no mouse move) — same Workspace:Raycast redirect pattern.
-					local arrestPart = typeof(auto_arrest_get_raycast_redirect_part) == "function"
-							and auto_arrest_get_raycast_redirect_part()
-						or nil
-					if arrestPart then
-						local origin = arguments[2]
-						local direction = getdirection(origin, arrestPart.Position) * 1000
-						arguments[2], arguments[3] = origin, direction
-						return oldnamecall(unpack(arguments))
-					end
 					if silent_aim_on then
 						if not silent_aim_require_bind or bind_pressed(silent_aim_bind) then
 							local hitpart = closest_silent_part

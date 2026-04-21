@@ -116,6 +116,119 @@ local function start_fly()
 	table.insert(connections, fly_conn)
 end
 
+local function get_vehicle_root_part()
+	local hum = get_hum()
+	if not hum or not hum.Sit then
+		return nil
+	end
+	local seat = hum.SeatPart
+	if not seat or not seat:IsA("BasePart") then
+		return nil
+	end
+	if not (seat:IsA("VehicleSeat") or seat:IsA("Seat")) then
+		return nil
+	end
+	return seat:GetRootPart()
+end
+
+local function stop_car_fly()
+	if car_fly_conn then
+		pcall(function()
+			car_fly_conn:Disconnect()
+		end)
+		car_fly_conn = nil
+	end
+	if car_fly_bv then
+		pcall(function()
+			car_fly_bv:Destroy()
+		end)
+		car_fly_bv = nil
+	end
+	if car_fly_bav then
+		pcall(function()
+			car_fly_bav:Destroy()
+		end)
+		car_fly_bav = nil
+	end
+end
+
+local function start_car_fly()
+	stop_car_fly()
+	car_fly_conn = RunService.RenderStepped:Connect(function()
+		if not car_fly_on or not _G.MYA_UNIVERSAL_LOADED then
+			return
+		end
+		local root = get_vehicle_root_part()
+		if not root then
+			if car_fly_bv then
+				pcall(function()
+					car_fly_bv:Destroy()
+				end)
+				car_fly_bv = nil
+			end
+			if car_fly_bav then
+				pcall(function()
+					car_fly_bav:Destroy()
+				end)
+				car_fly_bav = nil
+			end
+			return
+		end
+		if not car_fly_bv or car_fly_bv.Parent ~= root then
+			pcall(function()
+				if car_fly_bv then
+					car_fly_bv:Destroy()
+				end
+			end)
+			pcall(function()
+				if car_fly_bav then
+					car_fly_bav:Destroy()
+				end
+			end)
+			car_fly_bv = Instance.new("BodyVelocity")
+			car_fly_bv.Name = "MyaCarFlyVel"
+			car_fly_bv.MaxForce = Vector3.new(500000, 500000, 500000)
+			car_fly_bv.Velocity = Vector3.zero
+			car_fly_bv.Parent = root
+			car_fly_bav = Instance.new("BodyAngularVelocity")
+			car_fly_bav.Name = "MyaCarFlyAng"
+			car_fly_bav.MaxTorque = Vector3.new(4000000, 4000000, 4000000)
+			car_fly_bav.AngularVelocity = Vector3.zero
+			car_fly_bav.Parent = root
+		end
+		local cam = camera
+		if not cam or not car_fly_bv then
+			return
+		end
+		local cf = cam.CFrame
+		local dir = Vector3.zero
+		if UserInputService:IsKeyDown(Enum.KeyCode.W) then
+			dir = dir + cf.LookVector
+		end
+		if UserInputService:IsKeyDown(Enum.KeyCode.S) then
+			dir = dir - cf.LookVector
+		end
+		if UserInputService:IsKeyDown(Enum.KeyCode.D) then
+			dir = dir + cf.RightVector
+		end
+		if UserInputService:IsKeyDown(Enum.KeyCode.A) then
+			dir = dir - cf.RightVector
+		end
+		if UserInputService:IsKeyDown(Enum.KeyCode.Space) then
+			dir = dir + Vector3.new(0, 1, 0)
+		end
+		if UserInputService:IsKeyDown(Enum.KeyCode.LeftControl) or UserInputService:IsKeyDown(Enum.KeyCode.C) then
+			dir = dir - Vector3.new(0, 1, 0)
+		end
+		car_fly_bv.Velocity = dir.Magnitude > 0 and dir.Unit * car_fly_speed or Vector3.zero
+		if car_fly_bav then
+			car_fly_bav.AngularVelocity = Vector3.zero
+		end
+		root.AssemblyAngularVelocity = Vector3.zero
+	end)
+	table.insert(connections, car_fly_conn)
+end
+
 local NOCLIP_RENDERSTEP_NAME = "MyaPrisonLifeNoclip"
 
 local function noclip_disconnect_descendant_hooks()

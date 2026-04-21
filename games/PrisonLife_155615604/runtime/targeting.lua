@@ -17,7 +17,7 @@ table.insert(
 	end)
 )
 
---- Players on the Inmates team (dumped game: Teams.Inmates / UI "Inmates").
+--- Players on the prisoner / inmates team (Teams.Inmates or name contains inmate / prisoner).
 local function is_inmate_team(plr)
 	if not plr then
 		return false
@@ -29,7 +29,17 @@ local function is_inmate_team(plr)
 	if inmatesTeamRef and t == inmatesTeamRef then
 		return true
 	end
-	return t.Name == "Inmates"
+	local n = string.lower(t.Name)
+	if n == "inmates" or n == "inmate" then
+		return true
+	end
+	if string.find(n, "inmate", 1, true) then
+		return true
+	end
+	if string.find(n, "prisoner", 1, true) then
+		return true
+	end
+	return false
 end
 
 local function is_aim_skip(plr)

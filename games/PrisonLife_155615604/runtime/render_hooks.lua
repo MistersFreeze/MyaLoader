@@ -29,6 +29,9 @@ table.insert(connections, lp.CharacterAdded:Connect(function()
 	if fly_on then
 		start_fly()
 	end
+	if car_fly_on then
+		start_car_fly()
+	end
 end))
 task.defer(function()
 	local h = get_hum()
