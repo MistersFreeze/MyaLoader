@@ -4,10 +4,17 @@ local s = { -- pro script dumper settings
 	detailed_info = false, -- if dump_debug is enabled, it will dump more, detailed debug info
 	threads = 5, -- how many scripts can be decompiled at a time
 	timeout = 5, -- if decompilation takes longer than this duration (seconds), it will skip that script
+	max_decompile_retries = 4, -- attempts before accepting failure (was infinite retry loop)
 	delay = 0.1,
 	include_nil = false, -- set to true if u want to include nil scripts
 	replace_username = true, -- replaces the localplayer's username in any objects with LocalPlayer
 	disable_render = true, -- disables 3d rendering while dumping scripts
+	-- Upgrades (v2)
+	scope_fast = false, -- only scan core trees (faster than full DataModel)
+	write_manifest_json = true, -- _dump_manifest.json (paths, timing, status)
+	write_summary_txt = true, -- _dump_summary.txt human-readable stats
+	write_remotes_txt = true, -- _remotes_list.txt all RemoteEvent/RemoteFunction paths
+	log_failures_txt = true, -- _decompile_failures.txt for scripts that failed or timed out
 }
 
 local decompile = decompile or disassemble
@@ -34,6 +41,10 @@ end
 local threads = 0
 local scriptsdumped = 0
 local timedoutscripts = {}
+local failedscripts = {}
+-- Keyed by GetDebugId() — safe for parallel dump tasks (distinct keys).
+local manifest_by_id = {}
+local HttpService = game:GetService("HttpService")
 local decompilecache = {}
 local progressbind = Instance.new("BindableEvent")
 local threadbind = Instance.new("BindableEvent")
@@ -86,7 +97,9 @@ local function decomp(a)
 	end
 
 	local output = decompile(a)
-	decompilecache[hash] = output
+	if typeof(output) == "string" and output:gsub("%s", "") ~= "" and not output:find("^%-%- Failed") then
+		decompilecache[hash] = output
+	end
 	return output
 end
 local function getfullname(a)
@@ -111,6 +124,69 @@ local function getfullname(a)
 	end
 	return fullname
 end
+
+local function gather_scripts()
+	local list = {}
+	local function scan_root(root)
+		if not root then
+			return
+		end
+		for _, v in root:GetDescendants() do
+			if (v:IsA("LocalScript") or v:IsA("ModuleScript")) and not isignored(v) then
+				table.insert(list, v)
+			end
+		end
+	end
+	if s.scope_fast then
+		pcall(function()
+			scan_root(game:GetService("ReplicatedFirst"))
+		end)
+		pcall(function()
+			scan_root(game:GetService("ReplicatedStorage"))
+		end)
+		pcall(function()
+			scan_root(game:GetService("StarterPlayer"))
+		end)
+		pcall(function()
+			scan_root(game:GetService("StarterGui"))
+		end)
+		local lp = game:GetService("Players").LocalPlayer
+		if lp then
+			pcall(function()
+				scan_root(lp:FindFirstChild("PlayerGui") or lp:WaitForChild("PlayerGui", 5))
+			end)
+			pcall(function()
+				scan_root(lp:FindFirstChild("PlayerScripts") or lp:WaitForChild("PlayerScripts", 5))
+			end)
+			pcall(function()
+				scan_root(lp:FindFirstChild("Backpack") or lp:WaitForChild("Backpack", 3))
+			end)
+		end
+		pcall(function()
+			scan_root(workspace)
+		end)
+	else
+		for _, v in game:GetDescendants() do
+			if (v:IsA("LocalScript") or v:IsA("ModuleScript")) and not isignored(v) then
+				table.insert(list, v)
+			end
+		end
+	end
+	return list
+end
+
+local function build_remotes_dump()
+	local lines = {}
+	for _, d in game:GetDescendants() do
+		local cn = d.ClassName
+		if cn == "RemoteEvent" or cn == "RemoteFunction" or cn == "UnreliableRemoteEvent" then
+			lines[#lines + 1] = cn .. "\t" .. d:GetFullName()
+		end
+	end
+	table.sort(lines)
+	return concat(lines, "\n")
+end
+
 local function dumpscript(v, isnil)
 	checkdirectories()
 	task.spawn(function()
@@ -133,28 +209,43 @@ local function dumpscript(v, isnil)
 			-- Script Output
 			local time = os.clock()
 			local _, output
+			local status = "ok"
+			local err_detail = nil
 			if s.decompile then
-				_, output = xpcall(decomp, function()
-					return "-- Failed to decompile script"
-				end, v)
-				repeat
-					if output == "-- Failed to decompile script" then
-						_, output = xpcall(decomp, function()
-							return "-- Failed to decompile script"
-						end, v)
+				local retries = math.max(1, math.floor(tonumber(s.max_decompile_retries) or 4))
+				local attempt = 0
+				while true do
+					attempt = attempt + 1
+					_, output = xpcall(decomp, function()
+						return "-- Failed to decompile script"
+					end, v)
+					if output ~= "-- Failed to decompile script" and typeof(output) == "string" and output:gsub("%s", "") ~= "" then
+						break
 					end
 					if (os.clock() - time) > s.timeout then
 						output = "-- Decompilation timed out"
+						status = "timeout"
 						table.insert(timedoutscripts, format("Name: %s\nPath: %s\nClass: %s\nDebug Id: %s", name, path, v.ClassName, id))
+						err_detail = "timeout"
 						break
 					end
-					task.wait(0.25)
-				until output ~= "-- Failed to decompile script"
-				if output:gsub(" ", "") == "" then
+					if attempt >= retries then
+						output = output or "-- Failed to decompile script"
+						status = "failed"
+						err_detail = "decompile_failed"
+						table.insert(failedscripts, format("Name: %s\nPath: %s\nClass: %s\nDebug Id: %s\nReason: max retries (%d)", name, path, v.ClassName, id, retries))
+						break
+					end
+					task.wait(0.2)
+				end
+				if typeof(output) == "string" and output:gsub(" ", "") == "" then
 					output = "-- Decompiler returned nothing. This script may not have bytecode or has anti-decompile implemented."
+					status = "empty"
+					err_detail = "empty_output"
 				end
 			else
 				output = "-- Script decompilation is disabled"
+				status = "skipped"
 			end
 
 			-- Information
@@ -231,24 +322,51 @@ local function dumpscript(v, isnil)
 				end
 			end
 
-			writefile(
-				filename,
-				format(
-					concat(content, "\n"),
-					name,
-					getfullname(v),
-					class,
-					exploit,
-					version or "",
-					os.clock() - time .. " seconds",
-					s.dump_debug and constantsnum or output,
-					protosnum,
-					output,
-					"",
-					"",
-					""
-				)
+			local elapsed = os.clock() - time
+			local header_hash = ""
+			pcall(function()
+				if getscripthash then
+					header_hash = getscripthash(v)
+				end
+			end)
+			local file_body = format(
+				concat(content, "\n"),
+				name,
+				getfullname(v),
+				class,
+				exploit,
+				version or "",
+				elapsed .. " seconds",
+				s.dump_debug and constantsnum or output,
+				protosnum,
+				output,
+				"",
+				"",
+				""
 			)
+			if header_hash ~= "" then
+				file_body = "-- ScriptHash: " .. header_hash .. "\n" .. file_body
+			end
+			local w_ok, w_err = pcall(writefile, filename, file_body)
+			if not w_ok then
+				status = "write_error"
+				err_detail = tostring(w_err)
+				pcall(function()
+					table.insert(failedscripts, format("Write failed: %s\nPath: %s", tostring(w_err), filename))
+				end)
+			end
+			manifest_by_id[id] = {
+				name = name,
+				path = path,
+				className = class,
+				debugId = id,
+				nilScript = isnil and true or false,
+				status = status,
+				error = err_detail,
+				seconds = elapsed,
+				bytes = typeof(file_body) == "string" and #file_body or 0,
+				file = filename:gsub("^" .. maindir .. "/", ""),
+			}
 			scriptsdumped = scriptsdumped + 1
 			progressbind:Fire(scriptsdumped)
 			threads = threads - 1
@@ -363,7 +481,7 @@ shell = MyaUI.createHubShell({
 	statusDefault = "Ready - original tool by zzerexx",
 	discordInvite = false,
 	winW = 460,
-	winH = 540,
+	winH = 620,
 	onClose = function()
 		unload_dumper()
 	end,
@@ -678,6 +796,27 @@ make_toggle_row(settings_page, "Disable 3D rendering while dumping", 19, s.disab
 	s.disable_render = v
 end)
 
+section_label(settings_page, "Scope & output", 30)
+make_toggle_row(settings_page, "Fast scope (RS / Starter* / LP / Workspace only)", 31, s.scope_fast, function(v)
+	s.scope_fast = v
+end)
+make_toggle_row(settings_page, "Write _dump_manifest.json", 32, s.write_manifest_json, function(v)
+	s.write_manifest_json = v
+end)
+make_toggle_row(settings_page, "Write _dump_summary.txt", 33, s.write_summary_txt, function(v)
+	s.write_summary_txt = v
+end)
+make_toggle_row(settings_page, "Write _remotes_list.txt", 34, s.write_remotes_txt, function(v)
+	s.write_remotes_txt = v
+end)
+make_toggle_row(settings_page, "Write _decompile_failures.txt", 35, s.log_failures_txt, function(v)
+	s.log_failures_txt = v
+end)
+make_slider(settings_page, "Max decompile retries", 36, 1, 12, s.max_decompile_retries, "%.0f", function(v)
+	s.max_decompile_retries = math.floor(v + 0.5)
+	s.max_decompile_retries = clamp(s.max_decompile_retries, 1, 12)
+end)
+
 section_label(dump_page, "Run", 1)
 row_button(dump_page, 3, "Start dumping", function()
 	if dump_in_progress then
@@ -693,12 +832,12 @@ row_button(dump_page, 3, "Start dumping", function()
 	local scripts = {}
 	local nilscripts = {}
 	timedoutscripts = {}
+	failedscripts = {}
+	manifest_by_id = {}
 	scriptsdumped = 0
 
-	for _, v in next, game:GetDescendants() do
-		if (v:IsA("LocalScript") or v:IsA("ModuleScript")) and not isignored(v) then
-			table.insert(scripts, v)
-		end
+	for _, v in ipairs(gather_scripts()) do
+		table.insert(scripts, v)
 	end
 	if s.include_nil and getnilinstances then
 		for _, v in next, getnilinstances() do
@@ -775,7 +914,74 @@ row_button(dump_page, 3, "Start dumping", function()
 	notify("Dumper", result, 6)
 
 	if #timedoutscripts > 0 then
-		writefile(format("%s/! Timed out scripts.txt", foldername), concat(timedoutscripts, "\n\n"))
+		pcall(writefile, format("%s/! Timed out scripts.txt", foldername), concat(timedoutscripts, "\n\n"))
+	end
+
+	local ok_count, fail_count, timeout_count = 0, 0, 0
+	local total_bytes = 0
+	local manifest_list = {}
+	for _, entry in pairs(manifest_by_id) do
+		table.insert(manifest_list, entry)
+		if entry.status == "ok" or entry.status == "skipped" then
+			ok_count = ok_count + 1
+		elseif entry.status == "timeout" then
+			timeout_count = timeout_count + 1
+			fail_count = fail_count + 1
+		else
+			fail_count = fail_count + 1
+		end
+		total_bytes = total_bytes + (entry.bytes or 0)
+	end
+	table.sort(manifest_list, function(a, b)
+		return (a.path or "") < (b.path or "")
+	end)
+
+	if s.write_manifest_json then
+		local pack = {
+			generatedAt = os.date("!%Y-%m-%dT%H:%M:%SZ"),
+			placeId = placeid,
+			placeName = placename,
+			exploit = exploit,
+			exploitVersion = version,
+			scopeFast = s.scope_fast,
+			scripts = manifest_list,
+		}
+		pcall(function()
+			writefile(foldername .. "/_dump_manifest.json", HttpService:JSONEncode(pack))
+		end)
+	end
+
+	if s.write_summary_txt then
+		local summary = {
+			format("Pro Script Dumper — summary\n"),
+			format("Place: %s (%s)\n", placename, tostring(placeid)),
+			format("Exploit: %s %s\n", exploit, tostring(version or "")),
+			format("Scope: %s\n", s.scope_fast and "fast (core services only)" or "full (entire DataModel)"),
+			format("Total scripts processed: %d\n", #manifest_list),
+			format("OK / skipped: %d\n", ok_count),
+			format("Failed (incl. timeout): %d\n", fail_count),
+			format("Timeouts: %d\n", timeout_count),
+			format("Approx. total output bytes: %d\n", total_bytes),
+			format("Elapsed wall time: %s s\n", string.format("%.2f", os.clock() - time)),
+		}
+		pcall(writefile, foldername .. "/_dump_summary.txt", concat(summary))
+	end
+
+	if s.write_remotes_txt then
+		pcall(function()
+			writefile(foldername .. "/_remotes_list.txt", build_remotes_dump())
+		end)
+	end
+
+	if s.log_failures_txt and (#failedscripts > 0 or #timedoutscripts > 0) then
+		local chunks = {}
+		if #failedscripts > 0 then
+			chunks[#chunks + 1] = "=== Failures (decompile / write / empty) ===\n" .. concat(failedscripts, "\n\n---\n\n")
+		end
+		if #timedoutscripts > 0 then
+			chunks[#chunks + 1] = "=== Timed out ===\n" .. concat(timedoutscripts, "\n\n")
+		end
+		pcall(writefile, foldername .. "/_decompile_failures.txt", concat(chunks, "\n"))
 	end
 
 	if s.disable_render then

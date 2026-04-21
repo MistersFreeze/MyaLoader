@@ -86,6 +86,12 @@ local trigger_next = 0
 local healthbars_on = false
 local esp_distance_on = false
 local esp_names_on = D.esp_names_on == true
+-- Visuals → World: smooth rainbow tint on the vehicle you're driving.
+local rainbow_car_on = false
+-- Misc → Auto arrest (police; Workspace:Raycast redirect like silent aim; Criminal team + FOV/LOS).
+local auto_arrest_on = false
+-- If true: mousemoveabs + mouse1click at criminal (games that ignore Raycast/GetMouseLocation hooks).
+local auto_arrest_synthetic_click = D.auto_arrest_synthetic_click ~= false
 local show_aim_fov_circle = false
 
 -- Silent aim (workspace.Raycast redirect; executor hook APIs required).
@@ -105,9 +111,6 @@ local silent_aim_team_check_on = D.silent_aim_team_check_on ~= false
 local fly_on = false
 local fly_speed = num("fly_speed", 50, 5, 500)
 local fly_bind = cfg_bind_enum("fly_bind", Enum.KeyCode.Unknown)
-local car_fly_on = false
-local car_fly_speed = num("car_fly_speed", 80, 5, 500)
-local car_fly_bind = cfg_bind_enum("car_fly_bind", Enum.KeyCode.Unknown)
 local noclip_on = false
 local noclip_saved = {}
 local noclip_bind = cfg_bind_enum("noclip_bind", Enum.KeyCode.Unknown)
@@ -136,7 +139,6 @@ table.insert(
 	end)
 )
 local fly_bv, fly_conn = nil, nil
-local car_fly_bv, car_fly_conn = nil, nil
 local noclip_conn = nil
 local render_conn = nil
 

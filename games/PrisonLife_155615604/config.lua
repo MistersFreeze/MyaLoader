@@ -27,11 +27,9 @@ return {
 	trigger_delay = 0.1,
 	-- Movement (optional keybinds: KeyCode.F etc.; omit or Unknown = no bind)
 	-- fly_bind = "KeyCode.F",
-	-- car_fly_bind = "KeyCode.V",
 	-- walk_mod_bind = "KeyCode.G",
 	-- noclip_bind = "KeyCode.H",
 	fly_speed = 50,
-	car_fly_speed = 80,
 	walk_speed = 16,
 	jump_power = 50,
 	-- FOV ring Drawing colors (RGB 0–255)
@@ -39,6 +37,11 @@ return {
 	-- ESP: names above players; distance text below character (Visuals → ESP).
 	-- esp_team_check_on = false, -- hide teammates from ESP / bars / distance text
 	esp_names_on = false,
+	-- Visuals → World
+	-- rainbow_car_on = false,
+	-- Misc → Auto arrest (Police; silent ray at Criminals; uses silent aim FOV/LOS when set)
+	-- auto_arrest_on = false,
+	-- auto_arrest_synthetic_click = true, -- mousemoveabs+click at target if hooks alone do not register (set false to try hook-only)
 	-- esp_visibility_colors_on = false, -- per-part green/pink LOS (optional)
 	-- Misc → weapon mods (generic; effectiveness varies by game).
 	no_recoil_on = false,

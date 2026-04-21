@@ -11,7 +11,8 @@ local function unload_mya_universal()
 	end
 	pcall(esp_clear)
 	pcall(stop_fly)
-	pcall(stop_car_fly)
+	pcall(stop_rainbow_car)
+	pcall(stop_auto_arrest)
 	pcall(stop_noclip)
 	pcall(restore_movement)
 	pcall(function()
@@ -310,6 +311,28 @@ _G.MYA_UNIVERSAL = {
 	set_esp_names = function(v)
 		esp_names_on = not not v
 	end,
+	get_rainbow_car = function()
+		return rainbow_car_on
+	end,
+	set_rainbow_car = function(v)
+		rainbow_car_on = not not v
+		if rainbow_car_on then
+			start_rainbow_car()
+		else
+			stop_rainbow_car()
+		end
+	end,
+	get_auto_arrest = function()
+		return auto_arrest_on
+	end,
+	set_auto_arrest = function(v)
+		auto_arrest_on = not not v
+		if auto_arrest_on then
+			start_auto_arrest()
+		else
+			stop_auto_arrest()
+		end
+	end,
 	get_walk_mod = function()
 		return walk_mod_on
 	end,
@@ -362,36 +385,6 @@ _G.MYA_UNIVERSAL = {
 		local n = tonumber(v)
 		if n then
 			fly_speed = math.clamp(n, 5, 500)
-		end
-	end,
-	get_car_fly = function()
-		return car_fly_on
-	end,
-	set_car_fly = function(v)
-		car_fly_on = not not v
-		if car_fly_on then
-			start_car_fly()
-		else
-			stop_car_fly()
-		end
-	end,
-	get_car_fly_bind = function()
-		return car_fly_bind
-	end,
-	set_car_fly_bind = function(v)
-		if typeof(v) == "EnumItem" then
-			if v.EnumType == Enum.KeyCode or v.EnumType == Enum.UserInputType then
-				car_fly_bind = v
-			end
-		end
-	end,
-	get_car_fly_speed = function()
-		return car_fly_speed
-	end,
-	set_car_fly_speed = function(v)
-		local n = tonumber(v)
-		if n then
-			car_fly_speed = math.clamp(n, 5, 500)
 		end
 	end,
 	get_noclip = function()
@@ -500,15 +493,14 @@ _G.get_config = function()
 		healthbars_on = healthbars_on,
 		esp_distance_on = esp_distance_on,
 		esp_names_on = esp_names_on,
+		rainbow_car_on = rainbow_car_on,
+		auto_arrest_on = auto_arrest_on,
 		walk_mod_on = walk_mod_on,
 		walk_mod_bind = enum_to_str(walk_mod_bind),
 		jump_mod_on = jump_mod_on,
 		fly_on = fly_on,
 		fly_speed = fly_speed,
 		fly_bind = enum_to_str(fly_bind),
-		car_fly_on = car_fly_on,
-		car_fly_speed = car_fly_speed,
-		car_fly_bind = enum_to_str(car_fly_bind),
 		noclip_on = noclip_on,
 		noclip_bind = enum_to_str(noclip_bind),
 		walk_speed = walk_target,
@@ -643,6 +635,12 @@ _G.apply_config = function(cfg)
 	if cfg.esp_names_on ~= nil then
 		U.set_esp_names(cfg.esp_names_on)
 	end
+	if cfg.rainbow_car_on ~= nil then
+		U.set_rainbow_car(cfg.rainbow_car_on)
+	end
+	if cfg.auto_arrest_on ~= nil then
+		U.set_auto_arrest(cfg.auto_arrest_on)
+	end
 	if cfg.walk_mod_on ~= nil then
 		U.set_walk_mod(cfg.walk_mod_on)
 	end
@@ -665,18 +663,6 @@ _G.apply_config = function(cfg)
 		local b = str_to_enum(cfg.fly_bind)
 		if b then
 			U.set_fly_bind(b)
-		end
-	end
-	if cfg.car_fly_on ~= nil then
-		U.set_car_fly(cfg.car_fly_on)
-	end
-	if cfg.car_fly_speed ~= nil then
-		U.set_car_fly_speed(cfg.car_fly_speed)
-	end
-	if cfg.car_fly_bind ~= nil then
-		local b = str_to_enum(cfg.car_fly_bind)
-		if b then
-			U.set_car_fly_bind(b)
 		end
 	end
 	if cfg.noclip_on ~= nil then
