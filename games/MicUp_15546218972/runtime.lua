@@ -6,6 +6,7 @@
 return function(env)
 	local order = {
 		"runtime/piano_engine.lua",
+		"runtime/profile_tag_limits.lua",
 		"runtime/visuals.lua",
 		"runtime/movement.lua",
 		"runtime/targeting.lua",

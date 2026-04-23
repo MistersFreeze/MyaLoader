@@ -673,7 +673,7 @@ row_button(visuals_page, 6, "Spy camera", function()
 		return
 	end
 	local ok, err = P.start_spy_camera(t)
-	notify("Mya", ok and ("Spying " .. t.Name .. " · mouse look · wheel zoom") or (err or "Failed"), 2)
+	notify("Mya", ok and ("Spying " .. t.Name .. " · hold right-click to orbit · wheel zoom") or (err or "Failed"), 2)
 end)
 row_button(visuals_page, 7, "Teleport to", function()
 	local t = resolve_visual_target()

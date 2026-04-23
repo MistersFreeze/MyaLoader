@@ -748,10 +748,43 @@ local function stop_render_loop()
 	end
 end
 
+-- Corner (MicUp): game Profile Tags UI caps selection using require(ReplicatedStorage.Assets.Data.Tags).MaxTags.
+-- Bump it client-side so the stock prompt allows more than 8. Server may still reject on UpdateProfileTags.
+task.spawn(function()
+	local okPath, tagsMod = pcall(function()
+		return game:GetService("ReplicatedStorage"):WaitForChild("Assets", 30):WaitForChild("Data", 30):WaitForChild(
+			"Tags",
+			30
+		)
+	end)
+	if not okPath or not tagsMod or not tagsMod:IsA("ModuleScript") then
+		return
+	end
+	local ok, m = pcall(require, tagsMod)
+	if ok and type(m) == "table" and type(m.MaxTags) == "number" then
+		m.MaxTags = 255
+	end
+end)
+
 -- ——— Visuals (ESP + nametags) ———
 local visuals_esp = false
 local visuals_nametags = false
 local visuals_conns = {}
+
+local function visuals_collect_body_parts(char)
+	local parts = {}
+	for _, p in ipairs(char:GetDescendants()) do
+		if p:IsA("BasePart") then
+			local tool = p:FindFirstAncestorOfClass("Tool")
+			if tool and tool:IsDescendantOf(char) then
+				-- skip held tools
+			else
+				table.insert(parts, p)
+			end
+		end
+	end
+	return parts
+end
 
 local function visuals_strip(char)
 	if not char then
@@ -777,14 +810,20 @@ local function visuals_apply(plr, char)
 	visuals_strip(char)
 	local show_esp = visuals_esp and plr ~= player
 	if show_esp then
-		local hl = Instance.new("Highlight")
-		hl.Name = "MyaESP"
-		hl.Parent = char
-		hl.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
-		hl.FillTransparency = 0.55
-		hl.OutlineTransparency = 0
-		hl.FillColor = Color3.fromRGB(200, 100, 160)
-		hl.OutlineColor = Color3.fromRGB(255, 160, 200)
+		local folder = Instance.new("Folder")
+		folder.Name = "MyaESP"
+		folder.Parent = char
+		for _, part in ipairs(visuals_collect_body_parts(char)) do
+			local hl = Instance.new("Highlight")
+			hl.Name = "MyaESPPart"
+			hl.Adornee = part
+			hl.Parent = folder
+			hl.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
+			hl.FillTransparency = 0.55
+			hl.OutlineTransparency = 0
+			hl.FillColor = Color3.fromRGB(200, 100, 160)
+			hl.OutlineColor = Color3.fromRGB(255, 160, 200)
+		end
 	end
 	if visuals_nametags then
 		local head = char:FindFirstChild("Head") or char:WaitForChild("Head", 8)
@@ -867,7 +906,7 @@ end
 -- ——— Movement (fly + noclip) ———
 local workspace = Services.Workspace
 local move_fly = false
-local move_fly_speed = 50
+local move_fly_speed = 500
 local move_noclip = false
 local anti_ragdoll_enabled = false
 local anti_ragdoll_hb = nil
@@ -1145,6 +1184,7 @@ local spy_yaw = 0
 local spy_pitch = 0
 local spy_dist = 18
 local spy_sens = 0.0025
+local spy_rmb_orbit_lock = false
 
 local function resolve_target_query(q)
 	if typeof(q) ~= "string" then
@@ -1176,6 +1216,12 @@ local function stop_spy_camera()
 			spy_input_conn:Disconnect()
 		end)
 		spy_input_conn = nil
+	end
+	if spy_rmb_orbit_lock then
+		spy_rmb_orbit_lock = false
+		pcall(function()
+			uis.MouseBehavior = Enum.MouseBehavior.Default
+		end)
 	end
 	spy_target_player = nil
 	local cam = workspace.CurrentCamera
@@ -1220,17 +1266,11 @@ local function start_spy_camera(target)
 
 	cam.CameraType = Enum.CameraType.Scriptable
 
-	spy_input_conn = uis.InputChanged:Connect(function(input, gameProcessed)
-		if gameProcessed or not spy_target_player then
+	spy_input_conn = uis.InputChanged:Connect(function(input)
+		if not spy_target_player then
 			return
 		end
-		if input.UserInputType == Enum.UserInputType.MouseMovement then
-			local d = input.Delta
-			spy_yaw = spy_yaw - d.X * spy_sens
-			spy_pitch = spy_pitch - d.Y * spy_sens
-			local pitchMax = math.rad(89)
-			spy_pitch = _math.clamp(spy_pitch, -pitchMax, pitchMax)
-		elseif input.UserInputType == Enum.UserInputType.MouseWheel then
+		if input.UserInputType == Enum.UserInputType.MouseWheel then
 			spy_dist = _math.clamp(spy_dist - input.Position.Z * 2.5, 4, 90)
 		end
 	end)
@@ -1250,6 +1290,25 @@ local function start_spy_camera(target)
 			stop_spy_camera()
 			return
 		end
+
+		local rmb = uis:IsMouseButtonPressed(Enum.UserInputType.MouseButton2)
+		if rmb then
+			if not spy_rmb_orbit_lock then
+				spy_rmb_orbit_lock = true
+				uis.MouseBehavior = Enum.MouseBehavior.LockCenter
+			end
+			local d = uis:GetMouseDelta()
+			if d.Magnitude > 0 then
+				spy_yaw = spy_yaw - d.X * spy_sens
+				spy_pitch = spy_pitch - d.Y * spy_sens
+				local pitchMax = math.rad(89)
+				spy_pitch = _math.clamp(spy_pitch, -pitchMax, pitchMax)
+			end
+		elseif spy_rmb_orbit_lock then
+			spy_rmb_orbit_lock = false
+			uis.MouseBehavior = Enum.MouseBehavior.Default
+		end
+
 		local focus = h.Position + Vector3.new(0, 1.5, 0)
 		local cp = math.cos(spy_pitch)
 		local dir = Vector3.new(cp * math.sin(spy_yaw), math.sin(spy_pitch), cp * math.cos(spy_yaw))
@@ -1272,7 +1331,10 @@ local function start_spy_camera(target)
 				if safe < 1 then
 					safe = 1
 				end
-				wantPos = focus - dir * _math.min(safe, spy_dist)
+				local minOrbit = math.min(spy_dist, 6)
+				if safe >= minOrbit then
+					wantPos = focus - dir * _math.min(safe, spy_dist)
+				end
 			end
 		end
 
@@ -1459,7 +1521,7 @@ _G.MYA_NEIGHBORS_PIANO = {
 		return move_fly_speed
 	end,
 	set_fly_speed = function(v)
-		move_fly_speed = _math.clamp(tonumber(v) or 50, 5, 200)
+		move_fly_speed = _math.clamp(tonumber(v) or 500, 5, 500)
 	end,
 	get_noclip_enabled = function()
 		return move_noclip

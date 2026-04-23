@@ -3,6 +3,21 @@ local visuals_esp = false
 local visuals_nametags = false
 local visuals_conns = {}
 
+local function visuals_collect_body_parts(char)
+	local parts = {}
+	for _, p in ipairs(char:GetDescendants()) do
+		if p:IsA("BasePart") then
+			local tool = p:FindFirstAncestorOfClass("Tool")
+			if tool and tool:IsDescendantOf(char) then
+				-- skip held tools
+			else
+				table.insert(parts, p)
+			end
+		end
+	end
+	return parts
+end
+
 local function visuals_strip(char)
 	if not char then
 		return
@@ -27,14 +42,21 @@ local function visuals_apply(plr, char)
 	visuals_strip(char)
 	local show_esp = visuals_esp and plr ~= player
 	if show_esp then
-		local hl = Instance.new("Highlight")
-		hl.Name = "MyaESP"
-		hl.Parent = char
-		hl.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
-		hl.FillTransparency = 0.55
-		hl.OutlineTransparency = 0
-		hl.FillColor = Color3.fromRGB(200, 100, 160)
-		hl.OutlineColor = Color3.fromRGB(255, 160, 200)
+		-- Folder of per-part Highlights: model-level Highlight fails on fully transparent / "invisible" rigs.
+		local folder = Instance.new("Folder")
+		folder.Name = "MyaESP"
+		folder.Parent = char
+		for _, part in ipairs(visuals_collect_body_parts(char)) do
+			local hl = Instance.new("Highlight")
+			hl.Name = "MyaESPPart"
+			hl.Adornee = part
+			hl.Parent = folder
+			hl.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
+			hl.FillTransparency = 0.55
+			hl.OutlineTransparency = 0
+			hl.FillColor = Color3.fromRGB(200, 100, 160)
+			hl.OutlineColor = Color3.fromRGB(255, 160, 200)
+		end
 	end
 	if visuals_nametags then
 		local head = char:FindFirstChild("Head") or char:WaitForChild("Head", 8)

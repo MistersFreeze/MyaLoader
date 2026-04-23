@@ -1,7 +1,7 @@
 -- ——— Movement (fly + noclip) ———
 local workspace = Services.Workspace
 local move_fly = false
-local move_fly_speed = 50
+local move_fly_speed = 500
 local move_noclip = false
 local anti_ragdoll_enabled = false
 local anti_ragdoll_hb = nil

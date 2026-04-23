@@ -684,14 +684,14 @@ local function resolve_visual_target()
 	return P.resolve_target_query(target_name_box.Text)
 end
 
-row_button(visuals_page, 6, "Spy camera (orbit)", function()
+row_button(visuals_page, 6, "Spy camera", function()
 	local t = resolve_visual_target()
 	if not t then
 		notify("Mya", "Player not found", 2)
 		return
 	end
 	local ok, err = P.start_spy_camera(t)
-	notify("Mya", ok and ("Spying " .. t.Name .. " · mouse look · wheel zoom") or (err or "Failed"), 2)
+	notify("Mya", ok and ("Spying " .. t.Name .. " · hold right-click to orbit · wheel zoom") or (err or "Failed"), 2)
 end)
 row_button(visuals_page, 7, "Teleport to", function()
 	local t = resolve_visual_target()
@@ -733,7 +733,7 @@ make_toggle_row(misc_page, "Fly", 2, P.get_fly_enabled(), function(v)
 	P.set_fly_enabled(v)
 	notify("Mya", v and "Fly on (WASD · Space · Ctrl)" or "Fly off", 2)
 end)
-make_slider(misc_page, "Fly speed", 3, 5, 200, P.get_fly_speed(), "%d", function(v)
+make_slider(misc_page, "Fly speed", 3, 5, 500, P.get_fly_speed(), "%d", function(v)
 	P.set_fly_speed(v)
 end)
 make_toggle_row(misc_page, "Noclip", 4, P.get_noclip_enabled(), function(v)

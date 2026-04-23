@@ -29,7 +29,7 @@ return {
 	-- fly_bind = "KeyCode.F",
 	-- walk_mod_bind = "KeyCode.G",
 	-- noclip_bind = "KeyCode.H",
-	fly_speed = 50,
+	fly_speed = 500,
 	car_fly_speed = 60,
 	-- car_fly_bind = "KeyCode.V", -- Movement → Car flight (omit or Unknown = no bind)
 	walk_speed = 16,

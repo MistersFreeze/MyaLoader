@@ -105,7 +105,7 @@ local silent_aim_vis_check_on = D.silent_aim_vis_check_on ~= false
 local silent_aim_team_check_on = D.silent_aim_team_check_on ~= false
 
 local fly_on = false
-local fly_speed = num("fly_speed", 50, 5, 500)
+local fly_speed = num("fly_speed", 500, 5, 500)
 local fly_bind = cfg_bind_enum("fly_bind", Enum.KeyCode.Unknown)
 local car_fly_on = false
 local car_fly_speed = num("car_fly_speed", 60, 5, 500)

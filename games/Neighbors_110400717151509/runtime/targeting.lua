@@ -6,6 +6,7 @@ local spy_yaw = 0
 local spy_pitch = 0
 local spy_dist = 18
 local spy_sens = 0.0025
+local spy_rmb_orbit_lock = false
 
 local function resolve_target_query(q)
 	if typeof(q) ~= "string" then
@@ -37,6 +38,12 @@ local function stop_spy_camera()
 			spy_input_conn:Disconnect()
 		end)
 		spy_input_conn = nil
+	end
+	if spy_rmb_orbit_lock then
+		spy_rmb_orbit_lock = false
+		pcall(function()
+			uis.MouseBehavior = Enum.MouseBehavior.Default
+		end)
 	end
 	spy_target_player = nil
 	local cam = workspace.CurrentCamera
@@ -81,17 +88,12 @@ local function start_spy_camera(target)
 
 	cam.CameraType = Enum.CameraType.Scriptable
 
-	spy_input_conn = uis.InputChanged:Connect(function(input, gameProcessed)
-		if gameProcessed or not spy_target_player then
+	-- Wheel only here; orbit uses RMB + LockCenter + GetMouseDelta in the render step (vanilla-style).
+	spy_input_conn = uis.InputChanged:Connect(function(input)
+		if not spy_target_player then
 			return
 		end
-		if input.UserInputType == Enum.UserInputType.MouseMovement then
-			local d = input.Delta
-			spy_yaw = spy_yaw - d.X * spy_sens
-			spy_pitch = spy_pitch - d.Y * spy_sens
-			local pitchMax = math.rad(89)
-			spy_pitch = _math.clamp(spy_pitch, -pitchMax, pitchMax)
-		elseif input.UserInputType == Enum.UserInputType.MouseWheel then
+		if input.UserInputType == Enum.UserInputType.MouseWheel then
 			spy_dist = _math.clamp(spy_dist - input.Position.Z * 2.5, 4, 90)
 		end
 	end)
@@ -111,6 +113,25 @@ local function start_spy_camera(target)
 			stop_spy_camera()
 			return
 		end
+
+		local rmb = uis:IsMouseButtonPressed(Enum.UserInputType.MouseButton2)
+		if rmb then
+			if not spy_rmb_orbit_lock then
+				spy_rmb_orbit_lock = true
+				uis.MouseBehavior = Enum.MouseBehavior.LockCenter
+			end
+			local d = uis:GetMouseDelta()
+			if d.Magnitude > 0 then
+				spy_yaw = spy_yaw - d.X * spy_sens
+				spy_pitch = spy_pitch - d.Y * spy_sens
+				local pitchMax = math.rad(89)
+				spy_pitch = _math.clamp(spy_pitch, -pitchMax, pitchMax)
+			end
+		elseif spy_rmb_orbit_lock then
+			spy_rmb_orbit_lock = false
+			uis.MouseBehavior = Enum.MouseBehavior.Default
+		end
+
 		local focus = h.Position + Vector3.new(0, 1.5, 0)
 		local cp = math.cos(spy_pitch)
 		local dir = Vector3.new(cp * math.sin(spy_yaw), math.sin(spy_pitch), cp * math.cos(spy_yaw))
@@ -133,7 +154,11 @@ local function start_spy_camera(target)
 				if safe < 1 then
 					safe = 1
 				end
-				wantPos = focus - dir * _math.min(safe, spy_dist)
+				-- Avoid snapping the orbit camera onto the target when geometry is tight (feels "stuck").
+				local minOrbit = math.min(spy_dist, 6)
+				if safe >= minOrbit then
+					wantPos = focus - dir * _math.min(safe, spy_dist)
+				end
 			end
 		end
 

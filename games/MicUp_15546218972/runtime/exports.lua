@@ -154,7 +154,7 @@ _G.MYA_NEIGHBORS_PIANO = {
 		return move_fly_speed
 	end,
 	set_fly_speed = function(v)
-		move_fly_speed = _math.clamp(tonumber(v) or 50, 5, 200)
+		move_fly_speed = _math.clamp(tonumber(v) or 500, 5, 500)
 	end,
 	get_noclip_enabled = function()
 		return move_noclip
