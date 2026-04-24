@@ -10,6 +10,7 @@ local RunService = game:GetService("RunService")
 local Players = game:GetService("Players")
 local CollectionService = game:GetService("CollectionService")
 local VirtualInputManager = game:GetService("VirtualInputManager")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local fetch = _G.MYA_FETCH
 local repoBase = _G.MYA_REPO_BASE
@@ -108,12 +109,20 @@ local function killer_character_model()
 	return nil
 end
 
+local function generator_fill_color(pct)
+	pct = math.clamp(pct, 0, 100) / 100
+	local cold = Color3.fromRGB(55, 70, 95)
+	local hot = Color3.fromRGB(110, 255, 150)
+	return cold:Lerp(hot, pct)
+end
+
 local opt = {
 	esp_survivors = true,
 	esp_killer = true,
 	esp_generators = true,
 	esp_doors = true,
 	esp_trapdoor = true,
+	killer_power_hud = true,
 	auto_skillcheck = false,
 }
 
@@ -127,7 +136,8 @@ local COL = {
 	exit = Color3.fromRGB(255, 215, 95),
 	vault = Color3.fromRGB(95, 185, 255),
 	pallet = Color3.fromRGB(255, 155, 70),
-	generator = Color3.fromRGB(120, 255, 160),
+	hooked = Color3.fromRGB(255, 90, 55),
+	knocked = Color3.fromRGB(255, 200, 70),
 	door = Color3.fromRGB(175, 125, 255),
 	trapdoor = Color3.fromRGB(80, 255, 195),
 }
@@ -169,6 +179,48 @@ local function set_highlight(target, color)
 	h.OutlineTransparency = 0.35
 end
 
+local gen_folder = Instance.new("Folder")
+gen_folder.Name = "MyaVD_GenLabels"
+
+local function clear_gen_labels()
+	for _, c in gen_folder:GetChildren() do
+		c:Destroy()
+	end
+end
+
+local function sync_gen_labels()
+	clear_gen_labels()
+	if not opt.esp_generators or uiDestroyed then
+		return
+	end
+	for _, g in CollectionService:GetTagged("Generator") do
+		if g:IsA("Model") and g:IsDescendantOf(workspace) and not g:IsDescendantOf(Players) then
+			local rp = g:GetAttribute("RepairProgress")
+			local pct = typeof(rp) == "number" and math.clamp(rp, 0, 100) or 0
+			local part = g.PrimaryPart or g:FindFirstChildWhichIsA("BasePart", true)
+			if part and part:IsA("BasePart") then
+				local bb = Instance.new("BillboardGui")
+				bb.Name = "GenPct_" .. g:GetDebugId()
+				bb.Size = UDim2.fromOffset(52, 22)
+				bb.StudsOffset = Vector3.new(0, 3.2, 0)
+				bb.AlwaysOnTop = true
+				bb.Adornee = part
+				bb.Parent = gen_folder
+				local tl = Instance.new("TextLabel")
+				tl.BackgroundColor3 = Color3.fromRGB(18, 14, 22)
+				tl.BackgroundTransparency = 0.2
+				tl.Size = UDim2.fromScale(1, 1)
+				tl.Font = Enum.Font.GothamBold
+				tl.TextSize = 12
+				tl.TextColor3 = Color3.fromRGB(255, 248, 252)
+				tl.Text = string.format("%d%%", math.floor(pct + 0.5))
+				tl.Parent = bb
+				Instance.new("UICorner", tl).CornerRadius = UDim.new(0, 6)
+			end
+		end
+	end
+end
+
 local function sync_esp()
 	if uiDestroyed then
 		return
@@ -179,6 +231,18 @@ local function sync_esp()
 		for _, plr in Players:GetPlayers() do
 			if plr ~= localPlayer and plr.Team and plr.Team.Name == "Survivors" and plr.Character then
 				wanted[plr.Character] = COL.survivor
+			end
+		end
+		for _, m in CollectionService:GetTagged("Hooked") do
+			if m:IsA("Model") and m:IsDescendantOf(workspace) and m:IsDescendantOf(Players) and m:GetAttribute("IsHooked") then
+				wanted[m] = COL.hooked
+			end
+		end
+		for _, m in CollectionService:GetTagged("Knocked") do
+			if m:IsA("Model") and m:IsDescendantOf(workspace) and m:IsDescendantOf(Players) then
+				if m:FindFirstChild("Humanoid") and m:GetAttribute("IsCarried") ~= true then
+					wanted[m] = COL.knocked
+				end
 			end
 		end
 	end
@@ -192,7 +256,9 @@ local function sync_esp()
 	if opt.esp_generators then
 		for _, g in CollectionService:GetTagged("Generator") do
 			if g:IsA("Model") and g:IsDescendantOf(workspace) and not g:IsDescendantOf(Players) then
-				wanted[g] = COL.generator
+				local rp = g:GetAttribute("RepairProgress")
+				local pct = typeof(rp) == "number" and math.clamp(rp, 0, 100) or 0
+				wanted[g] = generator_fill_color(pct)
 			end
 		end
 	end
@@ -280,6 +346,7 @@ local function sync_esp()
 	for inst, col in pairs(wanted) do
 		set_highlight(inst, col)
 	end
+	sync_gen_labels()
 end
 
 local function tick_auto_skillcheck()
@@ -320,6 +387,7 @@ ui.IgnoreGuiInset = true
 ui.DisplayOrder = 35
 ui.ResetOnSpawn = false
 ui.Parent = gethui_support and gethui() or game:GetService("CoreGui")
+gen_folder.Parent = ui
 
 local notify, notif_ui = MyaUI.createNotifyStack({
 	C = C,
@@ -468,6 +536,85 @@ local function row_button(parent, order, text, callback, danger)
 	btn.MouseButton1Click:Connect(callback)
 end
 
+local killerHudLines = {}
+local killerHudFrame = Instance.new("Frame")
+killerHudFrame.Name = "MyaKillerPowerHud"
+killerHudFrame.AnchorPoint = Vector2.new(1, 0)
+killerHudFrame.Position = UDim2.new(1, -14, 0, 48)
+killerHudFrame.Size = UDim2.fromOffset(208, 102)
+killerHudFrame.BackgroundColor3 = C.panel
+killerHudFrame.BackgroundTransparency = 0.12
+killerHudFrame.BorderSizePixel = 0
+killerHudFrame.Visible = false
+killerHudFrame.ZIndex = 8
+killerHudFrame.Parent = ui
+Instance.new("UICorner", killerHudFrame).CornerRadius = UDim.new(0, ROW_CORNER)
+local killerHudTitle = Instance.new("TextLabel")
+killerHudTitle.BackgroundTransparency = 1
+killerHudTitle.Font = Enum.Font.GothamBold
+killerHudTitle.TextSize = 11
+killerHudTitle.TextColor3 = C.accent
+killerHudTitle.TextXAlignment = Enum.TextXAlignment.Left
+killerHudTitle.Text = "Power"
+killerHudTitle.Position = UDim2.fromOffset(10, 6)
+killerHudTitle.Size = UDim2.new(1, -20, 0, 16)
+killerHudTitle.Parent = killerHudFrame
+local killerHudBody = Instance.new("TextLabel")
+killerHudBody.BackgroundTransparency = 1
+killerHudBody.Font = Enum.Font.Gotham
+killerHudBody.TextSize = 10
+killerHudBody.TextColor3 = C.text
+killerHudBody.TextXAlignment = Enum.TextXAlignment.Left
+killerHudBody.TextYAlignment = Enum.TextYAlignment.Top
+killerHudBody.TextWrapped = true
+killerHudBody.Text = ""
+killerHudBody.Position = UDim2.fromOffset(8, 26)
+killerHudBody.Size = UDim2.new(1, -16, 1, -32)
+killerHudBody.Parent = killerHudFrame
+
+local function format_remote_args(...)
+	local t = { ... }
+	local out = {}
+	for i = 1, #t do
+		local v = t[i]
+		local vt = typeof(v)
+		if vt == "table" then
+			out[i] = "[tbl]"
+		elseif vt == "Instance" then
+			out[i] = v.Name
+		else
+			out[i] = tostring(v)
+		end
+	end
+	return table.concat(out, " ")
+end
+
+local function wire_killer_remote_event(re, displayName)
+	if not re or not re:IsA("RemoteEvent") then
+		return
+	end
+	track(
+		re.OnClientEvent:Connect(function(...)
+			local line = displayName .. " " .. format_remote_args(...)
+			if #line > 118 then
+				line = string.sub(line, 1, 118)
+			end
+			table.insert(killerHudLines, 1, line)
+			while #killerHudLines > 5 do
+				table.remove(killerHudLines)
+			end
+			killerHudBody.Text = table.concat(killerHudLines, "\n")
+		end)
+	)
+end
+
+local function sync_killer_hud_visibility()
+	local team = localPlayer.Team
+	killerHudFrame.Visible = opt.killer_power_hud and team ~= nil and team.Name == "Killer"
+end
+
+track(localPlayer:GetPropertyChangedSignal("Team"):Connect(sync_killer_hud_visibility))
+
 section_label(visuals_page, "ESP", 1)
 make_toggle_row(visuals_page, "Survivors", 2, opt.esp_survivors, function(v)
 	opt.esp_survivors = v
@@ -483,6 +630,10 @@ make_toggle_row(visuals_page, "Exits, vaults, and pallets", 5, opt.esp_doors, fu
 end)
 make_toggle_row(visuals_page, "Trapdoor hint", 6, opt.esp_trapdoor, function(v)
 	opt.esp_trapdoor = v
+end)
+make_toggle_row(visuals_page, "Killer power HUD", 7, opt.killer_power_hud, function(v)
+	opt.killer_power_hud = v
+	sync_killer_hud_visibility()
 end)
 
 section_label(assist_page, "Skill check", 1)
@@ -516,6 +667,8 @@ sl.TextWrapped = true
 sl.Text = "Insert toggles menu"
 sl.Parent = s_hint
 
+sync_killer_hud_visibility()
+
 track(
 	RunService.Heartbeat:Connect(function(dt)
 		if uiDestroyed then
@@ -542,9 +695,18 @@ track(
 )
 
 task.defer(function()
-	local rem = game:GetService("ReplicatedStorage"):FindFirstChild("Remotes")
+	local rem = ReplicatedStorage:FindFirstChild("Remotes")
 	if not rem then
 		return
+	end
+	local killersRoot = rem:FindFirstChild("Killers")
+	if killersRoot then
+		local killerFolder = killersRoot:FindFirstChild("Killer")
+		if killerFolder then
+			for _, evName in ipairs({ "CooldownEvent", "ActivatePower", "PowerDoneDeactivating", "Deactivate", "IdleRefreshEvent" }) do
+				wire_killer_remote_event(killerFolder:FindFirstChild(evName), evName)
+			end
+		end
 	end
 	local gen = rem:FindFirstChild("Generator")
 	if gen then
@@ -580,6 +742,7 @@ local function unload_all()
 		return
 	end
 	uiDestroyed = true
+	clear_gen_labels()
 	for _, c in conns do
 		pcall(function()
 			c:Disconnect()
