@@ -17,7 +17,13 @@ local s = { -- pro script dumper settings
 	log_failures_txt = true, -- _decompile_failures.txt for scripts that failed or timed out
 }
 
-local decompile = decompile or disassemble
+-- Capture globals before any locals shadow executor APIs.
+local decompile_global = typeof(decompile) == "function" and decompile or nil
+local disassemble_global = typeof(disassemble) == "function" and disassemble or nil
+local primary_decompiler = decompile_global or disassemble_global
+local bytecode_get = (typeof(getscriptbytecode) == "function" and getscriptbytecode)
+	or (typeof(get_script_bytecode) == "function" and get_script_bytecode)
+	or nil
 local getnilinstances = getnilinstances or get_nil_instances
 local getscripthash = getscripthash or get_script_hash
 local getscriptclosure = getscriptclosure
@@ -89,18 +95,86 @@ local function delay()
 		task.wait(s.delay)
 	until threads < s.threads
 end
+
+-- Many executors return a failure *string* (e.g. Madium: "-- Failed to decompile Script.") instead of erroring.
+-- Only inspect a short first line so real sources whose body mentions decompilation are not misclassified.
+local function is_rejected_decompiler_output(output)
+	if typeof(output) ~= "string" then
+		return true
+	end
+	if output:gsub("%s", "") == "" then
+		return true
+	end
+	local first = output:match("^[^\n]*") or output
+	if #first > 220 then
+		return false
+	end
+	local probe = first:lower()
+	if probe:find("failed to decompile", 1, true) then
+		return true
+	end
+	if probe:find("could not decompile", 1, true) then
+		return true
+	end
+	if probe:find("unable to decompile", 1, true) then
+		return true
+	end
+	return false
+end
+
+local function decompile_attempt_succeeded(output)
+	return typeof(output) == "string" and not is_rejected_decompiler_output(output)
+end
+
 local function decomp(a)
-	local hash = getscripthash(a)
+	local hash
+	if getscripthash then
+		local ok, h = pcall(getscripthash, a)
+		if ok and typeof(h) == "string" and h ~= "" then
+			hash = h
+		end
+	end
+	if not hash then
+		hash = a:GetDebugId()
+	end
 	local cached = decompilecache[hash]
 	if cached then
 		return cached
 	end
 
-	local output = decompile(a)
-	if typeof(output) == "string" and output:gsub("%s", "") ~= "" and not output:find("^%-%- Failed") then
-		decompilecache[hash] = output
+	local function run_dec(fn, arg)
+		if typeof(fn) ~= "function" or arg == nil then
+			return nil
+		end
+		local ok, res = pcall(fn, arg)
+		if ok and decompile_attempt_succeeded(res) then
+			return res
+		end
+		return nil
 	end
-	return output
+
+	local out = run_dec(primary_decompiler, a)
+	if not out and bytecode_get and primary_decompiler then
+		local bc_ok, bc = pcall(bytecode_get, a)
+		if bc_ok and typeof(bc) == "string" and #bc > 0 then
+			out = run_dec(primary_decompiler, bc)
+		end
+	end
+	if not out and disassemble_global and disassemble_global ~= primary_decompiler then
+		out = run_dec(disassemble_global, a)
+		if not out and bytecode_get then
+			local bc_ok, bc = pcall(bytecode_get, a)
+			if bc_ok and typeof(bc) == "string" and #bc > 0 then
+				out = run_dec(disassemble_global, bc)
+			end
+		end
+	end
+
+	if not out then
+		return "-- Failed to decompile script"
+	end
+	decompilecache[hash] = out
+	return out
 end
 local function getfullname(a)
 	local name = a:GetFullName()
@@ -216,10 +290,11 @@ local function dumpscript(v, isnil)
 				local attempt = 0
 				while true do
 					attempt = attempt + 1
-					_, output = xpcall(decomp, function()
+					local ok_xp, res = xpcall(decomp, function()
 						return "-- Failed to decompile script"
 					end, v)
-					if output ~= "-- Failed to decompile script" and typeof(output) == "string" and output:gsub("%s", "") ~= "" then
+					output = res
+					if ok_xp and decompile_attempt_succeeded(output) then
 						break
 					end
 					if (os.clock() - time) > s.timeout then
