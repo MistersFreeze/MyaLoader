@@ -13,7 +13,7 @@ This folder is the **canonical orientation** for humans and AI assistants workin
 | 07 | [07_gui_and_hud.md](07_gui_and_hud.md) | Hub window, tabs, theme, lifecycle (including auto-close) |
 | 08 | [08_directory_structure.md](08_directory_structure.md) | Repository layout and file roles |
 | 09 | [09_workflows.md](09_workflows.md) | Day-to-day: host files, add a game (config + hub display names + loader notes), test, Junkie vs raw loader |
-| 10 | [10_critical_constraints.md](10_critical_constraints.md) | Non-negotiables: URLs, secrets, ToS, executor variance |
+| 10 | [10_critical_constraints.md](10_critical_constraints.md) | Non-negotiables: URLs, secrets, ToS, executor variance, user-facing UI copy rules |
 | 11 | [11_junkie_distribution.md](11_junkie_distribution.md) | `loader_jnkie.lua`, keys, `MYA_BASE_URL`, SDK validation |
 | 12 | [12_network_architecture.md](12_network_architecture.md) | HttpGet chain, static hosting, optional external SDK URL |
 

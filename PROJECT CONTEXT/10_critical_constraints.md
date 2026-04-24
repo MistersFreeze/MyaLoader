@@ -24,6 +24,11 @@
 
 - Successful mount of a **supported** game **destroys the hub**. Features that “live in the hub” must be redesigned if you need the hub to remain visible (would require code changes—out of scope for this doc).
 
+## User-facing copy in UIs
+
+- **No parenthetical asides** in hub text, in-game module labels, toasts, or hint rows—do not wrap clarifications in `()` or similar.
+- **No stray explanatory blocks** under toggles or in panels unless the user explicitly asks for that copy; prefer short control labels over implementation trivia or filler paragraphs.
+
 ## Undocumented files
 
 - **`piano.txt`** is intentionally excluded from this context set until explicitly analyzed later.

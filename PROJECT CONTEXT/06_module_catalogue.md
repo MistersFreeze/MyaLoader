@@ -41,6 +41,12 @@ Games live under **`games/`**. **Place-specific** modules are listed in **`confi
 - **Features:** Sliders — **FPS × 1–15**, **Ping × 0.1–10**, **Resolution × 0.1–10** (billboard `WxH` text when a matching label exists + **`settings().Rendering.QualityLevel`**); local FPS from **PreRender** counter; ping from **`Player:GetNetworkPing()`** (seconds → ms). Toggle to pause flex; **Insert** menu; **Unload** → **`_G.unload_mya`**.
 - **Teardown:** **`_G.unload_mya`**.
 
+## `games/ViolenceDistrict_93978595733734/`
+
+- **PlaceId:** `93978595733734` — Violence District, DbD-style asym horror.
+- **Entry:** `init.lua`, registered in `config.lua`. Loads **`gui.lua`** with **`MYA_REPO_BASE`** and **`MYA_FETCH`** like Flex Your FPS.
+- **GUI:** **`lib/mya_game_ui.lua`** hub shell. **Visuals:** Highlights only — pink other **Survivors**, red **killer** from **`Teams.Killer`**, **Generator** tagged models, exits, levers, vaults, pallets; **opened** map doors only after every in-map **Generator** model reports **`RepairProgress` ≥ 100**, using open-related attributes or transparency and collision heuristics; trapdoor scan after **`Remotes.Generator.Escapetime`** when one survivor remains. **Assist:** auto skill check via **`VirtualInputManager`**. **Insert** toggles menu; **Unload** → **`_G.unload_mya_vd`**.
+
 ## `games/PrisonLife_155615604/`
 
 - **PlaceId:** `155615604` (Prison Life).

@@ -24,6 +24,7 @@ return {
 		[112399855119586] = "games/MicUp_15546218972/init.lua",
 		[15546218972] = "games/MicUp_15546218972/init.lua",
 		[155615604] = "games/PrisonLife_155615604/init.lua",
+		[93978595733734] = "games/ViolenceDistrict_93978595733734/init.lua",
 	},
 
 	THEME = {

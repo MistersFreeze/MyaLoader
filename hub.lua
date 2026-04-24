@@ -631,6 +631,7 @@ return function(BASE_URL: string, config: { [string]: any })
 		[112399855119586] = "Corner",
 		[15546218972] = "Corner",
 		[155615604] = "Prison Life",
+		[93978595733734] = "Violence District",
 	}
 	local gamesCatalog = Instance.new("Frame")
 	gamesCatalog.BackgroundTransparency = 1
