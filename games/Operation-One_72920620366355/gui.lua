@@ -116,7 +116,7 @@ local shell = MyaUI.createHubShell({
 		Combat = { "Aim Assist", "Silent aim" },
 		Visuals = { "Player ESP", "Gadgets", "World" },
 	},
-	statusDefault = "Ready · Insert toggles this menu",
+	statusDefault = "Ready · Delete toggles this menu",
 	discordInvite = "https://discord.gg/YeyepQG6K9",
 })
 
@@ -746,7 +746,7 @@ misc_page.Visible = true
 misc_page.Parent = tab_containers["Misc"]
 
 section_label(misc_page, "Interface", 1)
-local _, menu_key_update = make_keybind(misc_page, "Menu Bind", 2, Enum.KeyCode.Insert,
+local _, menu_key_update = make_keybind(misc_page, "Menu Bind", 2, Enum.KeyCode.Delete,
     function(k) _G.new_menu_key = k end)
 _G.ui_set_menu_key = function(k) menu_key_update(k) end
 
@@ -938,4 +938,4 @@ refresh_configs()
 
 switch_tab("Combat")
 _G.user_interface = ui
-notify("Mya", "Operation One · UI ready. Insert to toggle.", 4)
+notify("Mya", "Operation One · UI ready. Delete to toggle.", 4)

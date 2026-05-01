@@ -467,10 +467,10 @@ bind_lbl.Font = Enum.Font.Gotham
 bind_lbl.TextSize = 12
 bind_lbl.TextColor3 = C.dim
 bind_lbl.TextXAlignment = Enum.TextXAlignment.Left
-bind_lbl.Text = "Menu: Insert  ·  Drag header to move"
+bind_lbl.Text = "Menu: Delete  ·  Drag header to move"
 bind_lbl.Parent = bind_row
 
-local menu_key = Enum.KeyCode.Insert
+local menu_key = Enum.KeyCode.Delete
 uis.InputBegan:Connect(function(input, processed)
 	if processed then
 		return
@@ -516,4 +516,4 @@ _G.MYA_TEMPLATE_RUN_GUI_SYNC = function()
 end
 
 switch_tab("Main")
-notify("Mya", "Template · Insert to hide", 3)
+notify("Mya", "Template · Delete to hide", 3)

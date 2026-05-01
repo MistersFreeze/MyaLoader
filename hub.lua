@@ -375,7 +375,7 @@ return function(BASE_URL: string, config: { [string]: any })
 	statusBar.Size = UDim2.new(1, -20, 0, 26)
 	statusBar.Parent = body
 	UI.corner(statusBar)
-	local statusLabel = UI.label(statusBar, "Ready · press Insert anytime to hide or bring this window back", 13, true)
+	local statusLabel = UI.label(statusBar, "Ready · press Delete anytime to hide or bring this window back", 13, true)
 	statusLabel.Position = UDim2.new(0, 10, 0, 0)
 	statusLabel.Size = UDim2.new(1, -20, 1, 0)
 	statusLabel.TextYAlignment = Enum.TextYAlignment.Center
@@ -622,6 +622,7 @@ return function(BASE_URL: string, config: { [string]: any })
 
 	-- Catalog of PlaceIds from config (display names; keep in sync with config.SUPPORTED_GAMES).
 	local GAME_DISPLAY_NAMES: { [number]: string } = {
+		[11729688377] = "Booga Booga",
 		[7353845952] = "Project Delta",
 		[7336302630] = "Project Delta",
 		[72920620366355] = "Operation One",
@@ -632,6 +633,7 @@ return function(BASE_URL: string, config: { [string]: any })
 		[15546218972] = "Corner",
 		[155615604] = "Prison Life",
 		[93978595733734] = "Violence District",
+		[11574110446] = "Desolate Valley",
 	}
 	local gamesCatalog = Instance.new("Frame")
 	gamesCatalog.BackgroundTransparency = 1
@@ -700,7 +702,7 @@ return function(BASE_URL: string, config: { [string]: any })
 	UI.label(universalCard, "Mya Universal", 18, false)
 	UI.label(
 		universalCard,
-		"This one tags along to almost any game: outlines so you see people easier, gentler aim help while you hold right-click, quieter aim tricks on the side, flight, walking through walls, bumping walk speed or jump — that sort of thing. There’s a tiny menu tucked behind Insert whenever you want it out of the way.",
+		"This one tags along to almost any game: outlines so you see people easier, gentler aim help while you hold right-click, quieter aim tricks on the side, flight, walking through walls, bumping walk speed or jump — that sort of thing. There’s a tiny menu tucked behind Delete whenever you want it out of the way.",
 		14,
 		true
 	)
@@ -728,7 +730,7 @@ return function(BASE_URL: string, config: { [string]: any })
 			notify("Mya Universal mount error: " .. tostring(errM))
 			return
 		end
-		notify("Mya Universal active · Insert for menu")
+		notify("Mya Universal active · Delete for menu")
 	end
 	UI.primaryButton(universalCard, "Launch Mya Universal", function()
 		tryMountMyaUniversal()
@@ -912,7 +914,7 @@ return function(BASE_URL: string, config: { [string]: any })
 		local mod, err = Util.loadModuleFromUrl(url, gamePath)
 		if not mod then
 			supportTitle.Text = "Load failed"
-			UI.label(gamePanel, tostring(err), 14, true)
+			UI.label(gamePanel, "Failed to load this game module.", 14, true)
 			notify("Game module error")
 			return
 		end
@@ -1100,7 +1102,7 @@ return function(BASE_URL: string, config: { [string]: any })
 		if gameProcessed then
 			return
 		end
-		if input.KeyCode ~= Enum.KeyCode.Insert then
+		if input.KeyCode ~= Enum.KeyCode.Delete then
 			return
 		end
 		gui.Enabled = not gui.Enabled

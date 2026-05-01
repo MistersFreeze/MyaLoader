@@ -770,6 +770,8 @@ end)
 local visuals_esp = false
 local visuals_nametags = false
 local visuals_conns = {}
+local visuals_periodic_conn = nil
+local visuals_char_tracked = {}
 
 local function visuals_collect_body_parts(char)
 	local parts = {}
@@ -784,6 +786,16 @@ local function visuals_collect_body_parts(char)
 		end
 	end
 	return parts
+end
+
+local function visuals_clear_char_track(plr)
+	local t = visuals_char_tracked[plr]
+	if t and t.descConn then
+		pcall(function()
+			t.descConn:Disconnect()
+		end)
+	end
+	visuals_char_tracked[plr] = nil
 end
 
 local function visuals_strip(char)
@@ -803,6 +815,38 @@ local function visuals_strip(char)
 	end
 end
 
+local function visuals_track_character(plr, char)
+	local existing = visuals_char_tracked[plr]
+	if existing and existing.char == char and existing.descConn then
+		return
+	end
+	visuals_clear_char_track(plr)
+	if not char or not char.Parent or not visuals_esp then
+		return
+	end
+	local pending = false
+	local descConn = char.DescendantAdded:Connect(function(inst)
+		if not visuals_esp or plr.Character ~= char then
+			return
+		end
+		if inst:IsA("BasePart") or inst:IsA("Accessory") then
+			if pending then
+				return
+			end
+			pending = true
+			_task.delay(0.45, function()
+				pending = false
+				if visuals_esp and plr.Character == char and char.Parent then
+					pcall(function()
+						visuals_apply(plr, char)
+					end)
+				end
+			end)
+		end
+	end)
+	visuals_char_tracked[plr] = { char = char, descConn = descConn }
+end
+
 local function visuals_apply(plr, char)
 	if not char then
 		return
@@ -813,16 +857,18 @@ local function visuals_apply(plr, char)
 		local folder = Instance.new("Folder")
 		folder.Name = "MyaESP"
 		folder.Parent = char
+		local fill = Color3.fromRGB(255, 90, 140)
+		local outline = Color3.fromRGB(255, 255, 255)
 		for _, part in ipairs(visuals_collect_body_parts(char)) do
 			local hl = Instance.new("Highlight")
 			hl.Name = "MyaESPPart"
 			hl.Adornee = part
 			hl.Parent = folder
 			hl.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
+			hl.FillColor = fill
+			hl.OutlineColor = outline
 			hl.FillTransparency = 0.55
-			hl.OutlineTransparency = 0
-			hl.FillColor = Color3.fromRGB(200, 100, 160)
-			hl.OutlineColor = Color3.fromRGB(255, 160, 200)
+			hl.OutlineTransparency = 0.3
 		end
 	end
 	if visuals_nametags then
@@ -850,24 +896,63 @@ local function visuals_apply(plr, char)
 end
 
 local function visuals_refresh_all()
+	if not visuals_esp then
+		for plr in pairs(visuals_char_tracked) do
+			visuals_clear_char_track(plr)
+		end
+	end
 	for _, plr in ipairs(players:GetPlayers()) do
 		if plr.Character then
-			visuals_apply(plr, plr.Character)
+			pcall(function()
+				visuals_apply(plr, plr.Character)
+			end)
+			if visuals_esp then
+				visuals_track_character(plr, plr.Character)
+			end
 		end
 	end
 end
 
+local function visuals_schedule_char_apply(plr, char)
+	_task.defer(function()
+		pcall(function()
+			char:WaitForChild("Humanoid", 15)
+			char:WaitForChild("HumanoidRootPart", 15)
+		end)
+		if plr.Character == char and char.Parent then
+			pcall(function()
+				visuals_apply(plr, char)
+			end)
+		end
+		if visuals_esp then
+			visuals_track_character(plr, char)
+		end
+	end)
+	_task.delay(0.55, function()
+		if visuals_esp and plr.Character == char and char.Parent then
+			pcall(function()
+				visuals_apply(plr, char)
+			end)
+			visuals_track_character(plr, char)
+		end
+	end)
+	_task.delay(1.8, function()
+		if visuals_esp and plr.Character == char and char.Parent then
+			pcall(function()
+				visuals_apply(plr, char)
+			end)
+			visuals_track_character(plr, char)
+		end
+	end)
+end
+
 local function visuals_hook_player(plr)
 	local c = plr.CharacterAdded:Connect(function(char)
-		_task.defer(function()
-			visuals_apply(plr, char)
-		end)
+		visuals_schedule_char_apply(plr, char)
 	end)
 	table.insert(visuals_conns, c)
 	if plr.Character then
-		_task.defer(function()
-			visuals_apply(plr, plr.Character)
-		end)
+		visuals_schedule_char_apply(plr, plr.Character)
 	end
 end
 
@@ -878,10 +963,39 @@ local function visuals_init()
 		end)
 	end
 	visuals_conns = {}
+	if visuals_periodic_conn then
+		pcall(function()
+			visuals_periodic_conn:Disconnect()
+		end)
+		visuals_periodic_conn = nil
+	end
+	for plr in pairs(visuals_char_tracked) do
+		visuals_clear_char_track(plr)
+	end
+
+	local acc = 0
+	visuals_periodic_conn = run_service.Heartbeat:Connect(function(dt)
+		if not visuals_esp then
+			return
+		end
+		acc = acc + dt
+		if acc >= 3.5 then
+			acc = 0
+			pcall(visuals_refresh_all)
+		end
+	end)
+	table.insert(visuals_conns, visuals_periodic_conn)
+
 	table.insert(
 		visuals_conns,
 		players.PlayerAdded:Connect(function(plr)
 			visuals_hook_player(plr)
+		end)
+	)
+	table.insert(
+		visuals_conns,
+		players.PlayerRemoving:Connect(function(plr)
+			visuals_clear_char_track(plr)
 		end)
 	)
 	for _, plr in ipairs(players:GetPlayers()) do
@@ -896,6 +1010,10 @@ local function visuals_unload()
 		end)
 	end
 	visuals_conns = {}
+	visuals_periodic_conn = nil
+	for plr in pairs(visuals_char_tracked) do
+		visuals_clear_char_track(plr)
+	end
 	for _, plr in ipairs(players:GetPlayers()) do
 		if plr.Character then
 			visuals_strip(plr.Character)

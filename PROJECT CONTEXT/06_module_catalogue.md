@@ -55,6 +55,14 @@ Games live under **`games/`**. **Place-specific** modules are listed in **`confi
 - **Game-specific:** Prison Life exposes **`Teams.Inmates`**, **`Teams.Guards`**, **`Teams.Criminals`**. Separate **Prisoner check** toggles (Inmates team) under **Aim assist**, **Silent aim**, and **Visuals → ESP**, independent of team check. Triggerbot follows aim assist targeting. **Movement → Car flight**: bind + speed slider; applies **`BodyVelocity`** to the vehicle model while seated in a **`VehicleSeat`**. Legacy config key **`pl_skip_inmates = true`** still maps all three prisoner checks on when the per-mode keys are omitted.
 - **Teardown:** **`_G.unload_mya_universal`**.
 
+## `games/BoogaBooga_11729688377/`
+
+- **PlaceId:** `11729688377` (Booga Booga).
+- **Entry:** `init.lua` (registered in `config.lua`).
+- **Pattern:** `init.lua` sets **`MYA_REPO_BASE`** + **`MYA_FETCH`**, runs **`runtime.lua`** bundle (`runtime/state.lua`, `runtime/esp.lua`, `runtime/exports.lua`), then loads **`gui.lua`**.
+- **GUI:** **`lib/mya_game_ui.lua`** shell with **Visuals → Player ESP** sub-page and toggles for Player ESP, tracers, health bar, distance, usernames.
+- **Teardown:** **`_G.unload_mya_booga`**.
+
 ## `games/_template.lua`
 
 - **Purpose:** Copy starter for new modules (not loaded unless you register it in config).

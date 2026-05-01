@@ -66,7 +66,7 @@ local shell = MyaUI.createHubShell({
 	titleText = "Mya  ·  Flex Your FPS",
 	tabNames = { "Flex", "Settings" },
 	subPages = {},
-	statusDefault = "Ready · Insert toggles menu",
+	statusDefault = "Ready · Delete toggles menu",
 	discordInvite = "https://discord.gg/YeyepQG6K9",
 	winW = 440,
 	winH = 420,
@@ -305,12 +305,12 @@ sl.TextSize = 12
 sl.TextColor3 = C.dim
 sl.TextXAlignment = Enum.TextXAlignment.Left
 sl.TextWrapped = true
-sl.Text = "Insert toggles menu"
+sl.Text = "Delete toggles menu"
 sl.Parent = s_hint
 
 P.start_flex_runtime()
 
-local menu_key = Enum.KeyCode.Insert
+local menu_key = Enum.KeyCode.Delete
 uis.InputBegan:Connect(function(input, processed)
 	if processed then
 		return
@@ -327,4 +327,4 @@ _G.MYA_FLEX_RUN_UI_SYNC = function()
 end
 
 switch_tab("Flex")
-notify("Mya", "Flex Your FPS · Insert to hide menu", 4)
+notify("Mya", "Flex Your FPS · Delete to hide menu", 4)

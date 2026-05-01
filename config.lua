@@ -8,13 +8,14 @@ return {
 	VERSION = "Loader",
 
 	-- Hub: when true (default), automatically loads the game module for the current PlaceId if registered (no "Load game module" click). Set false to load manually. Override: getgenv().MYA_AUTOLOAD_GAME_MODULE.
-	AUTOLOAD_GAME_MODULE = true,
+	AUTOLOAD_GAME_MODULE = false,
 	-- Hub: when true, if the current place has no registered module, automatically launches Mya Universal. Default false. Override: getgenv().MYA_AUTOLOAD_MYA_UNIVERSAL_WHEN_UNSUPPORTED.
 	AUTOLOAD_MYA_UNIVERSAL_WHEN_UNSUPPORTED = false,
 
 	-- PlaceId -> path under your host root (must match real files: use games/.../init.lua for folders).
 	-- Example: "games/MyGame_123/init.lua" or "games/example.lua"
 	SUPPORTED_GAMES = {
+		[11729688377] = "games/BoogaBooga_11729688377/init.lua",
 		[7353845952] = "games/ProjectDelta_7353845952/init.lua",
 		[7336302630] = "games/ProjectDelta_7353845952/init.lua",
 		[72920620366355] = "games/Operation-One_72920620366355/init.lua",
@@ -25,6 +26,7 @@ return {
 		[15546218972] = "games/MicUp_15546218972/init.lua",
 		[155615604] = "games/PrisonLife_155615604/init.lua",
 		[93978595733734] = "games/ViolenceDistrict_93978595733734/init.lua",
+		[11574110446] = "games/DesolateValley_11574110446/init.lua",
 	},
 
 	THEME = {

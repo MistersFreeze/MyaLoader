@@ -406,7 +406,7 @@ local shell = MyaUI.createHubShell({
 	titleText = "Mya  ·  Violence District",
 	tabNames = { "Visuals", "Assist", "Settings" },
 	subPages = {},
-	statusDefault = "Insert toggles menu",
+	statusDefault = "Delete toggles menu",
 	discordInvite = false,
 	winW = 540,
 	winH = 400,
@@ -664,7 +664,7 @@ sl.TextSize = 12
 sl.TextColor3 = C.dim
 sl.TextXAlignment = Enum.TextXAlignment.Left
 sl.TextWrapped = true
-sl.Text = "Insert toggles menu"
+sl.Text = "Delete toggles menu"
 sl.Parent = s_hint
 
 sync_killer_hud_visibility()
@@ -688,7 +688,7 @@ track(
 		if processed then
 			return
 		end
-		if input.KeyCode == Enum.KeyCode.Insert then
+		if input.KeyCode == Enum.KeyCode.Delete then
 			ui.Enabled = not ui.Enabled
 		end
 	end)
@@ -771,4 +771,4 @@ _G.MYA_VD_RUN_UI_SYNC = function()
 end
 
 switch_tab("Visuals")
-notify("Mya", "Violence District · Insert to hide menu", 4)
+notify("Mya", "Violence District · Delete to hide menu", 4)

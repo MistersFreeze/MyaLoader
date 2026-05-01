@@ -89,7 +89,7 @@ local shell = MyaUI.createHubShell({
 		Combat = { "Aim assist", "Silent aim", "Triggerbot" },
 		Visuals = { "Players", "World" },
 	},
-	statusDefault = "Ready · Insert toggles this menu",
+	statusDefault = "Ready · Delete toggles this menu",
 	discordInvite = "https://discord.gg/YeyepQG6K9",
 })
 
@@ -749,7 +749,7 @@ hint.TextSize = 11
 hint.TextColor3 = C.dim
 hint.TextXAlignment = Enum.TextXAlignment.Left
 hint.TextWrapped = true
-hint.Text = "Insert toggles this menu. Drag the title bar to move. Click a bind, then press a key or mouse button."
+hint.Text = "Delete toggles this menu. Drag the title bar to move. Click a bind, then press a key or mouse button."
 hint.Parent = hint_row
 
 local unload_row = make_row(settings_page, next_order(), 44)
@@ -770,7 +770,7 @@ unload_btn.MouseButton1Click:Connect(function()
 	end
 end)
 
-local menu_key = Enum.KeyCode.Insert
+local menu_key = Enum.KeyCode.Delete
 uis.InputBegan:Connect(function(input, gp)
 	if listening_btn and listening_set and listening_get and listening_armed then
 		if input.UserInputType == Enum.UserInputType.Keyboard then

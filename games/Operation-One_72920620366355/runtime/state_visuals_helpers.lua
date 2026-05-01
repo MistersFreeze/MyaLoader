@@ -46,7 +46,7 @@ local color_box_vis    = Color3.fromRGB(0, 255, 0)
 
 --[[ begin main script ]]--
 
-local menu_key = Enum.KeyCode.Insert
+local menu_key = Enum.KeyCode.Delete
 local pad = 4
 
 local cloneref_support = cloneref ~= nil

@@ -68,7 +68,7 @@ local shell = MyaUI.createHubShell({
 	titleText = "Mya  ·  Neighbors",
 	tabNames = { "Piano", "Visuals", "Piano Settings", "Misc", "Settings" },
 	subPages = {},
-	statusDefault = "Ready · Insert toggles menu",
+	statusDefault = "Ready · Delete toggles menu",
 	discordInvite = "https://discord.gg/YeyepQG6K9",
 	winW = 540,
 	winH = 400,
@@ -706,7 +706,7 @@ settings_hint.TextSize = 12
 settings_hint.TextColor3 = C.dim
 settings_hint.TextXAlignment = Enum.TextXAlignment.Left
 settings_hint.TextWrapped = true
-settings_hint.Text = "Insert toggles this menu · Drag the title bar to move"
+settings_hint.Text = "Delete toggles this menu · Drag the title bar to move"
 settings_hint.Parent = settings_hint_row
 
 -- ——— Misc ———
@@ -739,7 +739,7 @@ end)
 
 P.start_render_loop()
 
-local menu_key = Enum.KeyCode.Insert
+local menu_key = Enum.KeyCode.Delete
 uis.InputBegan:Connect(function(input, processed)
 	if processed then
 		return
@@ -753,4 +753,4 @@ _G.user_interface = ui
 _G.mya_neighbors_notif_ui = notif_ui
 
 switch_tab("Piano")
-notify("Mya", "Neighbors · Insert to hide menu", 4)
+notify("Mya", "Neighbors · Delete to hide menu", 4)
