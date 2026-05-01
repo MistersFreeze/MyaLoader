@@ -60,7 +60,12 @@ Games live under **`games/`**. **Place-specific** modules are listed in **`confi
 - **PlaceId:** `11729688377` (Booga Booga).
 - **Entry:** `init.lua` (registered in `config.lua`).
 - **Pattern:** `init.lua` sets **`MYA_REPO_BASE`** + **`MYA_FETCH`**, runs **`runtime.lua`** bundle (`runtime/state.lua`, `runtime/esp.lua`, `runtime/exports.lua`), then loads **`gui.lua`**.
-- **GUI:** **`lib/mya_game_ui.lua`** shell with **Visuals → Player ESP** sub-page and toggles for Player ESP, tracers, health bar, distance, usernames.
+- **GUI:** **`lib/mya_game_ui.lua`** shell with tabs **Visuals / Movement / Misc / Configs / Settings**.
+- **Visuals:** **Player ESP** (highlight, tracers, health bar, distance, usernames, team color mode), plus **Wandering Trader ESP** and optional trader tracers.
+- **Movement:** **Noclip** (toggle + bind), **Speed** (toggle + bind + slider), **Fly** (toggle + bind + speed slider).
+- **Misc:** **NoClipCam** and **Water Walker**.
+- **Config system:** In-GUI create/load/save/delete config files via JSON in `mya_booga_configs`.
+- **Removed features:** **Item ESP**, **AutoPickup**, and **Pickup Helper** are no longer present in this module.
 - **Teardown:** **`_G.unload_mya_booga`**.
 
 ## `games/_template.lua`

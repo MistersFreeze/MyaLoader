@@ -606,7 +606,7 @@ return function(BASE_URL: string, config: { [string]: any })
 	UI.label(homeCard, "Welcome to " .. config.BRAND, 18, false)
 	UI.label(
 		homeCard,
-		"Peek at the Games tab whenever you want to check if this experience has its own script — from there you can load it once everything looks good.",
+		"Peek at the Games tab whenever you want to check if this experience has its own script",
 		14,
 		true
 	)
@@ -702,7 +702,7 @@ return function(BASE_URL: string, config: { [string]: any })
 	UI.label(universalCard, "Mya Universal", 18, false)
 	UI.label(
 		universalCard,
-		"This one tags along to almost any game: outlines so you see people easier, gentler aim help while you hold right-click, quieter aim tricks on the side, flight, walking through walls, bumping walk speed or jump — that sort of thing. There’s a tiny menu tucked behind Delete whenever you want it out of the way.",
+		"Universal works in most games and keeps things simple: ESP, aim tools, fly, noclip, speed, and jump tweaks. Press Delete anytime to open or hide the menu.",
 		14,
 		true
 	)
@@ -744,7 +744,7 @@ return function(BASE_URL: string, config: { [string]: any })
 	UI.label(dumperCard, "Pro Script Dumper", 18, false)
 	UI.label(
 		dumperCard,
-		"Pulls LocalScripts and ModuleScripts out of whatever you’re playing and drops them into a tidy folder in your executor’s workspace — you’ll want the heavy-duty toys (decompile, write to disk, the works). The window matches the rest of Mya, and there’s an unload when you’re finished. Tip of the hat to zzerexx for the original Pro Script Dumper.",
+		"Pulls LocalScripts and ModuleScripts out of whatever you’re playing and drops them into a folder in your executor’s workspace. Tip of the hat to zzerexx for the original Pro Script Dumper.",
 		14,
 		true
 	)
