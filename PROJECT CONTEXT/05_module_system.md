@@ -42,10 +42,10 @@ Multi-file games derive a **directory URL** from `baseUrl` + dirname(`gameScript
 ## Lifecycle
 
 1. **`loader.lua`** (and **`loader_local.lua`**) wait for **`game.Loaded`** and briefly for **`game.PlaceId ~= 0`** before HttpGetting **`config.lua`** / **`hub.lua`**. The hub defers a **PlaceId sync** the same way so **`SUPPORTED_GAMES`** matches the live experience.
-2. Hub builds UI. The **Games** tab shows support for the current place. By default **`config.AUTOLOAD_GAME_MODULE`** is **`true`**: after sync, the hub calls **`tryMountGame()`** automatically when the place is registered (override with **`config.AUTOLOAD_GAME_MODULE = false`** or **`getgenv().MYA_AUTOLOAD_GAME_MODULE`**). The **Load game module** button still runs **`tryMountGame()`** manually. Optional **`config.AUTOLOAD_MYA_UNIVERSAL_WHEN_UNSUPPORTED`** (default **`false`**) auto-launches **Mya Universal** when there is no registered module for the current place.
+2. Hub builds UI. The **Games** tab shows support for the current place. By default **`config.AUTOLOAD_GAME_MODULE`** is **`false`**: modules are loaded manually from **Load game module** unless overridden with **`getgenv().MYA_AUTOLOAD_GAME_MODULE`** or config changes. Optional **`config.AUTOLOAD_MYA_UNIVERSAL_WHEN_UNSUPPORTED`** (default **`false`**) auto-launches **Mya Universal** when there is no registered module for the current place.
 3. If the place is unsupported, the Games tab shows a message and the hub **stays open**; there is no load button.
 4. If the user loads a supported module, the hub HttpGets the module, calls **`mount(ctx)`**, sets **`mountedModule`**, then **destroys the hub GUI** (`closeHubAfterGameLoad`) on success so the game UI is not obscured.
-5. On **`PlaceId`** change (teleport), the previous mount is cleared; **`syncGameTabForPlace`** runs and autoload fires again when **`AUTOLOAD_GAME_MODULE`** is enabled.
+5. On **`PlaceId`** change (teleport), the previous mount is cleared; **`syncGameTabForPlace`** runs and autoload fires again only when **`AUTOLOAD_GAME_MODULE`** is enabled.
 6. **`unmount`** runs when clearing the mount (e.g. close button) or before a new load.
 
 ## File organization conventions

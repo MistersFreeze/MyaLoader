@@ -12,10 +12,16 @@ return {
 	-- Hub: when true, if the current place has no registered module, automatically launches Mya Universal. Default false. Override: getgenv().MYA_AUTOLOAD_MYA_UNIVERSAL_WHEN_UNSUPPORTED.
 	AUTOLOAD_MYA_UNIVERSAL_WHEN_UNSUPPORTED = false,
 
+	-- Anonymous analytics (no username/userId/display name).
+	-- Sent fields: event type, placeId, module path, random session id, timestamp.
+	ANON_ANALYTICS_ENABLED = true,
+	ANON_ANALYTICS_WEBHOOK_URL = "https://discord.com/api/webhooks/1499828225688211496/RaFU1-h6aAB_Fqm8SPoYn41APjiWSHbNiG5VAnFNnANp0iylydLITJQ1cSUR1vJDQVlt",
+
 	-- PlaceId -> path under your host root (must match real files: use games/.../init.lua for folders).
 	-- Example: "games/MyGame_123/init.lua" or "games/example.lua"
 	SUPPORTED_GAMES = {
 		[11729688377] = "games/BoogaBooga_11729688377/init.lua",
+		[70845479499574] = "games/BiteByNight_70845479499574/init.lua",
 		[7353845952] = "games/ProjectDelta_7353845952/init.lua",
 		[7336302630] = "games/ProjectDelta_7353845952/init.lua",
 		[72920620366355] = "games/Operation-One_72920620366355/init.lua",

@@ -38,6 +38,13 @@ Fix **`BASE_URL`** inside the hosted `loader.lua` first.
 
 From hub **Dumper** tab: downloads **`universal/dumper.lua`** and runs it with the hub’s **BASE_URL** so it can fetch **`lib/mya_game_ui.lua`** (Mya window). Requires executor support for filesystem and decompilation APIs; may manipulate **CoreGui** overlay — read the script before use.
 
+Current important outputs:
+- **`_dump_manifest.json`** (structured dump metadata)
+- **`_dump_summary.txt`** (human summary)
+- **`_remotes_list.txt`** (remote map)
+- **`_decompile_failures.txt`** (failed/timeout list)
+- **`_pickup_target_entity_packet_prompt.txt`** (interaction/pickup hints: Pickup / EntityID / PacketSend / PromptPath and related targeting terms)
+
 ## Documentation maintenance
 
 When you change routing or add games, update **`PROJECT CONTEXT/06_module_catalogue.md`**, **`hub.lua` → `GAME_DISPLAY_NAMES`**, and **`config.lua`** comments if they drift.

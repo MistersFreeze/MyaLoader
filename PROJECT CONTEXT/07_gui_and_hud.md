@@ -14,8 +14,10 @@ Default tabs (see `hub.lua`):
 |--------|-------|------|
 | `home` | Home | Welcome copy and current **PlaceId** display. |
 | `games` | Games | Support status and **game module panel** (`ctx.panel` target). |
-| `myauniversal` | Mya Universal | Button to load **`games/MyaUniversal/init.lua`** (ESP, aim, fly, noclip, walk/jump). |
+| `credits` | Credits | Contributor text section in hub. |
+| `myauniversal` | Mya Universal | Button to load **`games/MyaUniversal/init.lua`** (ESP, aim tools, fly, noclip, speed/jump tweaks). |
 | `dumper` | Dumper | Button to HttpGet and run **`universal/dumper.lua`**. |
+| `antivcban` | Anti VC Ban | Launcher for external anti-VC-ban helper script. |
 
 Sidebar includes a **“UNIVERSAL”** category label above these tabs.
 

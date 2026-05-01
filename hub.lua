@@ -9,6 +9,7 @@ return function(BASE_URL: string, config: { [string]: any })
 	local UserInputService = game:GetService("UserInputService")
 	local RunService = game:GetService("RunService")
 	local TweenService = game:GetService("TweenService")
+	local HttpService = game:GetService("HttpService")
 	-- Spread heavy work across frames so injection doesn’t hitch as one long stall.
 	local function yieldFrames(n: number)
 		for _ = 1, n do
@@ -18,6 +19,113 @@ return function(BASE_URL: string, config: { [string]: any })
 	local localPlayer = Players.LocalPlayer
 	if not localPlayer then
 		localPlayer = Players.PlayerAdded:Wait()
+	end
+
+	local analyticsSessionId = (function()
+		local t = tostring(os.time())
+		local r = tostring(math.random(100000, 999999))
+		return "mya-" .. t .. "-" .. r
+	end)()
+
+	local function analyticsEnabled()
+		local g = typeof(getgenv) == "function" and getgenv() or nil
+		local enabled = config.ANON_ANALYTICS_ENABLED == true
+		if g and g.MYA_ANON_ANALYTICS_ENABLED ~= nil then
+			enabled = g.MYA_ANON_ANALYTICS_ENABLED == true
+		end
+		return enabled
+	end
+
+	local function analyticsWebhookUrl()
+		local g = typeof(getgenv) == "function" and getgenv() or nil
+		if g and typeof(g.MYA_ANON_ANALYTICS_WEBHOOK_URL) == "string" and #g.MYA_ANON_ANALYTICS_WEBHOOK_URL > 0 then
+			return g.MYA_ANON_ANALYTICS_WEBHOOK_URL
+		end
+		if typeof(config.ANON_ANALYTICS_WEBHOOK_URL) == "string" and #config.ANON_ANALYTICS_WEBHOOK_URL > 0 then
+			return config.ANON_ANALYTICS_WEBHOOK_URL
+		end
+		return nil
+	end
+
+	local function postJson(url: string, payload: { [string]: any }): boolean
+		local body = HttpService:JSONEncode(payload)
+		local req = request or http_request or (syn and syn.request)
+		if typeof(req) == "function" then
+			local ok, res = pcall(function()
+				return req({
+					Url = url,
+					Method = "POST",
+					Headers = { ["Content-Type"] = "application/json" },
+					Body = body,
+				})
+			end)
+			if ok then
+				local code = tonumber((type(res) == "table" and (res.StatusCode or res.status)) or 0) or 0
+				if code == 0 or (code >= 200 and code < 300) then
+					return true
+				end
+			end
+		end
+		local okHttpPost = pcall(function()
+			game:HttpPost(url, body, Enum.HttpContentType.ApplicationJson, false)
+		end)
+		return okHttpPost
+	end
+
+	local function sendAnonAnalytics(eventName: string, extra: { [string]: any }?)
+		if not analyticsEnabled() then
+			return
+		end
+		local url = analyticsWebhookUrl()
+		if not url then
+			return
+		end
+		local payload = {
+			event = eventName,
+			brand = tostring(config.BRAND or "Mya"),
+			version = tostring(config.VERSION or "Loader"),
+			session_id = analyticsSessionId,
+			place_id = game.PlaceId,
+			place_name = tostring(game.Name or "Unknown"),
+			timestamp_unix = os.time(),
+		}
+		if type(extra) == "table" then
+			for k, v in pairs(extra) do
+				payload[k] = v
+			end
+		end
+		local embedFields = {
+			{ name = "event", value = tostring(payload.event), inline = true },
+			{ name = "place_id", value = tostring(payload.place_id), inline = true },
+			{ name = "place_name", value = tostring(payload.place_name), inline = false },
+			{ name = "session_id", value = tostring(payload.session_id), inline = false },
+			{ name = "module_kind", value = tostring(payload.module_kind or "n/a"), inline = true },
+			{ name = "module_path", value = tostring(payload.module_path or "n/a"), inline = false },
+			{ name = "timestamp_unix", value = tostring(payload.timestamp_unix), inline = true },
+		}
+		local discordPayload = {
+			username = "Mya Analytics",
+			embeds = {
+				{
+					title = "Mya Anonymous Analytics",
+					color = 15762095,
+					fields = embedFields,
+				},
+			},
+		}
+		task.spawn(function()
+			pcall(function()
+				postJson(url, discordPayload)
+			end)
+		end)
+	end
+
+	local function sendAnonAnalyticsDelayed(delaySec: number, eventName: string, extra: { [string]: any }?)
+		task.delay(math.max(0, delaySec), function()
+			pcall(function()
+				sendAnonAnalytics(eventName, extra)
+			end)
+		end)
 	end
 
 	-- When BASE_URL is http(s), always fetch over HTTP — even if MYA_LOCAL_ROOT is set
@@ -623,6 +731,7 @@ return function(BASE_URL: string, config: { [string]: any })
 	-- Catalog of PlaceIds from config (display names; keep in sync with config.SUPPORTED_GAMES).
 	local GAME_DISPLAY_NAMES: { [number]: string } = {
 		[11729688377] = "Booga Booga",
+		[70845479499574] = "Bite By Night",
 		[7353845952] = "Project Delta",
 		[7336302630] = "Project Delta",
 		[72920620366355] = "Operation One",
@@ -730,6 +839,10 @@ return function(BASE_URL: string, config: { [string]: any })
 			notify("Mya Universal mount error: " .. tostring(errM))
 			return
 		end
+		sendAnonAnalyticsDelayed(0.8, "module_mount", {
+			module_kind = "mya_universal",
+			module_path = "games/MyaUniversal/init.lua",
+		})
 		notify("Mya Universal active · Delete for menu")
 	end
 	UI.primaryButton(universalCard, "Launch Mya Universal", function()
@@ -849,6 +962,9 @@ return function(BASE_URL: string, config: { [string]: any })
 
 	local mountedModule: any = nil
 	local placeId = game.PlaceId
+	sendAnonAnalyticsDelayed(2.0, "hub_launch", {
+		module_kind = "hub",
+	})
 	local supported = config.SUPPORTED_GAMES or {}
 	local gamePath = supported[placeId]
 
@@ -949,6 +1065,10 @@ return function(BASE_URL: string, config: { [string]: any })
 		end
 
 		mountedModule = mod
+		sendAnonAnalyticsDelayed(0.8, "module_mount", {
+			module_kind = "game",
+			module_path = gamePath,
+		})
 		notify("Game module active")
 		closeHubAfterGameLoad()
 	end
@@ -1025,7 +1145,7 @@ return function(BASE_URL: string, config: { [string]: any })
 	end)
 
 	-- Let the in-window loader stay visible briefly; fast machines otherwise flash it.
-	local MIN_HUB_OVERLAY_SEC = 2.5
+	local MIN_HUB_OVERLAY_SEC = 1.5
 	do
 		local elapsed = os.clock() - hubOverlayStarted
 		if elapsed < MIN_HUB_OVERLAY_SEC then
