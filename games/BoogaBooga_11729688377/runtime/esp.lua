@@ -68,7 +68,7 @@ local function update_health(plr, hum, hrp, head)
 	if not outline or not fill then
 		return
 	end
-	fill.Color = get_player_esp_color(plr)
+	fill.Color = Color3.fromRGB(90, 255, 120)
 	outline.From = Vector2.new(x, y1)
 	outline.To = Vector2.new(x, y2)
 	outline.Visible = true
@@ -117,12 +117,90 @@ local function update_username(plr, head)
 	txt.Visible = true
 end
 
+local function update_trader_esp(my_hrp, vp_size)
+	if not settings.trader_esp then
+		for key in pairs(trader_highlights) do
+			hide_trader_visual(key)
+		end
+		return
+	end
+	cleanup_stale_trader_visuals()
+	local seen = {}
+	for inst in pairs(tracked_traders) do
+		local adornee = inst.PrimaryPart or inst:FindFirstChildWhichIsA("BasePart", true)
+		if adornee then
+			seen[inst] = true
+			local h = trader_highlights[inst]
+			if not h then
+				h = Instance.new("Highlight")
+				h.Name = "MyaBoogaTraderESP"
+				h.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
+				h.FillColor = Color3.fromRGB(120, 210, 255)
+				h.OutlineColor = Color3.fromRGB(255, 255, 255)
+				h.FillTransparency = 0.6
+				h.OutlineTransparency = 0
+				h.Parent = highlights_folder
+				trader_highlights[inst] = h
+			end
+			h.Adornee = inst
+			h.Enabled = true
+			if settings.trader_tracers and drawing_ok then
+				local p, on_screen = camera:WorldToViewportPoint(adornee.Position)
+				if on_screen and p.Z > 0 then
+					local ln = trader_tracers[inst]
+					if not ln then
+						ln = Drawing.new("Line")
+						ln.Visible = false
+						ln.Color = Color3.fromRGB(120, 210, 255)
+						ln.Thickness = 1.5
+						ln.Transparency = 1
+						ln.From = Vector2.new(vp_size.X * 0.5, vp_size.Y - 8)
+						ln.To = Vector2.new(p.X, p.Y)
+						trader_tracers[inst] = ln
+					end
+					local targetTo = Vector2.new(p.X, p.Y)
+					ln.From = Vector2.new(vp_size.X * 0.5, vp_size.Y - 8)
+					ln.To = ln.To:Lerp(targetTo, 0.45)
+					ln.Visible = true
+				else
+					local ln = trader_tracers[inst]
+					if ln then
+						ln.Visible = false
+					end
+				end
+			else
+				local ln = trader_tracers[inst]
+				if ln then
+					ln.Visible = false
+				end
+			end
+		end
+	end
+	for key in pairs(trader_highlights) do
+		if not seen[key] then
+			hide_trader_visual(key)
+		end
+	end
+	for key in pairs(trader_tracers) do
+		if not seen[key] then
+			hide_trader_visual(key)
+		end
+	end
+end
+
 local function runtime_step()
 	if not camera then
 		hide_all_visuals()
+		step_noclip()
+		refresh_speed()
+		refresh_noclip_cam()
 		return
 	end
 	cleanup_stale_visuals()
+	step_noclip()
+	refresh_speed()
+	refresh_noclip_cam()
+	step_water_walker()
 	local my_char = lp.Character
 	local _, my_hrp = is_alive_character(my_char)
 	if not my_hrp then
@@ -131,6 +209,11 @@ local function runtime_step()
 	end
 
 	local vp_size = camera.ViewportSize
+	update_trader_esp(my_hrp, vp_size)
+	player_visual_frame += 1
+	if player_visual_frame % 2 == 0 then
+		return
+	end
 	for _, plr in ipairs(Players:GetPlayers()) do
 		if plr ~= lp then
 			local char = plr.Character

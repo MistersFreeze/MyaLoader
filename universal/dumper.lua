@@ -15,6 +15,7 @@ local s = { -- pro script dumper settings
 	write_summary_txt = true, -- _dump_summary.txt human-readable stats
 	write_remotes_txt = true, -- _remotes_list.txt all RemoteEvent/RemoteFunction paths
 	log_failures_txt = true, -- _decompile_failures.txt for scripts that failed or timed out
+	write_pickup_hints_txt = true, -- _pickup_target_entity_packet_prompt.txt cross-game interaction hints
 }
 
 -- Capture globals before any locals shadow executor APIs.
@@ -48,6 +49,7 @@ local threads = 0
 local scriptsdumped = 0
 local timedoutscripts = {}
 local failedscripts = {}
+local pickup_hints = {}
 -- Keyed by GetDebugId() — safe for parallel dump tasks (distinct keys).
 local manifest_by_id = {}
 local HttpService = game:GetService("HttpService")
@@ -398,6 +400,50 @@ local function dumpscript(v, isnil)
 			end
 
 			local elapsed = os.clock() - time
+			if s.write_pickup_hints_txt and typeof(output) == "string" then
+				local low = string.lower(output)
+				local has_pickup = low:find("pickup", 1, true) ~= nil
+				local has_entity_id = low:find("entityid", 1, true) ~= nil
+				local has_packet_send = low:find(".send(", 1, true) ~= nil
+					or low:find("fireserver(", 1, true) ~= nil
+					or low:find("bytereliable", 1, true) ~= nil
+					or low:find("definepacket", 1, true) ~= nil
+				local has_prompt = low:find("proximityprompt", 1, true) ~= nil
+					or low:find("fireproximityprompt", 1, true) ~= nil
+					or low:find("inputholdbegin", 1, true) ~= nil
+					or low:find("inputholdend", 1, true) ~= nil
+
+				local has_interact = low:find("interact", 1, true) ~= nil
+					or low:find("collect", 1, true) ~= nil
+					or low:find("loot", 1, true) ~= nil
+					or low:find("grab", 1, true) ~= nil
+					or low:find("take", 1, true) ~= nil
+					or low:find("actiontext", 1, true) ~= nil
+					or low:find("objecttext", 1, true) ~= nil
+
+				local has_targeting = low:find("raycast", 1, true) ~= nil
+					or low:find("viewportpointtoray", 1, true) ~= nil
+					or low:find("getmouselocation", 1, true) ~= nil
+					or low:find("hastag(\"pickup\")", 1, true) ~= nil
+					or low:find("collectionservice", 1, true) ~= nil
+
+				if has_pickup or has_entity_id or has_packet_send or has_prompt or has_interact or has_targeting then
+					local tags = {}
+					if has_pickup then tags[#tags + 1] = "Pickup" end
+					if has_entity_id then tags[#tags + 1] = "EntityID" end
+					if has_packet_send then tags[#tags + 1] = "PacketSend" end
+					if has_prompt then tags[#tags + 1] = "PromptPath" end
+					if has_interact then tags[#tags + 1] = "InteractTerms" end
+					if has_targeting then tags[#tags + 1] = "TargetingPath" end
+					pickup_hints[#pickup_hints + 1] = string.format(
+						"[%s]\nPath: %s\nClass: %s\nDebugId: %s\n",
+						table.concat(tags, " / "),
+						path,
+						class,
+						id
+					)
+				end
+			end
 			local header_hash = ""
 			pcall(function()
 				if getscripthash then
@@ -887,7 +933,10 @@ end)
 make_toggle_row(settings_page, "Write _decompile_failures.txt", 35, s.log_failures_txt, function(v)
 	s.log_failures_txt = v
 end)
-make_slider(settings_page, "Max decompile retries", 36, 1, 12, s.max_decompile_retries, "%.0f", function(v)
+make_toggle_row(settings_page, "Write _pickup_target_entity_packet_prompt.txt", 36, s.write_pickup_hints_txt, function(v)
+	s.write_pickup_hints_txt = v
+end)
+make_slider(settings_page, "Max decompile retries", 37, 1, 12, s.max_decompile_retries, "%.0f", function(v)
 	s.max_decompile_retries = math.floor(v + 0.5)
 	s.max_decompile_retries = clamp(s.max_decompile_retries, 1, 12)
 end)
@@ -908,6 +957,7 @@ row_button(dump_page, 3, "Start dumping", function()
 	local nilscripts = {}
 	timedoutscripts = {}
 	failedscripts = {}
+	pickup_hints = {}
 	manifest_by_id = {}
 	scriptsdumped = 0
 
@@ -1057,6 +1107,15 @@ row_button(dump_page, 3, "Start dumping", function()
 			chunks[#chunks + 1] = "=== Timed out ===\n" .. concat(timedoutscripts, "\n\n")
 		end
 		pcall(writefile, foldername .. "/_decompile_failures.txt", concat(chunks, "\n"))
+	end
+	if s.write_pickup_hints_txt then
+		local body
+		if #pickup_hints > 0 then
+			body = concat(pickup_hints, "\n")
+		else
+			body = "No interaction scripts matched Pickup / EntityID / PacketSend / PromptPath / InteractTerms / TargetingPath."
+		end
+		pcall(writefile, foldername .. "/_pickup_target_entity_packet_prompt.txt", body)
 	end
 
 	if s.disable_render then
