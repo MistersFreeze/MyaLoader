@@ -34,7 +34,7 @@ local function waitForGameReady()
 		game.Loaded:Wait()
 	end
 	-- Joining can briefly report PlaceId 0; wait (Studio may keep 0 — cap wait).
-	local deadline = os.clock() + 15
+	local deadline = os.clock() + 2
 	while game.PlaceId == 0 and os.clock() < deadline do
 		task.wait(0.05)
 	end
@@ -137,17 +137,15 @@ end
 	if typeof(config) ~= "table" then
 		error("config.lua must return a table.")
 	end
-	task.wait()
 
 	local hubSrc = get(BASE_URL .. "hub.lua")
-	task.wait()
 	local hubChunk = loadstring(hubSrc, "@hub.lua")
 	if typeof(hubChunk) ~= "function" then
 		error("hub.lua failed to compile.")
 	end
+
 	-- hub.lua returns function(BASE_URL, config); first call runs the chunk.
 	local hubMain = hubChunk()
-	task.wait()
 	if typeof(hubMain) ~= "function" then
 		error("hub.lua must return a function (return function(BASE_URL, config) ... end).")
 	end

