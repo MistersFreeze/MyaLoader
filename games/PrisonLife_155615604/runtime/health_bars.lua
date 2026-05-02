@@ -25,7 +25,7 @@ local function ensure_health_draw(plr)
 	fill.Visible = false
 	fill.Color = Color3.fromRGB(0, 255, 0)
 	fill.Thickness = 2
-	fill.Transparency = 1
+	fill.Transparency = 0
 	health_draw[plr] = { health_bg = bg, health_fill = fill }
 end
 
@@ -34,7 +34,11 @@ local function get_health(character)
 	if not hum then
 		return nil, nil
 	end
-	return hum.Health, hum.MaxHealth
+	local maxHp = hum.MaxHealth
+	if type(maxHp) ~= "number" or maxHp ~= maxHp or maxHp <= 0 then
+		maxHp = 100
+	end
+	return hum.Health, maxHp
 end
 
 local function hide_health(plr)
@@ -62,7 +66,7 @@ local function update_health_bars()
 	local HEALTHBAR_GAP_PX = 10
 
 	for _, plr in ipairs(Players:GetPlayers()) do
-		if plr ~= lp and not is_esp_skip(plr) then
+		if plr ~= lp and not is_esp_skip(plr) and esp_target_within_max_range(plr) then
 			local char = plr.Character
 			if not char then
 				hide_health(plr)
@@ -106,6 +110,8 @@ local function update_health_bars()
 					end
 				end
 			end
+		else
+			hide_health(plr)
 		end
 	end
 end

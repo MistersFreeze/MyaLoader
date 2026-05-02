@@ -33,7 +33,7 @@ Bottom **“Status”** strip shows short messages; **`notify`** from the hub an
 
 ## Behavior when a game loads
 
-Supported experiences show **Load game module** on the **Games** tab (always available when supported). With **`config.AUTOLOAD_GAME_MODULE`** **`true`** (default), the hub also **auto-loads** the registered module after PlaceId sync (and again after teleports). After a successful **`mount`**, the hub **closes automatically** (ScreenGui destroyed, drag connections disconnected) so the game module’s UI is not obscured. If **unsupported** or **load fails**, the hub remains for debugging.
+Supported experiences show **Load game module** on the **Games** tab (always available when supported). With **`config.AUTOLOAD_GAME_MODULE`** **`true`**, the hub also **auto-loads** the registered module after PlaceId sync (and again after teleports). The repo default in **`config.lua`** is **`false`** (manual load unless you override with **`getgenv().MYA_AUTOLOAD_GAME_MODULE`**). After a successful **`mount`**, the hub **closes automatically** (ScreenGui destroyed, drag connections disconnected) so the game module’s UI is not obscured. If **unsupported** or **load fails**, the hub remains for debugging.
 
 **Bootstrap order:** **`loader.lua`** / **`loader_local.lua`** wait for **`game.Loaded`** (and up to ~15 seconds for a non-zero **`PlaceId`**) before HttpGetting **`config.lua`** and **`hub.lua`**. The hub finishes building its UI, then **`task.defer`** syncs **`game.PlaceId`** and the Games tab banner after the same readiness checks so **`SUPPORTED_GAMES`** matches the joined experience, then runs **`maybeAutoloadFromConfig()`** when autoload flags allow.
 

@@ -41,7 +41,7 @@ local function esp_refresh()
 	-- Per-part highlights (not Adornee = Model): full transparency / invisibility on the rig
 	-- does not cull the overlay the way a model-level Highlight often does.
 	for _, plr in ipairs(Players:GetPlayers()) do
-		if plr ~= lp and plr.Character and not is_esp_skip(plr) then
+		if plr ~= lp and plr.Character and not is_esp_skip(plr) and esp_target_within_max_range(plr) then
 			local char = plr.Character
 			local list = {}
 			for _, part in ipairs(collect_body_parts(char)) do
@@ -69,7 +69,7 @@ local function update_esp_visibility_colors()
 	end
 	local camPos = camera.CFrame.Position
 	for plr, list in pairs(highlights) do
-		if type(list) == "table" and plr ~= lp and plr.Parent and not is_esp_skip(plr) then
+		if type(list) == "table" and plr ~= lp and plr.Parent and not is_esp_skip(plr) and esp_target_within_max_range(plr) then
 			local char = plr.Character
 			if char then
 				for _, hl in ipairs(list) do

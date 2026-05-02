@@ -22,6 +22,9 @@ local function silent_aim_getclosest()
 			if silent_prisoner_check_on and is_inmate_team(player) then
 				continue
 			end
+			if not esp_target_within_max_range(player) then
+				continue
+			end
 			local targetPart = player.Character:FindFirstChild(silent_aim_part)
 			local humanoid = player.Character:FindFirstChildWhichIsA("Humanoid")
 			if targetPart and targetPart:IsA("BasePart") and humanoid and humanoid.Health > 0 then

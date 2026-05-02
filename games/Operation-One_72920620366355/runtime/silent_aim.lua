@@ -1,25 +1,48 @@
 --[[
-  Silent aim: __namecall hook + Heartbeat loop (silent aim 2 pattern). LOS/team via Combat (lib/mya_combat_helpers.lua).
+  Silent aim: __namecall hook + Heartbeat (Mya Universal–aligned).
+  - Bind state only on Heartbeat (never UserInputService inside __namecall).
+  - workspace __namecall first, then game fallback; re-entrancy depth; Vector3 + degenerate guards.
+  - Clear closest_silent_part before getclosest so LOS Raycasts inside Combat.los_visible_exclude are not redirected.
+  - Team skip: teammate Highlight.Adornee == enemy Character (OP1), else Roblox Team via Combat.same_team.
 ]]
 
 local closest_silent_part = nil
+local silent_aim_bind_down = false
 
-local function getdirection(origin, position)
-	return (position - origin).Unit
+local function silent_aim_skip_player(player)
+	if not silent_aim_team_check_on then
+		return false
+	end
+	local char = player.Character
+	if not char then
+		return true
+	end
+	for h in pairs(teammate_highlights) do
+		if h.Adornee == char then
+			return true
+		end
+	end
+	return Combat.same_team(lp, player, true)
 end
 
 local function silent_aim_getclosest()
 	local closestpart = nil
 	local closestdistance = math.huge
 	local fov_px = silent_aim_fov
-	local anchor = silent_aim_fov_follow_cursor and UserInputService:GetMouseLocation() or get_fov_screen_anchor(false)
+	local anchor = get_fov_screen_anchor(silent_aim_fov_follow_cursor)
 
 	for _, player in pairs(Players:GetPlayers()) do
 		if player ~= lp and player.Character then
-			if Combat.same_team(lp, player, silent_aim_team_check_on) then
+			if silent_aim_skip_player(player) then
 				continue
 			end
 			local targetPart = player.Character:FindFirstChild(silent_aim_part)
+			if not targetPart or not targetPart:IsA("BasePart") then
+				-- R6 / alt rigs
+				if silent_aim_part == "HumanoidRootPart" then
+					targetPart = player.Character:FindFirstChild("Torso")
+				end
+			end
 			local humanoid = player.Character:FindFirstChildWhichIsA("Humanoid")
 			if targetPart and targetPart:IsA("BasePart") and humanoid and humanoid.Health > 0 then
 				local screenpos, onscreen = camera:WorldToViewportPoint(targetPart.Position)
@@ -61,45 +84,68 @@ local function raycast_redirect_ok()
 end
 
 local silent_aim_hook_installed = false
+local silent_nc_depth = 0
 
--- Exact hook shape from silent aim 2.txt (no pcall inside hook, no depth guard, self == workspace).
 if raycast_redirect_ok() then
 	local ok_hook, _err = pcall(function()
 		local oldnamecall
-		oldnamecall = hookmetamethod(
-			game,
-			"__namecall",
-			newcclosure(function(...)
-				local method, arguments = getnamecallmethod(), { ... }
-				local self = arguments[1]
-				if silent_aim_on and self == workspace and not checkcaller() and method == "Raycast" then
-					if not silent_aim_require_bind or bind_pressed(silent_aim_bind) then
+		local closure = newcclosure(function(...)
+			silent_nc_depth = silent_nc_depth + 1
+			if silent_nc_depth > 1 then
+				local r = table.pack(oldnamecall(...))
+				silent_nc_depth = silent_nc_depth - 1
+				return table.unpack(r, 1, r.n)
+			end
+			local method, arguments = getnamecallmethod(), { ... }
+			local self = arguments[1]
+			if silent_aim_on and self == workspace and not checkcaller() and method == "Raycast" then
+				if typeof(arguments[2]) == "Vector3" and typeof(arguments[3]) == "Vector3" then
+					if not silent_aim_require_bind or silent_aim_bind_down then
 						local hitpart = closest_silent_part
-						if hitpart then
+						if hitpart and hitpart:IsA("BasePart") and hitpart.Parent then
 							local origin = arguments[2]
-							local direction = getdirection(origin, hitpart.Position) * 1000
-							arguments[2], arguments[3] = origin, direction
-							return oldnamecall(unpack(arguments))
+							local delta = hitpart.Position - origin
+							local mag = delta.Magnitude
+							if mag == mag and mag > 1e-3 then
+								arguments[2] = origin
+								arguments[3] = delta.Unit * 1000
+								local r = table.pack(oldnamecall(unpack(arguments)))
+								silent_nc_depth = silent_nc_depth - 1
+								return table.unpack(r, 1, r.n)
+							end
 						end
 					end
 				end
-				return oldnamecall(...)
-			end)
-		)
+			end
+			local r = table.pack(oldnamecall(...))
+			silent_nc_depth = silent_nc_depth - 1
+			return table.unpack(r, 1, r.n)
+		end)
+
+		local wsOk = pcall(function()
+			oldnamecall = hookmetamethod(workspace, "__namecall", closure)
+		end)
+		if not wsOk or typeof(oldnamecall) ~= "function" then
+			oldnamecall = hookmetamethod(game, "__namecall", closure)
+		end
 	end)
 	silent_aim_hook_installed = ok_hook
 end
 
--- Exact: runservice.Heartbeat:Connect (silent aim 2.txt)
 table.insert(
 	connections,
 	RunService.Heartbeat:Connect(function()
+		if silent_aim_on and silent_aim_require_bind then
+			silent_aim_bind_down = bind_pressed(silent_aim_bind)
+		else
+			silent_aim_bind_down = true
+		end
+		-- Must be nil while getclosest runs (LOS uses Workspace:Raycast; hook must not rewrite those rays).
+		closest_silent_part = nil
 		if not silent_aim_on then
-			closest_silent_part = nil
 			return
 		end
-		if silent_aim_require_bind and not bind_pressed(silent_aim_bind) then
-			closest_silent_part = nil
+		if silent_aim_require_bind and not silent_aim_bind_down then
 			return
 		end
 		closest_silent_part = silent_aim_getclosest()

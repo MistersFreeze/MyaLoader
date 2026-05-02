@@ -88,7 +88,7 @@ local function get_best_target(fov_px, for_aim_lock)
 
 	if use_lock and aim_lock_plr then
 		local plr = aim_lock_plr
-		if plr.Parent and plr.Character and not is_aim_skip(plr) then
+		if plr.Parent and plr.Character and not is_aim_skip(plr) and esp_target_within_max_range(plr) then
 			local part = plr.Character:FindFirstChild(aim_assist_part)
 			if part and part:IsA("BasePart") then
 				local pos, on_screen = camera:WorldToViewportPoint(part.Position)
@@ -110,7 +110,7 @@ local function get_best_target(fov_px, for_aim_lock)
 	local best_screen, best_world, best_char, best_plr = nil, nil, nil, nil
 
 	for _, plr in ipairs(Players:GetPlayers()) do
-		if plr ~= lp and plr.Character and not is_aim_skip(plr) then
+		if plr ~= lp and plr.Character and not is_aim_skip(plr) and esp_target_within_max_range(plr) then
 			local part = plr.Character:FindFirstChild(aim_assist_part)
 			if part and part:IsA("BasePart") then
 				local pos, on_screen = camera:WorldToViewportPoint(part.Position)

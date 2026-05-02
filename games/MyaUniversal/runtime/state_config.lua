@@ -70,6 +70,15 @@ local trigger_next = 0
 local healthbars_on = false
 local esp_distance_on = false
 local esp_names_on = D.esp_names_on == true
+-- 0 = unlimited; 1–5000 = max distance (studs) local HRP→target HRP for ESP, aim assist, silent aim, triggerbot pick.
+local esp_max_range = num("esp_max_range", 0, 0, 5000)
+-- Crosshair-ring arrows (Drawing) toward enemies; ring radius / tip from config.
+local arrows_esp_on = D.arrows_esp_on == true
+local arrows_esp_ring_radius = num("arrows_esp_ring_radius", 72, 32, 220)
+local arrows_esp_tip_len = num("arrows_esp_tip_len", 14, 6, 40)
+local arrows_esp_half_width = num("arrows_esp_half_width", 7, 3, 18)
+-- Stud distance (m) drawn under each crosshair arrow tip (Drawing text).
+local arrows_esp_distance_on = D.arrows_esp_distance_on == true
 local show_aim_fov_circle = false
 
 -- Silent aim (workspace.Raycast redirect; executor hook APIs required).
@@ -157,6 +166,19 @@ end
 local function get_root()
 	local c = lp.Character
 	return c and c:FindFirstChild("HumanoidRootPart")
+end
+
+local function esp_target_within_max_range(plr)
+	if esp_max_range <= 0 then
+		return true
+	end
+	local myRoot = get_root()
+	local char = plr and plr.Character
+	local hrp = char and char:FindFirstChild("HumanoidRootPart")
+	if not myRoot or not hrp or not hrp:IsA("BasePart") then
+		return false
+	end
+	return (myRoot.Position - hrp.Position).Magnitude <= esp_max_range
 end
 
 local function get_fov_screen_anchor(follow_cursor)

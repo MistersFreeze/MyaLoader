@@ -38,6 +38,7 @@ return {
 	fov_ring_aim = { r = 230, g = 120, b = 175 },
 	-- ESP: names above players; distance text below character (Visuals → ESP).
 	-- esp_team_check_on = false, -- hide teammates from ESP / bars / distance text
+	-- esp_max_range = 0, -- 0 = unlimited; 1–5000 studs HRP→HRP: ESP, aim assist, silent aim, triggerbot
 	esp_names_on = false,
 	-- Visuals → World
 	-- rainbow_car_on = false,

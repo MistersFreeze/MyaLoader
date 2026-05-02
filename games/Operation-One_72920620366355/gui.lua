@@ -647,8 +647,12 @@ end
 local pg = all_sub_pages["Combat"]["Aim Assist"]
 section_label(pg, "Aim Assist", 1)
 make_toggle(pg, "Aim Assist",       2,  "toggle_aim_assist")
-local upd_col_fov = make_toggle_with_color(pg, "Show FOV", 3, "toggle_show_fov", Color3.new(1, 1, 1),
-    function(c) if _G.set_color_fov then _G.set_color_fov(c) end end)
+local upd_col_fov = make_toggle_with_color(pg, "Show FOV", 3, "toggle_show_fov", Color3.fromRGB(245, 118, 168),
+	function(c)
+		if _G.set_color_fov then
+			_G.set_color_fov(c)
+		end
+	end)
 make_toggle(pg, "Visibility Check", 4,  "toggle_vis_check")
 
 local aim_fov_set   = make_slider(pg, "FOV Radius",  5, 20, 400, 120, "%d px",
@@ -720,8 +724,14 @@ local upd_col_tracer = make_toggle_with_color(pg, "Tracers", 4, "toggle_tracers"
 make_toggle(pg, "Health Bars",  5,  "toggle_healthbars")
 make_toggle(pg, "Names",        6,  "toggle_names")
 make_toggle(pg, "Team Check",   7,  "toggle_team_check")
-local upd_col_chams = make_toggle_with_color(pg, "Chams", 8, "toggle_chams", Color3.fromRGB(255, 50, 50),
-    function(c) if _G.set_color_chams then _G.set_color_chams(c) end end)
+make_toggle(pg, "Crosshair arrows (off-screen)", 8, "toggle_arrows_esp")
+make_toggle(pg, "Distance under arrows", 9, "toggle_arrows_esp_distance")
+local arrows_ring_set = make_slider(pg, "Arrows ring radius", 10, 32, 220, 72, "%d px", function(v)
+	if _G.set_arrows_esp_ring_value then
+		_G.set_arrows_esp_ring_value(v)
+	end
+end)
+_G.set_arrows_ring_slider = arrows_ring_set
 
 -- ---- Visuals > Gadgets ----
 pg = all_sub_pages["Visuals"]["Gadgets"]
@@ -746,12 +756,35 @@ misc_page.Visible = true
 misc_page.Parent = tab_containers["Misc"]
 
 section_label(misc_page, "Interface", 1)
-local _, menu_key_update = make_keybind(misc_page, "Menu Bind", 2, Enum.KeyCode.Delete,
-    function(k) _G.new_menu_key = k end)
-_G.ui_set_menu_key = function(k) menu_key_update(k) end
+local _, menu_key_update_ui = make_keybind(misc_page, "Menu Bind", 2, Enum.KeyCode.Delete, function(k)
+	_G.new_menu_key = k
+end)
+local function menu_key_update(k)
+	menu_key_update_ui(k)
+	_G.new_menu_key = k
+end
+_G.ui_set_menu_key = function(k)
+	menu_key_update(k)
+end
 
 section_label(misc_page, "Script", 10)
-make_toggle(misc_page, "Unload Script", 11, "unload_mya")
+local unload_row = make_row(misc_page, 11, 44)
+local unload_btn = Instance.new("TextButton")
+unload_btn.Size = UDim2.new(1, -28, 0, 32)
+unload_btn.Position = UDim2.fromOffset(14, 6)
+unload_btn.BackgroundColor3 = THEME.danger:Lerp(THEME.bg, 0.52)
+unload_btn.TextColor3 = C.text
+unload_btn.Font = Enum.Font.GothamBold
+unload_btn.TextSize = 13
+unload_btn.Text = "Unload Operation One"
+unload_btn.AutoButtonColor = false
+unload_btn.Parent = unload_row
+Instance.new("UICorner", unload_btn).CornerRadius = UDim.new(0, THEME.corner)
+unload_btn.MouseButton1Click:Connect(function()
+	if typeof(_G.unload_mya) == "function" then
+		pcall(_G.unload_mya)
+	end
+end)
 
 
 -- ================================================================
@@ -776,13 +809,21 @@ local function sync_ui_from_config(cfg)
         _G.set_silent_aim_part(cfg.silent_aim_part)
         if _G.ui_refresh_silent_hitpart then _G.ui_refresh_silent_hitpart() end
     end
-    local mk=str_to_enum_local(cfg.menu_key); if mk then menu_key_update(mk) end
+    local mk = str_to_enum_local(cfg.menu_key)
+    if mk == Enum.KeyCode.Insert then
+        mk = Enum.KeyCode.Delete
+    end
+    if mk then
+        menu_key_update(mk)
+    end
+    if cfg.arrows_esp_ring_radius ~= nil and _G.set_arrows_ring_slider then
+        _G.set_arrows_ring_slider(cfg.arrows_esp_ring_radius)
+    end
     local function tc(t) if not t then return nil end return Color3.new(t.r or 1,t.g or 1,t.b or 1) end
     local c_box   =tc(cfg.color_box);        if c_box      then upd_col_box(c_box)           end
     local c_tr    =tc(cfg.color_tracer);     if c_tr       then upd_col_tracer(c_tr)          end
     local c_sv    =tc(cfg.color_skel_vis);   if c_sv       then upd_col_skel_vis(c_sv)        end
     local c_sh    =tc(cfg.color_skel_hid);   if c_sh       then upd_col_skel_hid(c_sh)        end
-    local c_ch    =tc(cfg.color_chams);      if c_ch       then upd_col_chams(c_ch)           end
     local c_fov   =tc(cfg.color_fov);        if c_fov      then upd_col_fov(c_fov)            end
     local c_sfov  =tc(cfg.color_fov_silent); if c_sfov     then upd_col_silent_fov(c_sfov)     end
     local c_th    =tc(cfg.color_throwable);  if c_th       then upd_col_throw(c_th)           end
@@ -938,4 +979,4 @@ refresh_configs()
 
 switch_tab("Combat")
 _G.user_interface = ui
-notify("Mya", "Operation One · UI ready. Delete to toggle.", 4)
+notify("Mya", "Operation One · UI ready. Menu bind toggles (default Delete).", 4)

@@ -32,6 +32,10 @@ return {
 	fov_ring_aim = { r = 230, g = 120, b = 175 },
 	-- ESP: names above players; distance text below character (Visuals → ESP).
 	-- esp_team_check_on = false, -- hide teammates from ESP / bars / distance text
+	-- esp_max_range = 0, -- 0 = unlimited; 1–5000 studs HRP→HRP: ESP visuals, aim assist, silent aim, triggerbot FOV pick
+	-- arrows_esp_on = false, -- Drawing chevrons on a ring around the aim FOV anchor pointing at enemies (team + max range)
+	-- arrows_esp_ring_radius = 72, -- pixels from anchor to arrow base (32–220)
+	-- arrows_esp_distance_on = false, -- stud distance (m) under each arrow tip
 	esp_names_on = false,
 	-- esp_visibility_colors_on = false, -- per-part green/pink LOS (optional)
 	-- Misc → weapon mods (generic; effectiveness varies by game).

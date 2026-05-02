@@ -11,7 +11,7 @@ Games live under **`games/`**. **Place-specific** modules are listed in **`confi
 
 - **PlaceId:** None (not in `SUPPORTED_GAMES`).
 - **Launch:** Hub sidebar **Universal → Mya Universal** (loads `init.lua` via `Util.loadModuleFromUrl`).
-- **Features:** ESP highlights, aim assist, silent aim (Raycast hook), triggerbot, fly, noclip, walk/jump; **Insert** toggles menu.
+- **Features:** ESP highlights, aim assist, silent aim (workspace-first `__namecall` Raycast hook with re-entrancy guard), triggerbot, fly, noclip, walk/jump; crosshair-ring arrows ESP (optional stud distance); **Delete** toggles menu.
 - **Files:** `init.lua` sets **`MYA_REPO_BASE`** + **`MYA_FETCH`**, then **`runtime.lua`** (bundle under **`runtime/`**) → **`gui.lua`**. **`runtime.lua`** HttpGets **`lib/mya_combat_helpers.lua`** from the repo root and injects it as **`Combat`** for shared team/LOS/hit-part logic. **`gui.lua`** loads **`lib/mya_game_ui.lua`** (`createHubShell`, tabs + sub-tabs, configs/settings).
 - **Teardown:** **`_G.unload_mya_universal`**.
 
@@ -20,8 +20,8 @@ Games live under **`games/`**. **Place-specific** modules are listed in **`confi
 - **PlaceId:** `72920620366355` (Operation One).
 - **Entry:** `init.lua` (registered in `config.lua`).
 - **Pattern:** `init.lua` computes **`base`**, sets **`MYA_REPO_BASE`** + **`MYA_FETCH`**, fetches **`runtime.lua`** (returns a **bundle loader** `function(env)` with `env.fetch` / `env.base`), then **`gui.lua`**. Calls **`_G.MYA_OP1_RUN_UI_SYNC`** if defined.
-- **GUI:** **`lib/mya_game_ui.lua`** hub shell (sidebar: Combat / Movement / Visuals / Misc / Configs; Combat–Visuals have sub-pages). Custom cursor + color pickers + config list remain in **`gui.lua`**.
-- **Runtime:** Ordered fragments under **`runtime/`** (e.g. `state_visuals_helpers.lua`, `globals_config.lua`, …) concatenated into one chunk.
+- **GUI:** **`lib/mya_game_ui.lua`** (`defaultTheme`, **`createHubShell`**) for the window shell (tabs **Combat**, **Visuals**, **Misc**, **Configs**; Combat and Visuals have sub-pages). **Visuals → Player ESP** includes **crosshair arrows** (Drawing, pink, off-screen targets only — same visibility rule as Mya Universal / AR2) plus ring-radius slider and optional stud distance labels. **Misc → Menu bind** defaults to **Delete** (keyboard or mouse); **Misc → Unload** is a themed **TextButton** (not a toggle). Runtime **`menu_unload_bootstrap.lua`** toggles **`_G.user_interface`**. JSON configs under **`mya_op1_configs`** in **`gui.lua`**.
+- **Runtime:** Ordered fragments under **`runtime/`** concatenated into one chunk; backup **`runtime_monolith.lua`** should stay aligned when changing bootstrap/menu behavior.
 - **Teardown:** `unmount` → **`_G.unload_mya`**.
 
 ## `games/Neighbors_110400717151509/`
@@ -54,6 +54,38 @@ Games live under **`games/`**. **Place-specific** modules are listed in **`confi
 - **Pattern:** Same bundle style as Mya Universal — **`runtime.lua`** prepends **`lib/mya_combat_helpers.lua`** as **`Combat`**, concatenates **`runtime/*.lua`**, then **`gui.lua`** (`lib/mya_game_ui.lua`).
 - **Game-specific:** Prison Life exposes **`Teams.Inmates`**, **`Teams.Guards`**, **`Teams.Criminals`**. Separate **Prisoner check** toggles (Inmates team) under **Aim assist**, **Silent aim**, and **Visuals → ESP**, independent of team check. Triggerbot follows aim assist targeting. **Movement → Car flight**: bind + speed slider; applies **`BodyVelocity`** to the vehicle model while seated in a **`VehicleSeat`**. Legacy config key **`pl_skip_inmates = true`** still maps all three prisoner checks on when the per-mode keys are omitted.
 - **Teardown:** **`_G.unload_mya_universal`**.
+
+## `games/ApocalypseRising2_863266079/`
+
+- **PlaceIds:** `863266079`, `93911318070665` (same `init.lua` in `config.lua`).
+- **Entry:** `init.lua` merges **`games/ApocalypseRising2_863266079/config.lua`** with **`getgenv().MYA_AR2_CONFIG`** into **`MYA_UNIVERSAL_CONFIG`**, runs a **Mya Universal** runtime bundle plus **`runtime/movement_ar2_stub.lua`** (no flight/noclip/walk module) and **`runtime/tracers.lua`**, then **`gui.lua`**.
+- **Features:** Shared universal ESP / aim / silent aim / triggerbot / weapon mods; AR2-only **tracers**; menu **Delete** (same shell pattern as Universal).
+- **Teardown:** **`_G.unload_mya_universal`**.
+
+## `games/ProjectDelta_7353845952/`
+
+- **PlaceIds:** `7353845952`, `7336302630` → same module.
+- **Entry:** `init.lua`; **`MYA_UNIVERSAL_CONFIG`** merge pattern similar to other universal-style games; **`gui.lua`** uses **`lib/mya_game_ui.lua`**.
+
+## `games/MicUp_15546218972/`
+
+- **PlaceIds:** `15546218972`, `112399855119586` → same module (Corner / MicUp).
+- **Entry:** `init.lua` + runtime bundle + **`lib/mya_game_ui.lua`** GUI.
+
+## `games/DesolateValley_11574110446/`
+
+- **PlaceId:** `11574110446`.
+- **Entry:** `init.lua` + **`lib/mya_game_ui.lua`** GUI.
+
+## `games/SecoursDeFranceRP_8392374718/`
+
+- **PlaceId:** `8392374718`.
+- **Entry:** `init.lua`; GUI under **`lib/mya_game_ui.lua`** (alternate parent pattern in module).
+
+## `games/BiteByNight_70845479499574/`
+
+- **PlaceId:** `70845479499574`.
+- **Entry:** `init.lua` + runtime + **`lib/mya_game_ui.lua`** GUI.
 
 ## `games/BoogaBooga_11729688377/`
 

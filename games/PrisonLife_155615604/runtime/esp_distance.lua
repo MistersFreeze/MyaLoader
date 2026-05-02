@@ -88,7 +88,7 @@ local function update_esp_distance()
 	end
 
 	for _, plr in ipairs(Players:GetPlayers()) do
-		if plr ~= lp and not is_esp_skip(plr) then
+		if plr ~= lp and not is_esp_skip(plr) and esp_target_within_max_range(plr) then
 			local char = plr.Character
 			local hrp = char and char:FindFirstChild("HumanoidRootPart")
 			local head = char and char:FindFirstChild("Head")
@@ -135,7 +135,7 @@ local function update_esp_names()
 	end
 
 	for _, plr in ipairs(Players:GetPlayers()) do
-		if plr ~= lp and not is_esp_skip(plr) then
+		if plr ~= lp and not is_esp_skip(plr) and esp_target_within_max_range(plr) then
 			local char = plr.Character
 			local hrp = char and char:FindFirstChild("HumanoidRootPart")
 			local head = char and char:FindFirstChild("Head")

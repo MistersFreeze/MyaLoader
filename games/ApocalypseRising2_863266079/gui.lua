@@ -1,4 +1,4 @@
---[[ Mya Universal — rose / plum GUI ]]
+--[[ Apocalypse Rising 2 — Mya GUI (universal runtime + tracers) ]]
 local P = _G.MYA_UNIVERSAL
 if not P then
 	error("[MyaUniversal] Load runtime.lua first")
@@ -12,7 +12,7 @@ local uis = cloneref_fn(game:GetService("UserInputService"))
 local http = game:GetService("HttpService")
 local ts = game:GetService("TweenService")
 
-local CONFIG_FOLDER = "mya_universal_configs"
+local CONFIG_FOLDER = "mya_ar2_configs"
 local function ensure_config_dir()
 	if not makefolder then
 		return
@@ -83,12 +83,11 @@ local shell = MyaUI.createHubShell({
 	C = C,
 	ts = ts,
 	uis = uis,
-	titleText = "Mya  ·  Universal",
-	tabNames = { "Combat", "Visuals", "Movement", "Configs", "Settings" },
+	titleText = "Mya  ·  Apocalypse Rising 2",
+	tabNames = { "Combat", "Visuals", "Configs", "Settings" },
 	subPages = {
 		Combat = { "Aim assist", "Silent aim", "Triggerbot" },
 		Visuals = { "ESP" },
-		Movement = { "Flight", "Walk & jump", "Noclip" },
 	},
 	statusDefault = "Ready · Delete toggles this menu",
 	discordInvite = "https://discord.gg/YeyepQG6K9",
@@ -108,9 +107,6 @@ local combat_aim = all_sub_pages["Combat"]["Aim assist"]
 local combat_silent = all_sub_pages["Combat"]["Silent aim"]
 local combat_trigger = all_sub_pages["Combat"]["Triggerbot"]
 local visuals_esp = all_sub_pages["Visuals"]["ESP"]
-local movement_fly = all_sub_pages["Movement"]["Flight"]
-local movement_walk = all_sub_pages["Movement"]["Walk & jump"]
-local movement_noclip = all_sub_pages["Movement"]["Noclip"]
 
 local settings_page = make_page()
 settings_page.Visible = true
@@ -560,12 +556,7 @@ local ref_esp_vis_colors = make_toggle_row(
 local ref_health = make_toggle_row(visuals_esp, "Health bars", next_order(), P.get_healthbars, P.set_healthbars)
 local ref_esp_dist = make_toggle_row(visuals_esp, "Distance text", next_order(), P.get_esp_distance, P.set_esp_distance)
 local ref_esp_names = make_toggle_row(visuals_esp, "Player names", next_order(), P.get_esp_names, P.set_esp_names)
-local esp_arrows_spacer = Instance.new("Frame")
-esp_arrows_spacer.LayoutOrder = next_order()
-esp_arrows_spacer.BackgroundTransparency = 1
-esp_arrows_spacer.BorderSizePixel = 0
-esp_arrows_spacer.Size = UDim2.new(1, 0, 0, 12)
-esp_arrows_spacer.Parent = visuals_esp
+local ref_tracers = make_toggle_row(visuals_esp, "Tracers", next_order(), P.get_tracers, P.set_tracers)
 section_label(visuals_esp, "Crosshair arrows", next_order())
 local ref_arrows_esp = make_toggle_row(
 	visuals_esp,
@@ -764,31 +755,6 @@ end)
 refresh_configs()
 
 lo = 0
-section_label(movement_fly, "Flight", next_order())
-local ref_fly = make_toggle_row(movement_fly, "Fly", next_order(), P.get_fly, P.set_fly)
-local set_fly_speed_slider = make_slider(movement_fly, "Fly speed", next_order(), 5, 500, P.get_fly_speed(), "%.0f", function(v)
-	P.set_fly_speed(v)
-end)
-local ref_fly_bind = make_keybind_row(movement_fly, "Fly bind", next_order(), P.get_fly_bind, P.set_fly_bind)
-
-lo = 0
-section_label(movement_walk, "Walk & jump", next_order())
-local ref_walk_mod = make_toggle_row(movement_walk, "Walk speed override", next_order(), P.get_walk_mod, P.set_walk_mod)
-local ref_walk_mod_bind = make_keybind_row(movement_walk, "Walk speed bind", next_order(), P.get_walk_mod_bind, P.set_walk_mod_bind)
-local set_walk_slider = make_slider(movement_walk, "Walk speed", next_order(), 0, 200, P.get_walk(), "%.0f", function(v)
-	P.set_walk(v)
-end)
-local ref_jump_mod = make_toggle_row(movement_walk, "Jump power override", next_order(), P.get_jump_mod, P.set_jump_mod)
-local set_jump_slider = make_slider(movement_walk, "Jump power", next_order(), 0, 500, P.get_jump(), "%.0f", function(v)
-	P.set_jump(v)
-end)
-
-lo = 0
-section_label(movement_noclip, "Noclip", next_order())
-local ref_nc = make_toggle_row(movement_noclip, "Noclip", next_order(), P.get_noclip, P.set_noclip)
-local ref_noclip_bind = make_keybind_row(movement_noclip, "Noclip bind", next_order(), P.get_noclip_bind, P.set_noclip_bind)
-
-lo = 0
 section_label(settings_page, "Menu", next_order())
 local hint_row = make_row(settings_page, next_order(), 52)
 local hint = Instance.new("TextLabel")
@@ -803,7 +769,6 @@ hint.TextWrapped = true
 hint.Text = "Delete toggles this menu. Drag the title bar to move. Click a bind, then press a key or mouse button."
 hint.Parent = hint_row
 
-section_label(settings_page, "Settings", next_order())
 local unload_row = make_row(settings_page, next_order(), 44)
 local unload_btn = Instance.new("TextButton")
 unload_btn.Size = UDim2.new(1, -28, 0, 32)
@@ -812,7 +777,7 @@ unload_btn.BackgroundColor3 = THEME.danger:Lerp(THEME.bg, 0.52)
 unload_btn.TextColor3 = C.text
 unload_btn.Font = Enum.Font.GothamBold
 unload_btn.TextSize = 13
-unload_btn.Text = "Unload Mya Universal"
+unload_btn.Text = "Unload Apocalypse Rising 2"
 unload_btn.AutoButtonColor = false
 unload_btn.Parent = unload_row
 Instance.new("UICorner", unload_btn).CornerRadius = UDim.new(0, THEME.corner)
@@ -821,22 +786,6 @@ unload_btn.MouseButton1Click:Connect(function()
 		_G.unload_mya_universal()
 	end
 end)
-
-local function input_matches_movement_bind(input, bind)
-	if typeof(bind) ~= "EnumItem" then
-		return false
-	end
-	if bind.EnumType == Enum.KeyCode then
-		if bind == Enum.KeyCode.Unknown then
-			return false
-		end
-		return input.UserInputType == Enum.UserInputType.Keyboard and input.KeyCode == bind
-	end
-	if bind.EnumType == Enum.UserInputType then
-		return input.UserInputType == bind
-	end
-	return false
-end
 
 local menu_key = Enum.KeyCode.Delete
 uis.InputBegan:Connect(function(input, gp)
@@ -866,21 +815,6 @@ uis.InputBegan:Connect(function(input, gp)
 		ui.Enabled = not ui.Enabled
 		return
 	end
-	if input_matches_movement_bind(input, P.get_fly_bind()) then
-		P.set_fly(not P.get_fly())
-		ref_fly()
-		return
-	end
-	if input_matches_movement_bind(input, P.get_walk_mod_bind()) then
-		P.set_walk_mod(not P.get_walk_mod())
-		ref_walk_mod()
-		return
-	end
-	if input_matches_movement_bind(input, P.get_noclip_bind()) then
-		P.set_noclip(not P.get_noclip())
-		ref_nc()
-		return
-	end
 end)
 
 switch_tab("Combat")
@@ -890,9 +824,6 @@ task.defer(function()
 	set_aim_speed_slider(P.get_aim_speed())
 	set_silent_fov_slider(P.get_silent_aim_fov())
 	set_trigger_delay_slider(P.get_trigger_delay())
-	set_fly_speed_slider(P.get_fly_speed())
-	set_walk_slider(P.get_walk())
-	set_jump_slider(P.get_jump())
 	set_esp_max_range_slider(P.get_esp_max_range())
 	set_arrows_ring_slider(P.get_arrows_esp_ring_radius())
 end)
@@ -904,6 +835,7 @@ function _G.MYA_UNIVERSAL_SYNC_UI()
 	ref_health()
 	ref_esp_dist()
 	ref_esp_names()
+	ref_tracers()
 	ref_arrows_esp()
 	ref_arrows_distance()
 	ref_aim_toggle()
@@ -922,22 +854,12 @@ function _G.MYA_UNIVERSAL_SYNC_UI()
 	ref_silent_vis()
 	ref_silent_team()
 	refresh_silent_hitpart()
-	ref_fly()
-	ref_fly_bind()
-	ref_walk_mod()
-	ref_walk_mod_bind()
-	ref_jump_mod()
-	ref_nc()
-	ref_noclip_bind()
 	ref_trigger_toggle()
 	ref_trigger_bind()
 	set_aim_fov_slider(P.get_aim_fov())
 	set_aim_speed_slider(P.get_aim_speed())
 	set_silent_fov_slider(P.get_silent_aim_fov())
 	set_trigger_delay_slider(P.get_trigger_delay())
-	set_fly_speed_slider(P.get_fly_speed())
-	set_walk_slider(P.get_walk())
-	set_jump_slider(P.get_jump())
 	set_esp_max_range_slider(P.get_esp_max_range())
 	set_arrows_ring_slider(P.get_arrows_esp_ring_radius())
 end

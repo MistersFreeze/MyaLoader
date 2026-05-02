@@ -311,6 +311,16 @@ _G.MYA_UNIVERSAL = {
 	set_esp_names = function(v)
 		esp_names_on = not not v
 	end,
+	get_esp_max_range = function()
+		return esp_max_range
+	end,
+	set_esp_max_range = function(v)
+		local n = tonumber(v)
+		if n then
+			esp_max_range = math.clamp(math.floor(n + 0.5), 0, 5000)
+			esp_refresh()
+		end
+	end,
 	get_rainbow_car = function()
 		return rainbow_car_on
 	end,
@@ -520,6 +530,7 @@ _G.get_config = function()
 		healthbars_on = healthbars_on,
 		esp_distance_on = esp_distance_on,
 		esp_names_on = esp_names_on,
+		esp_max_range = esp_max_range,
 		rainbow_car_on = rainbow_car_on,
 		walk_mod_on = walk_mod_on,
 		walk_mod_bind = enum_to_str(walk_mod_bind),
@@ -663,6 +674,9 @@ _G.apply_config = function(cfg)
 	end
 	if cfg.esp_names_on ~= nil then
 		U.set_esp_names(cfg.esp_names_on)
+	end
+	if cfg.esp_max_range ~= nil then
+		U.set_esp_max_range(cfg.esp_max_range)
 	end
 	if cfg.rainbow_car_on ~= nil then
 		U.set_rainbow_car(cfg.rainbow_car_on)

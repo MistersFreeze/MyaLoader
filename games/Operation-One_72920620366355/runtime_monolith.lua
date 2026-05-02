@@ -534,6 +534,9 @@ _G.apply_config = function(cfg)
     local ak = str_to_enum(cfg.aim_key)
     if ak then aim_key  = ak; if _G.ui_set_aim_key  then _G.ui_set_aim_key(ak)   end end
     local mk = str_to_enum(cfg.menu_key)
+    if mk == Enum.KeyCode.Insert then
+        mk = Enum.KeyCode.Delete
+    end
     if mk then menu_key = mk; if _G.ui_set_menu_key then _G.ui_set_menu_key(mk)  end end
 
     -- Colors
@@ -950,11 +953,38 @@ connections[#connections+1] = runservice.RenderStepped:Connect(function()
     end
 end)
 
--- Menu toggle
+-- Menu toggle: KeyCode (default Delete) or mouse from Misc → Menu bind.
+local function input_matches_menu_bind(inp, bind)
+	if typeof(bind) ~= "EnumItem" then
+		return false
+	end
+	if bind.EnumType == Enum.KeyCode then
+		if bind == Enum.KeyCode.Unknown then
+			return false
+		end
+		return inp.UserInputType == Enum.UserInputType.Keyboard and inp.KeyCode == bind
+	end
+	if bind.EnumType == Enum.UserInputType then
+		return inp.UserInputType == bind
+	end
+	return false
+end
+
 connections[#connections+1] = uis.InputBegan:Connect(function(input, processed)
-    if processed or input.KeyCode ~= menu_key then return end
-    local menu_ui = _G.user_interface
-    if menu_ui then menu_ui.Enabled = not menu_ui.Enabled end
+	if processed then
+		return
+	end
+	if _G.new_menu_key then
+		menu_key = _G.new_menu_key
+		_G.new_menu_key = nil
+	end
+	if not input_matches_menu_bind(input, menu_key) then
+		return
+	end
+	local menu_ui = _G.user_interface
+	if menu_ui then
+		menu_ui.Enabled = not menu_ui.Enabled
+	end
 end)
 
 -- -------------------- Unload --------------------

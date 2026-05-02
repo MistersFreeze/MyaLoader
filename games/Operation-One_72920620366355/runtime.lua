@@ -23,6 +23,7 @@ return function(env)
 		"runtime/globals_config.lua",
 		"runtime/env_combat_movement.lua",
 		"runtime/targeting_compat.lua",
+		"runtime/esp_arrows.lua",
 		"runtime/gadget_render.lua",
 		"runtime/silent_aim.lua",
 		"runtime/menu_unload_bootstrap.lua",

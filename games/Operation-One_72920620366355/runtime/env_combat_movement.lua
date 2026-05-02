@@ -110,8 +110,17 @@ _G.MYA_OP1_RUN_UI_SYNC = function()
 		if _G.set_vis_check then
 			_G.set_vis_check(vis_check)
 		end
-		if _G.set_chams then
-			_G.set_chams(chams)
+		if _G.set_arrows_esp then
+			_G.set_arrows_esp(arrows_esp_on)
+		end
+		if _G.set_arrows_esp_distance then
+			_G.set_arrows_esp_distance(arrows_esp_distance_on)
+		end
+		if _G.set_arrows_ring_slider then
+			_G.set_arrows_ring_slider(arrows_esp_ring_radius)
+		end
+		if _G.ui_set_menu_key then
+			_G.ui_set_menu_key(menu_key)
 		end
 	end)
 end

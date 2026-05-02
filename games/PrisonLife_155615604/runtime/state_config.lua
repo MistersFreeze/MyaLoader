@@ -86,6 +86,8 @@ local trigger_next = 0
 local healthbars_on = false
 local esp_distance_on = false
 local esp_names_on = D.esp_names_on == true
+-- 0 = unlimited; 1–5000 studs local HRP→target HRP for ESP visuals, aim assist, silent aim, triggerbot.
+local esp_max_range = num("esp_max_range", 0, 0, 5000)
 -- Visuals → World: smooth rainbow tint on the vehicle you're driving.
 local rainbow_car_on = false
 local show_aim_fov_circle = false
@@ -179,6 +181,19 @@ end
 local function get_root()
 	local c = lp.Character
 	return c and c:FindFirstChild("HumanoidRootPart")
+end
+
+local function esp_target_within_max_range(plr)
+	if esp_max_range <= 0 then
+		return true
+	end
+	local myRoot = get_root()
+	local char = plr and plr.Character
+	local hrp = char and char:FindFirstChild("HumanoidRootPart")
+	if not myRoot or not hrp or not hrp:IsA("BasePart") then
+		return false
+	end
+	return (myRoot.Position - hrp.Position).Magnitude <= esp_max_range
 end
 
 local function get_fov_screen_anchor(follow_cursor)

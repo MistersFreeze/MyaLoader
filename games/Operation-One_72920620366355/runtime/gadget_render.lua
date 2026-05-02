@@ -34,6 +34,8 @@ connections[#connections+1] = runservice.RenderStepped:Connect(function()
 
     if _G.new_menu_key then menu_key = _G.new_menu_key; _G.new_menu_key = nil end
 
+    update_esp_arrows()
+
     -- FOV circles (only while the matching feature is on)
     if aim_assist and show_fov_circle then
         local vp = camera.ViewportSize
@@ -142,13 +144,13 @@ connections[#connections+1] = runservice.RenderStepped:Connect(function()
         if not character or not character.Parent or not is_valid(character) then
             box.Visible = false; hide_drawings(character); remove_drawings(character)
             folder:Destroy(); esp_list[character] = nil
-            remove_skeleton(character); remove_chams(character)
+            remove_skeleton(character)
             continue
         end
 
         local torso = character:FindFirstChild("torso")
         if not torso or torso.Transparency >= 1 or is_teammate(character) then
-            box.Visible = false; hide_drawings(character); remove_chams(character)
+            box.Visible = false; hide_drawings(character)
             local skel = skeleton_list[character]
             if skel then
                 for _, line in ipairs(skel.lines) do line.l1.Visible = false; line.l2.Visible = false end
@@ -156,8 +158,6 @@ connections[#connections+1] = runservice.RenderStepped:Connect(function()
             end
             continue
         end
-
-        update_chams(character)
 
         if not skeleton_list[character] and (aim_assist or silent_aim_on) then
             create_skeleton(character)

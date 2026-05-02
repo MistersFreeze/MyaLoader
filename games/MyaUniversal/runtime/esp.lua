@@ -40,7 +40,7 @@ local function esp_refresh()
 	end
 	-- Per-part highlights (not Adornee = Model): invisible / fully transparent rigs still get overlay.
 	for _, plr in ipairs(Players:GetPlayers()) do
-		if plr ~= lp and plr.Character and not is_esp_teammate(plr) then
+		if plr ~= lp and plr.Character and not is_esp_teammate(plr) and esp_target_within_max_range(plr) then
 			local char = plr.Character
 			local list = {}
 			for _, part in ipairs(collect_body_parts(char)) do
@@ -50,7 +50,7 @@ local function esp_refresh()
 				hl.FillColor = COLOR_ESP_HIDDEN
 				hl.OutlineColor = Color3.fromRGB(255, 255, 255)
 				hl.FillTransparency = 0.55
-				hl.OutlineTransparency = 0.3
+				hl.OutlineTransparency = 1
 				hl.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
 				hl.Parent = esp_gui
 				table.insert(list, hl)
@@ -68,7 +68,13 @@ local function update_esp_visibility_colors()
 	end
 	local camPos = camera.CFrame.Position
 	for plr, list in pairs(highlights) do
-		if type(list) == "table" and plr ~= lp and plr.Parent and not is_esp_teammate(plr) then
+		if
+			type(list) == "table"
+			and plr ~= lp
+			and plr.Parent
+			and not is_esp_teammate(plr)
+			and esp_target_within_max_range(plr)
+		then
 			local char = plr.Character
 			if char then
 				for _, hl in ipairs(list) do

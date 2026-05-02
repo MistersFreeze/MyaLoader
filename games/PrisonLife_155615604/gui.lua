@@ -571,6 +571,18 @@ local ref_esp_vis_colors = make_toggle_row(
 local ref_health = make_toggle_row(visuals_esp, "Health bars", next_order(), P.get_healthbars, P.set_healthbars)
 local ref_esp_dist = make_toggle_row(visuals_esp, "Distance text", next_order(), P.get_esp_distance, P.set_esp_distance)
 local ref_esp_names = make_toggle_row(visuals_esp, "Player names", next_order(), P.get_esp_names, P.set_esp_names)
+local set_esp_max_range_slider = make_slider(
+	visuals_esp,
+	"Max range (studs, 0 = unlimited)",
+	next_order(),
+	0,
+	5000,
+	P.get_esp_max_range(),
+	"%.0f",
+	function(v)
+		P.set_esp_max_range(v)
+	end
+)
 
 lo = 0
 section_label(visuals_world, "World", next_order())
@@ -811,6 +823,7 @@ hint.TextWrapped = true
 hint.Text = "Delete toggles this menu. Drag the title bar to move. Click a bind, then press a key or mouse button."
 hint.Parent = hint_row
 
+section_label(settings_page, "Settings", next_order())
 local unload_row = make_row(settings_page, next_order(), 44)
 local unload_btn = Instance.new("TextButton")
 unload_btn.Size = UDim2.new(1, -28, 0, 32)
@@ -908,6 +921,7 @@ task.defer(function()
 	set_car_fly_speed_slider(P.get_car_fly_speed())
 	set_walk_slider(P.get_walk())
 	set_jump_slider(P.get_jump())
+	set_esp_max_range_slider(P.get_esp_max_range())
 end)
 
 function _G.MYA_UNIVERSAL_SYNC_UI()
@@ -956,4 +970,5 @@ function _G.MYA_UNIVERSAL_SYNC_UI()
 	set_car_fly_speed_slider(P.get_car_fly_speed())
 	set_walk_slider(P.get_walk())
 	set_jump_slider(P.get_jump())
+	set_esp_max_range_slider(P.get_esp_max_range())
 end

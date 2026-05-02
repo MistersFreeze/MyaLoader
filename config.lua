@@ -33,6 +33,8 @@ return {
 		[155615604] = "games/PrisonLife_155615604/init.lua",
 		[93978595733734] = "games/ViolenceDistrict_93978595733734/init.lua",
 		[11574110446] = "games/DesolateValley_11574110446/init.lua",
+		[863266079] = "games/ApocalypseRising2_863266079/init.lua",
+		[93911318070665] = "games/ApocalypseRising2_863266079/init.lua",
 		[8392374718] = "games/SecoursDeFranceRP_8392374718/init.lua",
 	},
 

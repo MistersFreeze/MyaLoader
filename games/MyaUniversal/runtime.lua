@@ -25,6 +25,7 @@ return function(env)
 		"runtime/esp.lua",
 		"runtime/esp_distance.lua",
 		"runtime/health_bars.lua",
+		"runtime/esp_arrows.lua",
 		"runtime/fov_rings.lua",
 		"runtime/aim_assist.lua",
 		"runtime/silent_aim.lua",

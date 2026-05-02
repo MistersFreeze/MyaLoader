@@ -1,9 +1,36 @@
 
--- Menu toggle
+-- Menu toggle: matches KeyCode (default Delete) or mouse buttons from Misc → Menu bind.
+local function input_matches_menu_bind(inp, bind)
+	if typeof(bind) ~= "EnumItem" then
+		return false
+	end
+	if bind.EnumType == Enum.KeyCode then
+		if bind == Enum.KeyCode.Unknown then
+			return false
+		end
+		return inp.UserInputType == Enum.UserInputType.Keyboard and inp.KeyCode == bind
+	end
+	if bind.EnumType == Enum.UserInputType then
+		return inp.UserInputType == bind
+	end
+	return false
+end
+
 connections[#connections+1] = uis.InputBegan:Connect(function(input, processed)
-    if processed or input.KeyCode ~= menu_key then return end
-    local menu_ui = _G.user_interface
-    if menu_ui then menu_ui.Enabled = not menu_ui.Enabled end
+	if processed then
+		return
+	end
+	if _G.new_menu_key then
+		menu_key = _G.new_menu_key
+		_G.new_menu_key = nil
+	end
+	if not input_matches_menu_bind(input, menu_key) then
+		return
+	end
+	local menu_ui = _G.user_interface
+	if menu_ui then
+		menu_ui.Enabled = not menu_ui.Enabled
+	end
 end)
 
 -- -------------------- Unload --------------------
@@ -14,10 +41,16 @@ _G.unload_mya = function()
     fov_circle:Remove()
     fov_circle_silent:Remove()
     for character, data in pairs(esp_list) do
-        remove_drawings(character); remove_skeleton(character); remove_chams(character)
+        remove_drawings(character); remove_skeleton(character)
         if data.folder then data.folder:Destroy() end
     end
-    esp_list = {}; skeleton_list = {}; chams_list = {}
+    esp_list = {}; skeleton_list = {}
+	pcall(function()
+		if _G.clear_op1_esp_arrows then
+			_G.clear_op1_esp_arrows()
+		end
+	end)
+	_G.clear_op1_esp_arrows = nil
     for instance in pairs(gadget_data) do cleanup_gadget(instance) end
     gadget_data = {}
     apply_fullbright(false)
@@ -29,18 +62,19 @@ _G.unload_mya = function()
         "toggle_gadgets","toggle_fullbright","toggle_aim_assist","toggle_show_fov",
         "toggle_silent_aim","toggle_show_silent_fov","toggle_silent_fov_follow",
         "toggle_silent_require_bind","toggle_silent_vis_check","toggle_silent_team_check",
-        "toggle_vis_check","toggle_chams","toggle_team_check",
+        "toggle_vis_check","toggle_team_check","toggle_arrows_esp","toggle_arrows_esp_distance",
         "set_boxes","set_skeletons","set_tracers","set_healthbars","set_names","set_gadgets","set_team_check",
         "set_fullbright","set_aim_assist","set_show_fov",
         "set_silent_aim","set_show_silent_fov","set_silent_fov_follow",
         "set_silent_require_bind","set_silent_vis_check","set_silent_team_check","set_vis_check",
-        "set_chams",
+        "set_arrows_esp","set_arrows_esp_distance",
         "set_aim_fov","set_aim_speed","set_aim_fov_value","set_aim_speed_value","set_aim_key_value",
         "set_silent_aim_fov","set_silent_aim_fov_value","set_silent_aim_bind_value",
         "get_silent_aim_part","set_silent_aim_part",
         "ui_set_silent_bind","ui_refresh_silent_hitpart",
         "set_color_tracer","set_color_box","set_color_skel_vis","set_color_skel_hid",
-        "set_color_fov","set_color_fov_silent","set_color_chams","set_color_throwable","set_color_placeable",
+        "set_color_fov","set_color_fov_silent","set_color_throwable","set_color_placeable",
+        "set_arrows_esp_ring_value","set_arrows_ring_slider",
         "get_config","apply_config","new_menu_key","user_interface","unload_mya",
         "ui_set_aim_key","ui_set_menu_key",
     }) do _G[k] = nil end
@@ -59,7 +93,7 @@ if viewmodels then
     end)
     connections[#connections+1] = viewmodels.ChildRemoved:Connect(function(v)
         if esp_list[v] then remove_drawings(v); esp_list[v].folder:Destroy(); esp_list[v] = nil end
-        remove_skeleton(v); remove_chams(v)
+        remove_skeleton(v)
     end)
 
     connections[#connections+1] = runservice.Heartbeat:Connect(function()

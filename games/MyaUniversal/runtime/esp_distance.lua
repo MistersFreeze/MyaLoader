@@ -1,4 +1,5 @@
 -- Name: above head. Distance: below character (feet / bottom of ESP), not stacked with the name.
+local DIST_TEXT_PINK = Color3.fromRGB(255, 130, 175)
 local NAME_UP = 2.45
 local DIST_BELOW_HRP = 3.2
 local distance_draw = {}
@@ -32,10 +33,10 @@ local function ensure_distance_text(plr)
 	end
 	local t = Drawing.new("Text")
 	t.Visible = false
-	t.Size = 14
+	t.Size = 15
 	t.Center = true
-	t.Outline = true
-	t.Color = Color3.fromRGB(240, 240, 250)
+	t.Outline = false
+	t.Color = DIST_TEXT_PINK
 	distance_draw[plr] = t
 end
 
@@ -88,7 +89,7 @@ local function update_esp_distance()
 	end
 
 	for _, plr in ipairs(Players:GetPlayers()) do
-		if plr ~= lp and not is_esp_teammate(plr) then
+		if plr ~= lp and not is_esp_teammate(plr) and esp_target_within_max_range(plr) then
 			local char = plr.Character
 			local hrp = char and char:FindFirstChild("HumanoidRootPart")
 			local head = char and char:FindFirstChild("Head")
@@ -102,6 +103,7 @@ local function update_esp_distance()
 					local d = distance_draw[plr]
 					d.Position = Vector2.new(pos.X, pos.Y)
 					d.Text = string.format("%.0fm", distStuds)
+					d.Color = DIST_TEXT_PINK
 					d.Visible = true
 				else
 					hide_distance(plr)
@@ -135,7 +137,7 @@ local function update_esp_names()
 	end
 
 	for _, plr in ipairs(Players:GetPlayers()) do
-		if plr ~= lp and not is_esp_teammate(plr) then
+		if plr ~= lp and not is_esp_teammate(plr) and esp_target_within_max_range(plr) then
 			local char = plr.Character
 			local hrp = char and char:FindFirstChild("HumanoidRootPart")
 			local head = char and char:FindFirstChild("Head")

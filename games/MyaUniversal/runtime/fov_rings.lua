@@ -2,18 +2,16 @@ if drawing_ok then
 	fov_circle_aim = Drawing.new("Circle")
 	fov_circle_aim.Visible = false
 	fov_circle_aim.Filled = false
-	fov_circle_aim.Thickness = 1
+	fov_circle_aim.Thickness = 2
 	fov_circle_aim.Color = color_fov_aim
 	fov_circle_aim.NumSides = 64
-	fov_circle_aim.Transparency = 0.5
 
 	fov_circle_silent = Drawing.new("Circle")
 	fov_circle_silent.Visible = false
 	fov_circle_silent.Filled = false
-	fov_circle_silent.Thickness = 1
+	fov_circle_silent.Thickness = 2
 	fov_circle_silent.Color = color_fov_silent
 	fov_circle_silent.NumSides = 64
-	fov_circle_silent.Transparency = 0.5
 end
 
 local function update_fov_circles()

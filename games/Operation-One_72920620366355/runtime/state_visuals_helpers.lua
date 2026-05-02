@@ -12,11 +12,18 @@ local team_check      = true
 local gadgets         = false
 local fullbright      = false
 local aim_assist      = false
-local chams           = false
+
+-- Crosshair-ring arrows (Drawing), same behavior as Mya Universal / AR2 (off-screen + visibility).
+local arrows_esp_on = false
+local arrows_esp_ring_radius = 72
+local arrows_esp_tip_len = 14
+local arrows_esp_half_width = 7
+local arrows_esp_distance_on = true
 
 local aim_fov         = 120        -- pixels radius
 local aim_speed       = 0.25       -- 0.0 (slow) -> 0.99 (fast) -> 1.0 (instant snap)
 local aim_key         = Enum.UserInputType.MouseButton2
+local menu_key        = Enum.KeyCode.Delete -- toggles Mya menu (Misc → Menu bind); use Delete, not Insert
 local show_fov_circle = false
 local vis_check       = false      -- false = track through walls, true = visible only
 
@@ -36,9 +43,8 @@ local color_tracer     = Color3.new(1, 1, 1)
 local color_box        = Color3.new(1, 1, 1)
 local color_skel_vis   = Color3.fromRGB(0, 255, 0)
 local color_skel_hid   = Color3.new(1, 1, 1)
-local color_fov_circle = Color3.new(1, 1, 1)
+local color_fov_circle = Color3.fromRGB(245, 118, 168)
 local color_fov_silent = Color3.fromRGB(160, 120, 220)
-local color_chams      = Color3.fromRGB(255, 50, 50)
 local color_throwable  = Color3.fromRGB(255, 60, 60)
 local color_placeable  = Color3.fromRGB(255, 170, 0)
 local color_box_vis    = Color3.fromRGB(0, 255, 0)
@@ -46,7 +52,6 @@ local color_box_vis    = Color3.fromRGB(0, 255, 0)
 
 --[[ begin main script ]]--
 
-local menu_key = Enum.KeyCode.Delete
 local pad = 4
 
 local cloneref_support = cloneref ~= nil
@@ -117,7 +122,6 @@ for _, t in ipairs(placeable_tags)  do table.insert(all_gadget_tags, t) end
 local esp_list      = {}
 local skeleton_list = {}
 local gadget_data   = {}
-local chams_list    = {}
 local connections   = {}
 local viewmodels    = workspace:FindFirstChild("Viewmodels")
 local camera        = workspace.CurrentCamera
@@ -273,12 +277,12 @@ end
 -- -------------------- FOV circles --------------------
 local fov_circle = Drawing.new("Circle")
 fov_circle.Visible = false; fov_circle.Color = color_fov_circle
-fov_circle.Thickness = 1; fov_circle.Transparency = 1
+fov_circle.Thickness = 2; fov_circle.Transparency = 1
 fov_circle.Filled = false; fov_circle.NumSides = 64
 
 local fov_circle_silent = Drawing.new("Circle")
 fov_circle_silent.Visible = false; fov_circle_silent.Color = color_fov_silent
-fov_circle_silent.Thickness = 1; fov_circle_silent.Transparency = 1
+fov_circle_silent.Thickness = 2; fov_circle_silent.Transparency = 1
 fov_circle_silent.Filled = false; fov_circle_silent.NumSides = 64
 
 -- -------------------- Drawing helpers --------------------
@@ -327,35 +331,6 @@ local function create_skeleton(character)
     head_circle.Thickness = 1; head_circle.Transparency = 1
     head_circle.Filled = false; head_circle.NumSides = 24
     skeleton_list[character] = { lines = lines, bones = char_bones, head_circle = head_circle }
-end
-
--- -------------------- Chams --------------------
-local function remove_chams(character)
-    if chams_list[character] then
-        chams_list[character]:Destroy()
-        chams_list[character] = nil
-    end
-end
-
-local function update_chams(character)
-    if chams and not is_teammate(character) then
-        if not chams_list[character] then
-            local hl = Instance.new("Highlight")
-            hl.FillColor           = color_chams
-            hl.FillTransparency    = 0.35
-            hl.OutlineColor        = color_chams
-            hl.OutlineTransparency = 0.5
-            hl.DepthMode           = Enum.HighlightDepthMode.AlwaysOnTop
-            hl.Adornee             = character
-            hl.Parent              = screen_gui
-            chams_list[character]  = hl
-        else
-            chams_list[character].FillColor   = color_chams
-            chams_list[character].OutlineColor = color_chams
-        end
-    else
-        remove_chams(character)
-    end
 end
 
 -- -------------------- ESP creation --------------------

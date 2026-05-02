@@ -10,6 +10,12 @@ local function unload_mya_universal()
 		end
 	end
 	pcall(esp_clear)
+	pcall(function()
+		if _G.clear_esp_arrows then
+			_G.clear_esp_arrows()
+		end
+	end)
+	_G.clear_esp_arrows = nil
 	pcall(stop_fly)
 	pcall(stop_noclip)
 	pcall(restore_movement)
@@ -290,6 +296,37 @@ _G.MYA_UNIVERSAL = {
 	set_esp_names = function(v)
 		esp_names_on = not not v
 	end,
+	get_esp_max_range = function()
+		return esp_max_range
+	end,
+	set_esp_max_range = function(v)
+		local n = tonumber(v)
+		if n then
+			esp_max_range = math.clamp(math.floor(n + 0.5), 0, 5000)
+			esp_refresh()
+		end
+	end,
+	get_arrows_esp = function()
+		return arrows_esp_on
+	end,
+	set_arrows_esp = function(v)
+		arrows_esp_on = not not v
+	end,
+	get_arrows_esp_ring_radius = function()
+		return arrows_esp_ring_radius
+	end,
+	set_arrows_esp_ring_radius = function(v)
+		local n = tonumber(v)
+		if n then
+			arrows_esp_ring_radius = math.clamp(math.floor(n + 0.5), 32, 220)
+		end
+	end,
+	get_arrows_esp_distance = function()
+		return arrows_esp_distance_on
+	end,
+	set_arrows_esp_distance = function(v)
+		arrows_esp_distance_on = not not v
+	end,
 	get_walk_mod = function()
 		return walk_mod_on
 	end,
@@ -447,6 +484,12 @@ _G.get_config = function()
 		healthbars_on = healthbars_on,
 		esp_distance_on = esp_distance_on,
 		esp_names_on = esp_names_on,
+		esp_max_range = esp_max_range,
+		arrows_esp_on = arrows_esp_on,
+		arrows_esp_ring_radius = arrows_esp_ring_radius,
+		arrows_esp_tip_len = arrows_esp_tip_len,
+		arrows_esp_half_width = arrows_esp_half_width,
+		arrows_esp_distance_on = arrows_esp_distance_on,
 		walk_mod_on = walk_mod_on,
 		walk_mod_bind = enum_to_str(walk_mod_bind),
 		jump_mod_on = jump_mod_on,
@@ -566,6 +609,30 @@ _G.apply_config = function(cfg)
 	end
 	if cfg.esp_names_on ~= nil then
 		U.set_esp_names(cfg.esp_names_on)
+	end
+	if cfg.esp_max_range ~= nil then
+		U.set_esp_max_range(cfg.esp_max_range)
+	end
+	if cfg.arrows_esp_on ~= nil then
+		U.set_arrows_esp(cfg.arrows_esp_on)
+	end
+	if cfg.arrows_esp_ring_radius ~= nil then
+		U.set_arrows_esp_ring_radius(cfg.arrows_esp_ring_radius)
+	end
+	if cfg.arrows_esp_tip_len ~= nil then
+		local n = tonumber(cfg.arrows_esp_tip_len)
+		if n then
+			arrows_esp_tip_len = math.clamp(math.floor(n + 0.5), 6, 40)
+		end
+	end
+	if cfg.arrows_esp_half_width ~= nil then
+		local n = tonumber(cfg.arrows_esp_half_width)
+		if n then
+			arrows_esp_half_width = math.clamp(math.floor(n + 0.5), 3, 18)
+		end
+	end
+	if cfg.arrows_esp_distance_on ~= nil then
+		U.set_arrows_esp_distance(cfg.arrows_esp_distance_on)
 	end
 	if cfg.walk_mod_on ~= nil then
 		U.set_walk_mod(cfg.walk_mod_on)

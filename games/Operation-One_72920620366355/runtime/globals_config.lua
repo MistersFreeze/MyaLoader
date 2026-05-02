@@ -50,14 +50,18 @@ _G.toggle_silent_team_check = function()
 		_G.set_silent_team_check(silent_aim_team_check_on)
 	end
 end
-_G.toggle_chams = function()
-    chams = not chams
-    if not chams then
-        for char in pairs(chams_list) do remove_chams(char) end
-    end
-    if _G.set_chams then _G.set_chams(chams) end
+_G.toggle_arrows_esp = function()
+	arrows_esp_on = not arrows_esp_on
+	if _G.set_arrows_esp then
+		_G.set_arrows_esp(arrows_esp_on)
+	end
 end
-
+_G.toggle_arrows_esp_distance = function()
+	arrows_esp_distance_on = not arrows_esp_distance_on
+	if _G.set_arrows_esp_distance then
+		_G.set_arrows_esp_distance(arrows_esp_distance_on)
+	end
+end
 
 -- Value setters (called by sliders)
 _G.set_aim_fov_value        = function(v) aim_fov        = v end
@@ -65,6 +69,9 @@ _G.set_aim_speed_value      = function(v) aim_speed      = v end
 _G.set_aim_key_value        = function(v) aim_key        = v end
 _G.set_silent_aim_fov_value = function(v) silent_aim_fov = v end
 _G.set_silent_aim_bind_value = function(v) silent_aim_bind = v end
+_G.set_arrows_esp_ring_value = function(v)
+	arrows_esp_ring_radius = math.clamp(v, 32, 220)
+end
 _G.get_silent_aim_part = function()
 	return silent_aim_part
 end
@@ -88,10 +95,6 @@ _G.set_color_skel_vis   = function(c) color_skel_vis   = c end
 _G.set_color_skel_hid   = function(c) color_skel_hid   = c end
 _G.set_color_fov        = function(c) color_fov_circle = c; refresh_esp_colors() end
 _G.set_color_fov_silent = function(c) color_fov_silent = c; refresh_esp_colors() end
-_G.set_color_chams      = function(c)
-    color_chams = c
-    for _, hl in pairs(chams_list) do hl.FillColor = c; hl.OutlineColor = c end
-end
 _G.set_color_throwable  = function(c) color_throwable = c end
 _G.set_color_placeable  = function(c) color_placeable = c end
 _G.set_box_color_value        = _G.set_color_box
@@ -135,7 +138,9 @@ _G.get_config = function()
         silent_aim_vis_check_on = silent_aim_vis_check_on,
         silent_aim_team_check_on = silent_aim_team_check_on,
         silent_aim_part = silent_aim_part,
-        chams = chams,
+        arrows_esp_on = arrows_esp_on,
+        arrows_esp_distance_on = arrows_esp_distance_on,
+        arrows_esp_ring_radius = arrows_esp_ring_radius,
         -- values
         aim_fov = aim_fov, aim_speed = aim_speed,
         silent_aim_fov = silent_aim_fov,
@@ -150,7 +155,6 @@ _G.get_config = function()
         color_skel_hid   = color_to_t(color_skel_hid),
         color_fov        = color_to_t(color_fov_circle),
         color_fov_silent = color_to_t(color_fov_silent),
-        color_chams      = color_to_t(color_chams),
         color_throwable  = color_to_t(color_throwable),
         color_placeable  = color_to_t(color_placeable),
     }
@@ -191,12 +195,23 @@ _G.apply_config = function(cfg)
         if want_vis ~= nil and want_vis ~= silent_aim_vis_check_on then _G.toggle_silent_vis_check() end
     end
     if cfg.silent_aim_team_check_on ~= nil and cfg.silent_aim_team_check_on ~= silent_aim_team_check_on then _G.toggle_silent_team_check() end
-    if cfg.chams          ~= nil and cfg.chams          ~= chams          then _G.toggle_chams()           end
+    if cfg.arrows_esp_on ~= nil and cfg.arrows_esp_on ~= arrows_esp_on then
+		_G.toggle_arrows_esp()
+	end
+	if cfg.arrows_esp_distance_on ~= nil and cfg.arrows_esp_distance_on ~= arrows_esp_distance_on then
+		_G.toggle_arrows_esp_distance()
+	end
 
     -- Sliders
     if cfg.aim_fov       ~= nil then aim_fov       = cfg.aim_fov;       if _G.set_aim_fov       then _G.set_aim_fov(aim_fov)             end end
     if cfg.aim_speed     ~= nil then aim_speed     = cfg.aim_speed;     if _G.set_aim_speed     then _G.set_aim_speed(aim_speed)         end end
     if cfg.silent_aim_fov ~= nil then silent_aim_fov = cfg.silent_aim_fov; if _G.set_silent_aim_fov then _G.set_silent_aim_fov(silent_aim_fov) end end
+	if cfg.arrows_esp_ring_radius ~= nil and _G.set_arrows_esp_ring_value then
+		_G.set_arrows_esp_ring_value(cfg.arrows_esp_ring_radius)
+		if _G.set_arrows_ring_slider then
+			_G.set_arrows_ring_slider(arrows_esp_ring_radius)
+		end
+	end
 
     -- Keybinds
     local ak = str_to_enum(cfg.aim_key)
@@ -204,6 +219,9 @@ _G.apply_config = function(cfg)
     local sb = str_to_enum(cfg.silent_aim_bind)
     if sb then silent_aim_bind = sb; if _G.ui_set_silent_bind then _G.ui_set_silent_bind(sb) end end
     local mk = str_to_enum(cfg.menu_key)
+    if mk == Enum.KeyCode.Insert then
+        mk = Enum.KeyCode.Delete
+    end
     if mk then menu_key = mk; if _G.ui_set_menu_key then _G.ui_set_menu_key(mk)  end end
     if cfg.silent_aim_part ~= nil and type(cfg.silent_aim_part) == "string" and _G.set_silent_aim_part then
         _G.set_silent_aim_part(cfg.silent_aim_part)
@@ -220,7 +238,6 @@ _G.apply_config = function(cfg)
     ac("color_skel_hid",   _G.set_color_skel_hid)
     ac("color_fov",        _G.set_color_fov)
     ac("color_fov_silent", _G.set_color_fov_silent)
-    ac("color_chams",      _G.set_color_chams)
     ac("color_throwable",  _G.set_color_throwable)
     ac("color_placeable",  _G.set_color_placeable)
 end
